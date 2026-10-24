@@ -12,5 +12,8 @@ A pattern with no sample here does not ship (DESIGN section 4); it classifies as
 `dep_missing.txt` comes from `cargo package`; `cargo publish` runs the same preparation step, but
 that equivalence is an assumption until R4 captures a real `cargo publish` of it.
 
-No sample of a crates.io rate limit (429) exists yet: none of the PM's logs kept the text. Until R4
-captures one, a rate-limited `cargo publish` classifies as `Unknown` and stops the run (resumable).
+| `rate_limited.txt` | the tail of a `cargo publish --locked` that crates.io answered with 429, cargo 1.99.1 | **relayed by the PM** in a peer message (`[FINDING] real-429-sample`, 2026-10-24T01:27Z), "verbatim"; this lane did not see the full output, so only these two lines are kept | 2026-10-24T01:26Z |
+
+The 429 pattern matches the outer shape of that line, not the middle sentence, because crates.io has more
+than one limit ("new crates" and "updates to existing crates" are known to exist; only the second has a
+sample). A variant with different middle text is a **guess** until a sample exists; the test for it says so.
