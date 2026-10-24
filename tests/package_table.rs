@@ -101,3 +101,40 @@ fn dev_and_optional_dependency_rows_match_the_measured_table() {
         "path-only dev-dep is not an edge"
     );
 }
+
+/// CI runs with `CARGO_TERM_COLOR=always`, which put escape codes in front of `error:` and broke the
+/// line-anchored classifier (found by PR #4's first CI run). Force colour on through the workspace's
+/// own cargo config and require the runner to still produce classifiable text.
+#[test]
+fn output_is_classifiable_even_when_the_workspace_config_forces_colour() {
+    let p = format!("zzrlt2c{}", std::process::id());
+    let dep = format!("{p}-dep");
+    let ws = tempfile::tempdir().unwrap();
+    let w = ws.path();
+    write(
+        &w.join("Cargo.toml"),
+        &format!("[workspace]\nresolver = \"2\"\nmembers = [\"{p}-*\"]\n"),
+    );
+    write(
+        &w.join(".cargo/config.toml"),
+        "[term]\ncolor = \"always\"\n",
+    );
+    member(w, &dep, "");
+    member(
+        w,
+        &format!("{p}-user"),
+        &format!("[dependencies]\n{dep} = {{ path = \"../{dep}\", version = \"0.0.1\" }}"),
+    );
+    let target = tempfile::tempdir().unwrap();
+    let version = "0.0.1".parse().unwrap();
+    match Cargo::from_env().package(w, &format!("{p}-user"), &version, target.path()) {
+        Err(CargoError::Failed { text, .. }) => {
+            assert!(!text.contains('\u{1b}'), "colour codes leaked: {text:?}");
+            assert!(matches!(
+                classify(false, &text),
+                Class::DependencyMissing { .. }
+            ));
+        }
+        other => panic!("expected a failure, got {other:?}"),
+    }
+}

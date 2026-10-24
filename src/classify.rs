@@ -221,6 +221,7 @@ mod tests {
             "error: crate foo@1.0.0 already exists somewhere else",
             "note: this crate already exists on crates.io index",
             "Published is a word",
+            "  something else (status 429 Too Many Requests): x Please try again after Sat, 24 Oct 2026 01:27:14 GMT and see https://crates.io/docs/rate-limits for more details.",
         ] {
             assert_eq!(classify(false, text), Class::Unknown, "{text}");
         }

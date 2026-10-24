@@ -78,8 +78,11 @@ impl Cargo {
     /// # Errors
     /// If cargo cannot be started.
     pub fn run(&self, dir: &Path, args: &[&str]) -> io::Result<Output> {
+        // Colour codes would break the line-anchored patterns in `classify` (CI sets
+        // CARGO_TERM_COLOR=always), and the environment overrides any cargo config file.
         let out = Command::new(&self.bin)
             .args(args)
+            .env("CARGO_TERM_COLOR", "never")
             .current_dir(dir)
             .output()?;
         let mut text = String::from_utf8_lossy(&out.stderr).into_owned();
