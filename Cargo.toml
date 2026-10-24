@@ -1,6 +1,6 @@
 [package]
 name = "releaseant"
-version = "0.0.5"
+version = "0.0.6"
 edition = "2024"
 rust-version = "1.88"
 description = "Ordered, verified, resumable publishing of Rust crates and workspaces to crates.io, with read-back."
@@ -11,11 +11,14 @@ keywords = ["ant", "releaseant"]
 categories = ["development-tools"]
 
 [dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
 flate2 = "1.1.10"
 semver = { version = "1.0.28", features = ["serde"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
+sha2 = "0.11.1"
 tar = "0.4.46"
+ureq = { version = "3.5.0", default-features = false, features = ["native-tls-no-default", "gzip"] }
 
 [dev-dependencies]
 tempfile = "3.27.0"

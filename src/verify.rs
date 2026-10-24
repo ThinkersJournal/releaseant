@@ -49,7 +49,9 @@ pub fn extract_crate(file: &Path, dest: &Path) -> io::Result<PathBuf> {
 
 /// Extract every crate into `scratch` and `cargo check` each one there.
 ///
-/// Returns one `(name, result)` per crate; `Err` holds cargo's output.
+/// Returns one `(name, result)` per crate not named in `skip`; `Err` holds cargo's output. A skipped
+/// crate is still extracted (the others may depend on it) but is not built here: skipping is a
+/// recorded exception made by the caller, never a default.
 ///
 /// # Errors
 /// I/O errors preparing the throwaway workspace.
@@ -57,6 +59,7 @@ pub fn verify_set(
     cargo: &Cargo,
     crates: &[PackagedCrate],
     scratch: &Path,
+    skip: &[String],
 ) -> io::Result<Vec<(String, Result<(), String>)>> {
     fs::create_dir_all(scratch)?;
     let mut dirs = Vec::new();
@@ -79,6 +82,7 @@ pub fn verify_set(
 
     Ok(dirs
         .iter()
+        .filter(|(n, _)| !skip.contains(n))
         .map(|(n, _)| {
             let r = cargo.check(scratch, n).map_err(|e| e.to_string());
             (n.clone(), r)
@@ -141,7 +145,7 @@ mod tests {
             .collect();
 
         let scratch = tempfile::tempdir().unwrap();
-        let results = verify_set(&cargo, &crates, scratch.path()).unwrap();
+        let results = verify_set(&cargo, &crates, scratch.path(), &[]).unwrap();
         let get = |n: &str| &results.iter().find(|(x, _)| x == n).unwrap().1;
         assert!(
             get(&bad).is_err(),

@@ -158,6 +158,42 @@ impl Cargo {
         }
     }
 
+    /// `cargo package -p a@1 -p b@1 ... --no-verify` for the whole set in one call.
+    ///
+    /// One call matters: measured with cargo 1.99.1, a crate whose versioned dependency is not yet
+    /// published packages fine **together with** that dependency (cargo overlays the set it is
+    /// packaging) but fails alone (see `tests/package_table.rs`). The returned paths are in the
+    /// order of `crates`.
+    ///
+    /// # Errors
+    /// [`CargoError::Failed`] with cargo's text, or [`CargoError::MissingOutput`].
+    pub fn package_set(
+        &self,
+        dir: &Path,
+        crates: &[(String, Version)],
+        target_dir: &Path,
+    ) -> Result<Vec<PathBuf>, CargoError> {
+        let specs: Vec<String> = crates.iter().map(|(n, v)| format!("{n}@{v}")).collect();
+        let target = target_dir.to_string_lossy().into_owned();
+        let mut args = vec!["package", "--no-verify", "--target-dir", target.as_str()];
+        for s in &specs {
+            args.push("-p");
+            args.push(s);
+        }
+        self.run_ok(dir, &args)?;
+        crates
+            .iter()
+            .map(|(n, v)| {
+                let file = target_dir.join("package").join(format!("{n}-{v}.crate"));
+                if file.is_file() {
+                    Ok(file)
+                } else {
+                    Err(CargoError::MissingOutput(file))
+                }
+            })
+            .collect()
+    }
+
     /// `cargo check -p name` in `dir`.
     ///
     /// # Errors
