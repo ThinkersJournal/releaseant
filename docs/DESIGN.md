@@ -138,15 +138,18 @@ Rehearsal (R4): a real throwaway set of placeholder crates on crates.io, run onc
 3. **Ledger location**: beside the workspace, `.releaseant/ledger.jsonl`, outside the `git archive` directory. Not committed by default (it holds SHAs and timestamps only; committing it is the user's choice).
 4. **`--max-wait`**: default 1 hour of total waiting per run (`Options::max_wait`). A longer window is a deliberate flag, because a stopped run is resumable and a run that waits forever is not visible. The first-publish pace the fuel wave doc quotes (about 7 hours) needs `--max-wait` raised or several resumed runs; R4 measures the real pace.
 
-## 11. Status of the test plan (R3a, 0.0.5)
+## 11. Status of the test plan (R3b, 0.0.6)
 
-Implemented: T1 (`source`), T2 (`tests/package_table.rs`, real cargo, needs network), T3-T9, T11 (`verify`), T12-T14, T16, T17, plus the unknown-result stop, bounded transient retry, `max-wait`, permanent-failure skip, bad-SHA and plan-changed refusals.
+All of T1-T17 now exist, each with its negative control, except as noted:
+- T10 (`--no-verify-crate NAME --reason TEXT`, repeatable pairs): `pipeline::publish` refuses a blank reason or an unknown crate, writes an `exception` event, skips only that crate's pre-upload build, and after upload runs a consumer check (`cargo add NAME@=VERSION` into a fresh project, then `cargo check`); a failing check makes the publish unsuccessful.
+- T15 (`releaseant yank NAME VERSION --reason KIND:TEXT --ledger FILE [--execute]`): refuses a bad reason, a version the ledger has no `visible` event for, and anything without `--execute`; with it, the `yanked` event is on disk before `cargo yank` runs. `pipeline::publish` has no path to `yank`.
+- Real index lookups are tested against canned HTTP responses (statuses, a 503, garbage, a closed port) and, with network, against the real index.
 
-Mutation checks done by hand with a script (not in CI): R2's ten (see the 0.0.4 changelog entry) and, in R3a, archive honouring the user's `core.autocrlf`, a loose `already exists` match, a loose `Published` match (first run NOT caught, a test case was added, then caught), and verification never reporting failure.
+Mutation checks by hand (not in CI) in R3b: yank event not written first, yank without a ledger record, negative retry-after not clamped, yanked version read as present, 5xx read as absent, verification failures ignored, blank exception reason accepted, exception not consumer-checked, and packaging the plan one crate at a time instead of as a set; all made a named test fail (the first attempt at the first one did not compile and was redone).
 
-Findings from R3a that change the design:
-- **`git archive` applies the user's `core.autocrlf`**: on this box the same commit came out with CRLF line endings. `source::archive` passes `-c core.autocrlf=false` so a commit packages the same on every machine.
-- **`cargo publish` itself waits for the crate to become available** ("waiting for NAME vX to be available at registry `crates-io`" in the captured sample). Read-back still runs: cargo's wait is cargo's, and our checksum comparison is ours.
-- **A real 429 sample arrived** from the PM during R3a (relayed verbatim, see `tests/fixtures/README.md`; this lane did not see the full output). It carries a GMT retry-after time, so `classify` returns `RateLimited { retry_at_unix }` and the run waits until then instead of a fixed sleep. Only the "updates to existing crates" limit has a sample; the "new crates" wording is matched by shape and is a guess until R4 captures it. Wiring `retry_at_unix` into `Upload::RateLimited { retry_after }` (against the clock) is R3b.
+Findings from R3b that change the design:
+- **Package the plan in ONE cargo call.** With cargo 1.99.1, `cargo package -p a -p b` succeeds for a `b` whose versioned dependency `a` is unpublished (cargo overlays the set it is packaging), while `cargo package -p b` alone fails. Section 0's table therefore describes what *publishing* one crate at a time needs on the index, not what packaging a set needs. `Cargo::package_set` and `tests/package_table.rs` pin both.
+- **TLS and licences**: `ureq`'s default `rustls` brings `webpki-roots` (CDLA-Permissive-2.0), which `deny.toml` does not allow; the HTTP client uses the platform TLS stack instead (`native-tls`; on Linux this needs the OpenSSL development package, present on GitHub's runners). The deny policy was not changed.
+- A dry run still archives, packages and builds (those are local) and only asks the index questions.
 
-Not yet (R3b): the CLI, the real crates.io `Registry` (sparse index lookup, `cargo publish` adapter, checksums), T10 (`--no-verify` exceptions), T15 (yank), the external-prerequisite check, `plan --exact`, name-ownership check.
+Not done: the external-prerequisite check (a dependency outside the set that is not yet on the index), `plan --exact`, the name-ownership check, and R4's rehearsal. The CLI's `verified` ledger events are written before the run's `planned` event; harmless, noted.

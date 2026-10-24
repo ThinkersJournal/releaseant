@@ -36,6 +36,8 @@ pub enum EventKind {
     Skipped,
     /// The run ended.
     Finished,
+    /// A version was yanked (the reason is in `detail`).
+    Yanked,
 }
 
 /// One ledger line.

@@ -138,3 +138,47 @@ fn output_is_classifiable_even_when_the_workspace_config_forces_colour() {
         other => panic!("expected a failure, got {other:?}"),
     }
 }
+
+/// The same crates that fail one at a time package together: cargo overlays the set it packages.
+/// This is why the pipeline packages the whole plan in one call, and why the single-crate table
+/// above describes *publishing* order, not packaging order.
+#[test]
+fn a_set_packages_together_although_its_dependents_fail_alone() {
+    let p = format!("zzrlt2s{}", std::process::id());
+    let dep = format!("{p}-dep");
+    let ws = tempfile::tempdir().unwrap();
+    let w = ws.path();
+    write(
+        &w.join("Cargo.toml"),
+        &format!("[workspace]\nresolver = \"2\"\nmembers = [\"{p}-*\"]\n"),
+    );
+    member(w, &dep, "");
+    member(
+        w,
+        &format!("{p}-norm"),
+        &format!("[dependencies]\n{dep} = {{ path = \"../{dep}\", version = \"0.0.1\" }}"),
+    );
+    member(
+        w,
+        &format!("{p}-verdev"),
+        &format!("[dev-dependencies]\n{dep} = {{ path = \"../{dep}\", version = \"0.0.1\" }}"),
+    );
+    let cargo = Cargo::from_env();
+    let version: semver::Version = "0.0.1".parse().unwrap();
+    let t1 = tempfile::tempdir().unwrap();
+    // Control: alone, a dependent fails.
+    assert!(
+        cargo
+            .package(w, &format!("{p}-norm"), &version, t1.path())
+            .is_err()
+    );
+    // Together, all three package.
+    let set: Vec<(String, semver::Version)> = ["dep", "norm", "verdev"]
+        .iter()
+        .map(|s| (format!("{p}-{s}"), version.clone()))
+        .collect();
+    let t2 = tempfile::tempdir().unwrap();
+    let files = cargo.package_set(w, &set, t2.path()).unwrap();
+    assert_eq!(files.len(), 3);
+    assert!(files.iter().all(|f| f.is_file()));
+}
