@@ -1,6 +1,6 @@
 # Captured cargo output
 
-Real output, kept byte-for-byte so `classify` is tested against what cargo actually printed.
+Real output as cargo printed it (git may normalise line endings), kept so `classify` is tested against what cargo actually printed.
 A pattern with no sample here does not ship (DESIGN section 4); it classifies as `Unknown`.
 
 | File | What it is | Source | Captured |
