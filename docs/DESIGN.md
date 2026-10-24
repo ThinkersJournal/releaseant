@@ -131,8 +131,15 @@ Rehearsal (R4): a real throwaway set of placeholder crates on crates.io, run onc
 - Version bumping and changelog generation (the PM allocates versions); the tool refuses a set whose versions it did not receive from the manifests.
 - A name-ownership pre-flight (SURVEY Q5) is **in** as `plan --check-names` (API owners lookup), default off, because the failure it prevents (fuel-core, fuel-compression) is real but costs a network call per crate.
 
-## 10. Open items for review
-1. Is `plan --exact` (real `cargo package` per crate) worth its cost, or is the metadata rule enough once T3 is green? (Proposed: keep both; exact is opt-in.)
-2. Yank reason allowlist wording (section 7).
-3. Ledger location default and whether the PM wants the ledger committed somewhere (it contains SHAs and timestamps only).
-4. Exact `--max-wait` default; depends on the R4 measurements.
+## 10. Decisions on the review items (lane, 2026-10-24; the PM delegated them with "defaults conservative")
+
+1. **`plan --exact`**: kept, opt-in, not built in R2 (needs the `Cargo` trait, R3). The default edge rule (section 0) is implemented and tested on fixtures plus one real `cargo metadata` parse. If the exact mode ever disagrees with the rule, the exact result wins and the disagreement is a finding.
+2. **Yank reasons**: the five-way list in section 7 stands (`security`, `broken-build`, `wrong-contents`, `licence`, `other` with a longer text). It is a field for auditing, not a gate on the mechanism.
+3. **Ledger location**: beside the workspace, `.releaseant/ledger.jsonl`, outside the `git archive` directory. Not committed by default (it holds SHAs and timestamps only; committing it is the user's choice).
+4. **`--max-wait`**: default 1 hour of total waiting per run (`Options::max_wait`). A longer window is a deliberate flag, because a stopped run is resumable and a run that waits forever is not visible. The first-publish pace the fuel wave doc quotes (about 7 hours) needs `--max-wait` raised or several resumed runs; R4 measures the real pace.
+
+## 11. Status of the test plan (R2, 0.0.4)
+
+Implemented in `src/` (unit tests) and `tests/`: T3, T4, T5, T6, T7, T8, T12, T13, T14, T16 (ordering and torn tail), T17, and the unknown-result stop, bounded transient retry, `max-wait`, permanent-failure skip, bad-SHA and plan-changed refusals. Each of the following behaviours was **mutated on purpose and a test failed** (checked by hand with a script, not in CI): versioned dev-dep not an edge, prerelease check removed, cycle ignored, lookup failure read as absent, read-back skipped, checksum compare disabled, `upload_started` not written before the upload, rate limit treated as failure, already-published not recognised, dry-run uploading.
+
+Not yet implemented (need cargo or the archive, R3): T1 (archive), T2 (real `cargo package` table), T9 (message table), T10 (`--no-verify` exceptions), T11 (extract-and-check), T15 (yank). Also not yet: external-prerequisite check, `plan --exact`, name-ownership check.
