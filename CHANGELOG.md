@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.3
+
+- R1 design: `docs/DESIGN.md` (publish-set rule measured with real `cargo package`, cycle = error, failure classification, ledger and resume, read-back, yank policy, test plan with a negative control per trap).
+
 ## 0.0.2
 
 - R0 survey: `docs/SURVEY.md` lists what the hand-written publish tooling does, what it shares, and what none of it does.
