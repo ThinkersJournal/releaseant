@@ -58,6 +58,25 @@ pub fn find_version(body: &str, version: &Version) -> Result<Lookup, String> {
     Ok(Lookup::Absent)
 }
 
+/// Every version in an index file body with its yanked flag.
+///
+/// # Errors
+/// A line that is not JSON in the index shape, or a version that is not semver.
+pub fn parse_versions(body: &str) -> Result<Vec<(Version, bool)>, String> {
+    body.lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|line| {
+            let e: Entry =
+                serde_json::from_str(line).map_err(|e| format!("bad index line: {e}"))?;
+            let v = e
+                .vers
+                .parse()
+                .map_err(|err| format!("bad version {:?}: {err}", e.vers))?;
+            Ok((v, e.yanked))
+        })
+        .collect()
+}
+
 /// A sparse index client.
 pub struct Index {
     agent: ureq::Agent,
@@ -83,6 +102,32 @@ impl Index {
         Self {
             agent,
             base: base.trim_end_matches('/').to_owned(),
+        }
+    }
+
+    /// All versions of `name`. A 404 is a definitive "no such crate" (empty list); everything
+    /// else that is not a 200 is an error.
+    ///
+    /// # Errors
+    /// Transport errors, unexpected statuses and unparseable bodies, as text.
+    pub fn versions(&self, name: &str) -> Result<Vec<(Version, bool)>, String> {
+        let url = format!("{}/{}", self.base, index_path(name));
+        let mut resp = self
+            .agent
+            .get(&url)
+            .header("cache-control", "no-cache")
+            .call()
+            .map_err(|e| format!("GET {url}: {e}"))?;
+        match resp.status().as_u16() {
+            200 => {
+                let body = resp
+                    .body_mut()
+                    .read_to_string()
+                    .map_err(|e| format!("reading {url}: {e}"))?;
+                parse_versions(&body)
+            }
+            404 => Ok(Vec::new()),
+            s => Err(format!("GET {url}: HTTP {s}")),
         }
     }
 
@@ -196,6 +241,10 @@ impl Registry for CratesIo {
         self.index.lookup(name, version)
     }
 
+    fn versions(&mut self, name: &str) -> Result<Vec<(Version, bool)>, String> {
+        self.index.versions(name)
+    }
+
     fn upload(&mut self, name: &str, version: &Version) -> Upload {
         let spec = format!("{name}@{version}");
         let target = self.target_dir.to_string_lossy().into_owned();
@@ -242,6 +291,23 @@ mod tests {
         r#"{"name":"x","vers":"2.0.0-alpha.1","cksum":"ccc"}"#,
         "\n"
     );
+
+    #[test]
+    fn parse_versions_lists_every_version_with_its_yanked_flag() {
+        let v = parse_versions(BODY).unwrap();
+        let s = |x: &str| x.parse::<Version>().unwrap();
+        assert_eq!(
+            v,
+            [
+                (s("1.0.0"), false),
+                (s("1.1.0"), true),
+                (s("2.0.0-alpha.1"), false)
+            ]
+        );
+        assert!(parse_versions("").unwrap().is_empty());
+        assert!(parse_versions("not json").is_err());
+        assert!(parse_versions(r#"{"vers":"x.y","cksum":"c"}"#).is_err());
+    }
 
     #[test]
     fn find_version_reads_present_absent_and_yanked() {
@@ -334,6 +400,14 @@ mod tests {
                 &semver
             ),
             Lookup::Absent
+        );
+        // The same questions through `versions`, which the external-prerequisite check uses.
+        let all = idx.versions("semver").unwrap();
+        assert!(all.iter().any(|(v, y)| *v == semver && !*y));
+        assert!(
+            idx.versions(&format!("zzrl-no-such-crate-{}", std::process::id()))
+                .unwrap()
+                .is_empty()
         );
     }
 

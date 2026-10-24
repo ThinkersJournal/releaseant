@@ -9,6 +9,7 @@ use clap::{Parser, Subcommand};
 use releaseant::cargo::Cargo;
 use releaseant::clock::{SystemClock, now_unix};
 use releaseant::crates_io::{CratesIo, INDEX_URL, Index};
+use releaseant::externals::missing_externals;
 use releaseant::ledger::Ledger;
 use releaseant::pipeline::{
     CargoAddCheck, Exception, PipelineError, PublishArgs, package_all, prepare, publish, readback,
@@ -41,7 +42,13 @@ struct Source {
 #[derive(Subcommand)]
 enum Command {
     /// Print the publish order for a commit.
-    Plan(Source),
+    Plan {
+        #[command(flatten)]
+        source: Source,
+        /// Also ask the index whether every dependency outside the set is satisfiable (needs network).
+        #[arg(long)]
+        check_externals: bool,
+    },
     /// Package the commit and build the extracted tarballs; uploads nothing.
     Verify(Source),
     /// Verify, then publish (dry-run unless `--execute`). Running it again resumes.
@@ -110,14 +117,29 @@ fn main() -> ExitCode {
 fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
     let cargo = Cargo::from_env();
     match cli.command {
-        Command::Plan(s) => {
+        Command::Plan {
+            source: s,
+            check_externals,
+        } => {
             let work = work_dir(&run_id(&s.sha));
             let prepared = prepare(&cargo, &s.repo, &s.sha, &work);
             let _ = std::fs::remove_dir_all(&work);
-            for c in prepared?.plan.order {
+            let prepared = prepared?;
+            for c in &prepared.plan.order {
                 println!("{} {}", c.name, c.version);
             }
-            Ok(true)
+            if !check_externals {
+                return Ok(true);
+            }
+            let mut idx = IndexRegistry(Index::new(INDEX_URL));
+            let missing = missing_externals(&prepared.meta, &prepared.plan, &mut idx)?;
+            for m in &missing {
+                println!("MISSING EXTERNAL: {m}");
+            }
+            if missing.is_empty() {
+                println!("externals: every dependency outside the set is on the registry");
+            }
+            Ok(missing.is_empty())
         }
         Command::Verify(s) => {
             let work = work_dir(&run_id(&s.sha));
@@ -290,6 +312,10 @@ struct IndexRegistry(Index);
 impl Registry for IndexRegistry {
     fn lookup(&mut self, name: &str, version: &semver::Version) -> Lookup {
         self.0.lookup(name, version)
+    }
+
+    fn versions(&mut self, name: &str) -> Result<Vec<(semver::Version, bool)>, String> {
+        self.0.versions(name)
     }
 
     fn upload(&mut self, _: &str, _: &semver::Version) -> releaseant::registry::Upload {

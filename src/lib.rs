@@ -11,6 +11,7 @@ pub mod cargo;
 pub mod classify;
 pub mod clock;
 pub mod crates_io;
+pub mod externals;
 pub mod ledger;
 pub mod metadata;
 pub mod pipeline;

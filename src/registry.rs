@@ -52,6 +52,12 @@ pub trait Registry {
     fn lookup(&mut self, name: &str, version: &Version) -> Lookup;
     /// Upload `name@version` from the prepared archive.
     fn upload(&mut self, name: &str, version: &Version) -> Upload;
+    /// Every version of `name` on the registry with its yanked flag; an empty list means the
+    /// registry definitively has no such crate.
+    ///
+    /// # Errors
+    /// The failure text when the registry could not be asked (never read as "no versions").
+    fn versions(&mut self, name: &str) -> Result<Vec<(Version, bool)>, String>;
 }
 
 /// Time, injectable so waiting is testable.
@@ -93,6 +99,10 @@ pub mod fake {
         pub upload_calls: Vec<String>,
         /// Called at the start of each upload.
         pub on_upload: Option<UploadHook>,
+        /// Crates whose published versions all count as yanked in `versions`.
+        pub yanked: BTreeSet<String>,
+        /// Crates for which `versions` fails with this text.
+        pub versions_error: BTreeMap<String, String>,
         lag_left: BTreeMap<(String, String), u32>,
     }
 
@@ -139,6 +149,19 @@ pub mod fake {
                 },
                 None => Lookup::Absent,
             }
+        }
+
+        fn versions(&mut self, name: &str) -> Result<Vec<(Version, bool)>, String> {
+            if let Some(why) = self.versions_error.get(name) {
+                return Err(why.clone());
+            }
+            Ok(self
+                .published
+                .keys()
+                .filter(|(n, _)| n == name)
+                .filter_map(|(_, v)| v.parse().ok())
+                .map(|v| (v, self.yanked.contains(name)))
+                .collect())
         }
 
         fn upload(&mut self, name: &str, version: &Version) -> Upload {
