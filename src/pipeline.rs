@@ -8,7 +8,9 @@ use std::path::{Path, PathBuf};
 use semver::Version;
 
 use crate::cargo::{Cargo, CargoError};
+use crate::externals::{ExternalsError, MissingExternal, missing_externals};
 use crate::ledger::{Event, EventKind, Ledger, LedgerError};
+use crate::metadata::Metadata;
 use crate::plan::{Plan, PlanError, plan};
 use crate::registry::{Clock, Lookup, Registry};
 use crate::run::{Mode, Options, Outcome, Report, RunContext, RunError, run};
@@ -45,6 +47,10 @@ pub enum PipelineError {
     ExceptionWithoutReason(String),
     /// An exception names a crate that is not in the plan.
     ExceptionForUnknownCrate(String),
+    /// The registry could not be asked about the external dependencies.
+    Externals(ExternalsError),
+    /// Dependencies outside the set that the registry cannot satisfy; nothing was uploaded.
+    MissingExternals(Vec<MissingExternal>),
 }
 
 impl fmt::Display for PipelineError {
@@ -69,6 +75,21 @@ impl fmt::Display for PipelineError {
             Self::ExceptionForUnknownCrate(c) => {
                 write!(f, "exception names {c}, which is not in the publish plan")
             }
+            Self::Externals(e) => write!(f, "{e}"),
+            Self::MissingExternals(v) => {
+                write!(
+                    f,
+                    "dependencies outside the set are not on the registry; nothing was uploaded:"
+                )?;
+                for m in v {
+                    write!(
+                        f,
+                        "
+  {m}"
+                    )?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -81,7 +102,7 @@ macro_rules! from_err {
     )*};
 }
 from_err!(SourceError => Source, CargoError => Cargo, PlanError => Plan, RunError => Run,
-          LedgerError => Ledger, io::Error => Io);
+          LedgerError => Ledger, io::Error => Io, ExternalsError => Externals);
 
 /// A commit archived and planned.
 #[derive(Debug)]
@@ -90,6 +111,8 @@ pub struct Prepared {
     pub dir: PathBuf,
     /// The publish plan.
     pub plan: Plan,
+    /// The workspace metadata the plan came from.
+    pub meta: Metadata,
 }
 
 /// Archive `sha` from `repo` into `work/src` and plan it.
@@ -106,7 +129,7 @@ pub fn prepare(
     source::archive(repo, sha, &dir)?;
     let meta = cargo.metadata(&dir)?;
     let plan = plan(&meta)?;
-    Ok(Prepared { dir, plan })
+    Ok(Prepared { dir, plan, meta })
 }
 
 /// Package the whole plan in one cargo call.
@@ -255,6 +278,14 @@ pub fn publish(
             return Err(PipelineError::ExceptionForUnknownCrate(e.krate.clone()));
         }
     }
+    let target_dir = args.work.join("target");
+    let mut registry = make_registry(&prepared.dir, &target_dir);
+    // Before anything is written or built: a dependency outside the set that the registry cannot
+    // satisfy means the dependent cannot be published yet (it would fail at package or upload).
+    let missing = missing_externals(&prepared.meta, &prepared.plan, registry.as_mut())?;
+    if !missing.is_empty() {
+        return Err(PipelineError::MissingExternals(missing));
+    }
     let ledger = Ledger::open(args.ledger)?;
     let version_of = |name: &str| {
         prepared
@@ -277,7 +308,6 @@ pub fn publish(
         )?;
     }
 
-    let target_dir = args.work.join("target");
     let packaged = package_all(cargo, &prepared, &target_dir)?;
     let skip: Vec<String> = args.exceptions.iter().map(|e| e.krate.clone()).collect();
     let verified = verify_set(cargo, &packaged, &args.work.join("verify"), &skip)?;
@@ -293,7 +323,6 @@ pub fn publish(
         record(&ledger, clock, args, EventKind::Verified, Some((n, &v)), "")?;
     }
 
-    let mut registry = make_registry(&prepared.dir, &target_dir);
     let ctx = RunContext {
         run_id: args.run_id.to_owned(),
         sha: args.sha.to_owned(),
@@ -495,7 +524,7 @@ mod tests {
         let err = publish(
             &Cargo::from_env(),
             &args(repo.path(), &sha, &ledger, &work, Mode::Execute, vec![]),
-            |_, _| panic!("the registry must not even be created"),
+            |_, _| Box::new(FakeRegistry::new()),
             &mut FakeClock::default(),
             &mut NoConsumer,
         )
@@ -506,6 +535,56 @@ mod tests {
         }
         let text = fs::read_to_string(&ledger).unwrap();
         assert!(!text.contains("upload_started"), "{text}");
+    }
+
+    // A dependency outside the set that the registry lacks blocks everything before any write.
+    #[test]
+    fn unsatisfied_external_dependency_blocks_the_publish_before_any_write() {
+        let p = pid();
+        let d = tempfile::tempdir().unwrap();
+        let r = d.path();
+        let a = format!("{p}-a");
+        write(
+            &r.join("Cargo.toml"),
+            &format!(
+                "[workspace]
+resolver = \"2\"
+members = [\"{a}\"]
+"
+            ),
+        );
+        write(
+            &r.join(&a).join("Cargo.toml"),
+            &manifest(
+                &a,
+                "[dependencies]
+zzrl-not-yet-published = \"0.23.0\"",
+            ),
+        );
+        write(&r.join(&a).join("src/lib.rs"), "");
+        git(r, &["init", "-q"]);
+        git(r, &["add", "-A"]);
+        git(r, &["commit", "-q", "-m", "one"]);
+        let sha = git(r, &["rev-parse", "HEAD"]);
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let err = publish(
+            &Cargo::from_env(),
+            &args(r, &sha, &ledger, &work, Mode::Execute, vec![]),
+            |_, _| Box::new(FakeRegistry::new()),
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+        .unwrap_err();
+        match err {
+            PipelineError::MissingExternals(m) => {
+                assert_eq!(m.len(), 1);
+                assert_eq!(m[0].dependency, "zzrl-not-yet-published");
+            }
+            other => panic!("{other}"),
+        }
+        assert!(!ledger.exists(), "no ledger was created");
+        assert!(!work.join("target").exists(), "nothing was packaged");
     }
 
     // T10: an exception needs a reason, is recorded, and the consumer check decides the outcome.
