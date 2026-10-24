@@ -58,3 +58,31 @@ lane does not yank them (yank is not part of this rehearsal).
 The lane compares the output with the table above, adds any new real samples as fixtures with
 provenance, fixes what the run showed, and records the measured limits (burst size, interval, the
 retry-after wording of the "new crates" limit if it appeared) in `docs/DESIGN.md` with the date.
+
+## Result (run by the PM, 2026-10-24 01:58-01:59 UTC, releaseant 0.0.7, cargo 1.99.1)
+
+Read from the run's own artifacts (output file and ledger), and cross-checked by the lane against the live
+registry afterwards (crates.io API returns 200 for all six `name@version`s):
+
+- Steps 1-7 matched the table above. Run A published and read back all three crates in about 20 s
+  (roughly 4 to 5 s per crate, which includes cargo's own wait for availability). The checksums the
+  index showed after run A equal the `Accepted` checksums in the ledger for each crate.
+- **Interrupt and resume worked.** Run B was killed after `releaseant-rehearsal-core 0.0.1` was read back;
+  its log was empty (the tool prints at the end), the ledger ended with `mid` `upload_started` and no
+  finish, and the registry confirmed `mid` and `top` ABSENT. The resume reported `core: already published`
+  (ledger `classified: already-published`) and published `mid` and `top` with read-back; the final
+  read-back showed all three present. Each crate/version was uploaded exactly once.
+- **No 429 occurred**, so no rate-limit text was captured and nothing in `tests/fixtures/` changed. The
+  "new crates" limit's wording and the rate numbers remain unmeasured; six uploads are not enough to reach
+  either limit.
+- **Not exercised:** a kill landing *between* an upload and its read-back (here the killed upload had not
+  reached the registry); a lagging index; a dependency not yet visible.
+
+Deviation from the script as written, disclosed by the PM: the PM's copy replaced the
+`CARGO_REGISTRY_TOKEN` check with a check that `~/.cargo/credentials.toml` exists, because the vault had no
+crates.io token and cargo reads that file. The script in the repository is unchanged and still asks for the
+environment variable; a lane or CI that has the token only in `credentials.toml` needs the same tweak.
+
+Small findings: the interrupted run's output is empty because progress is printed at the end (a live
+progress line per crate would help a human watching); the `verified` ledger events precede the `planned`
+event of the same run.
