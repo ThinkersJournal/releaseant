@@ -1,0 +1,11 @@
+warning: manifest has no documentation, homepage or repository
+  |
+  = note: see https://doc.rust-lang.org/cargo/reference/manifest.html#package-metadata for more info
+   Packaging zzrlprobe23934-verdev v0.0.1 (C:\Users\cires\AppData\Local\Temp\claude\C--Projects-releaseant\ab5173a5-1359-4b80-b76d-8a4004a4a042\scratchpad\q1\zzrlprobe23934-verdev)
+    Updating crates.io index
+error: failed to prepare local package for uploading
+
+Caused by:
+  no matching package named `zzrlprobe23934-dep` found
+  location searched: crates.io index
+  required by package `zzrlprobe23934-verdev v0.0.1 (C:\Users\cires\AppData\Local\Temp\claude\C--Projects-releaseant\ab5173a5-1359-4b80-b76d-8a4004a4a042\scratchpad\q1\zzrlprobe23934-verdev)`

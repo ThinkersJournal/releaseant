@@ -1,0 +1,20 @@
+    Updating crates.io index
+   Packaging baracuda-core v0.0.1-alpha.152 (C:\Users\cires\AppData\Local\Temp\ba-pub.eeNq\crates\baracuda-core)
+    Updating crates.io index
+    Packaged 12 files, 53.4KiB (17.0KiB compressed)
+   Verifying baracuda-core v0.0.1-alpha.152 (C:\Users\cires\AppData\Local\Temp\ba-pub.eeNq\crates\baracuda-core)
+ Downloading crates ...
+  Downloaded baracuda-types v0.0.1-alpha.152
+   Compiling thiserror v2.0.20
+   Compiling windows-link v0.2.1
+   Compiling syn v3.0.6
+   Compiling baracuda-types v0.0.1-alpha.152
+   Compiling libloading v0.8.9
+   Compiling thiserror-impl v2.0.20
+   Compiling baracuda-core v0.0.1-alpha.152 (C:\Users\cires\AppData\Local\Temp\ba-pub.eeNq\target\package\baracuda-core-0.0.1-alpha.152)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.79s
+   Uploading baracuda-core v0.0.1-alpha.152 (C:\Users\cires\AppData\Local\Temp\ba-pub.eeNq\crates\baracuda-core)
+    Uploaded baracuda-core v0.0.1-alpha.152 to registry `crates-io`
+note: waiting for baracuda-core v0.0.1-alpha.152 to be available at registry `crates-io`
+help: you may press ctrl-c to skip waiting; the crate should be available shortly
+   Published baracuda-core v0.0.1-alpha.152 at registry `crates-io`

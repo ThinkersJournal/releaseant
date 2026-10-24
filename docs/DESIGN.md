@@ -138,8 +138,15 @@ Rehearsal (R4): a real throwaway set of placeholder crates on crates.io, run onc
 3. **Ledger location**: beside the workspace, `.releaseant/ledger.jsonl`, outside the `git archive` directory. Not committed by default (it holds SHAs and timestamps only; committing it is the user's choice).
 4. **`--max-wait`**: default 1 hour of total waiting per run (`Options::max_wait`). A longer window is a deliberate flag, because a stopped run is resumable and a run that waits forever is not visible. The first-publish pace the fuel wave doc quotes (about 7 hours) needs `--max-wait` raised or several resumed runs; R4 measures the real pace.
 
-## 11. Status of the test plan (R2, 0.0.4)
+## 11. Status of the test plan (R3a, 0.0.5)
 
-Implemented in `src/` (unit tests) and `tests/`: T3, T4, T5, T6, T7, T8, T12, T13, T14, T16 (ordering and torn tail), T17, and the unknown-result stop, bounded transient retry, `max-wait`, permanent-failure skip, bad-SHA and plan-changed refusals. Each of the following behaviours was **mutated on purpose and a test failed** (checked by hand with a script, not in CI): versioned dev-dep not an edge, prerelease check removed, cycle ignored, lookup failure read as absent, read-back skipped, checksum compare disabled, `upload_started` not written before the upload, rate limit treated as failure, already-published not recognised, dry-run uploading.
+Implemented: T1 (`source`), T2 (`tests/package_table.rs`, real cargo, needs network), T3-T9, T11 (`verify`), T12-T14, T16, T17, plus the unknown-result stop, bounded transient retry, `max-wait`, permanent-failure skip, bad-SHA and plan-changed refusals.
 
-Not yet implemented (need cargo or the archive, R3): T1 (archive), T2 (real `cargo package` table), T9 (message table), T10 (`--no-verify` exceptions), T11 (extract-and-check), T15 (yank). Also not yet: external-prerequisite check, `plan --exact`, name-ownership check.
+Mutation checks done by hand with a script (not in CI): R2's ten (see the 0.0.4 changelog entry) and, in R3a, archive honouring the user's `core.autocrlf`, a loose `already exists` match, a loose `Published` match (first run NOT caught, a test case was added, then caught), and verification never reporting failure.
+
+Findings from R3a that change the design:
+- **`git archive` applies the user's `core.autocrlf`**: on this box the same commit came out with CRLF line endings. `source::archive` passes `-c core.autocrlf=false` so a commit packages the same on every machine.
+- **`cargo publish` itself waits for the crate to become available** ("waiting for NAME vX to be available at registry `crates-io`" in the captured sample). Read-back still runs: cargo's wait is cargo's, and our checksum comparison is ours.
+- **No real 429 sample exists** (the PM's logs did not keep the text). By DESIGN section 4, rate-limited `cargo publish` output classifies as `Unknown` and stops the run (resumable) until R4 captures one. The README in `tests/fixtures/` says so.
+
+Not yet (R3b): the CLI, the real crates.io `Registry` (sparse index lookup, `cargo publish` adapter, checksums), T10 (`--no-verify` exceptions), T15 (yank), the external-prerequisite check, `plan --exact`, name-ownership check.
