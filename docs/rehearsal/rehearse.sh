@@ -48,7 +48,7 @@ PID=$!
 WINPID=$(cat "/proc/$PID/winpid" 2>/dev/null || true)
 interrupted=no
 for _ in $(seq 1 3000); do
-  if grep -q "\"crate\":\"$CORE\",\"version\":\"0.0.1\",\"event\":\"visible\"" "$LEDGER" 2>/dev/null; then
+  if grep -q "\"sha\":\"$B\",\"crate\":\"$CORE\",\"version\":\"0.0.1\",\"event\":\"visible\"" "$LEDGER" 2>/dev/null; then
     if [ -n "$WINPID" ]; then taskkill //F //T //PID "$WINPID" >/dev/null 2>&1; else kill -9 "$PID" 2>/dev/null; fi
     interrupted=yes
     break
