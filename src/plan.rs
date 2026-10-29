@@ -40,6 +40,24 @@ impl Plan {
             .collect::<Vec<_>>()
             .join(";")
     }
+
+    /// This plan without the named crates (a recorded exclusion). The order of the rest is
+    /// unchanged and the excluded names disappear from every `depends_on`: a crate that needs an
+    /// excluded one is the registry's business, see [`crate::externals::missing_externals`].
+    #[must_use]
+    pub fn without(&self, names: &BTreeSet<String>) -> Plan {
+        Plan {
+            order: self
+                .order
+                .iter()
+                .filter(|c| !names.contains(&c.name))
+                .map(|c| PlannedCrate {
+                    depends_on: c.depends_on.difference(names).cloned().collect(),
+                    ..c.clone()
+                })
+                .collect(),
+        }
+    }
 }
 
 /// Why a plan could not be made. Nothing is uploaded when planning fails.
@@ -270,6 +288,31 @@ mod tests {
 
     fn names(p: &Plan) -> Vec<&str> {
         p.order.iter().map(|c| c.name.as_str()).collect()
+    }
+
+    #[test]
+    fn without_drops_the_named_crates_keeps_the_order_and_forgets_them_as_prerequisites() {
+        let m = Metadata {
+            packages: vec![
+                pkg("a", "1.0.0", vec![]),
+                pkg("b", "1.0.0", vec![dep("a", "^1", None)]),
+                pkg(
+                    "c",
+                    "1.0.0",
+                    vec![dep("a", "^1", None), dep("b", "^1", None)],
+                ),
+            ],
+        };
+        let full = plan(&m).unwrap();
+        assert_eq!(names(&full), ["a", "b", "c"]);
+        let cut = full.without(&BTreeSet::from(["b".to_owned()]));
+        assert_eq!(names(&cut), ["a", "c"]);
+        let c = cut.order.iter().find(|c| c.name == "c").unwrap();
+        assert_eq!(c.depends_on, BTreeSet::from(["a".to_owned()]));
+        // The plan changed, so a resume that expected the full plan is told so.
+        assert_ne!(cut.fingerprint(), full.fingerprint());
+        // Negative control: excluding nothing is the identity.
+        assert_eq!(full.without(&BTreeSet::new()), full);
     }
 
     // T3: the edge rule, one fixture per dependency position.
