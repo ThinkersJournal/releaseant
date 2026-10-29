@@ -10,12 +10,14 @@ use releaseant::cargo::Cargo;
 use releaseant::clock::{SystemClock, now_unix};
 use releaseant::crates_io::{CratesIo, INDEX_URL, Index};
 use releaseant::externals::missing_externals;
-use releaseant::ledger::Ledger;
+use releaseant::ledger::{Event, EventKind, Ledger};
 use releaseant::pipeline::{
-    CargoAddCheck, Exception, PipelineError, PublishArgs, package_all, prepare, publish, readback,
+    CargoAddCheck, Exception, PipelineError, PublishArgs, Summary, package_all, prepare, publish,
+    readback,
 };
-use releaseant::registry::{Lookup, Registry};
+use releaseant::registry::{Clock, Lookup, Registry};
 use releaseant::run::{Mode, Options, Outcome};
+use releaseant::tag::{TagOutcome, TagRequest, release_version, tag_release};
 use releaseant::verify::verify_set;
 use releaseant::yank::{CargoYank, YankOutcome, yank};
 
@@ -84,6 +86,31 @@ enum Command {
         /// Keep the scratch directory.
         #[arg(long)]
         keep: bool,
+        /// When the run has published everything, tag the commit `v<version>` on origin and read it
+        /// back (with `--execute`; without it, check that the tag could be made).
+        #[arg(long)]
+        tag: bool,
+        /// The version to tag, when the crates are at several versions.
+        #[arg(long)]
+        tag_version: Option<semver::Version>,
+        /// The project name in the tag message (default: the repository directory's name).
+        #[arg(long)]
+        tag_name: Option<String>,
+    },
+    /// Tag a published release: an annotated `v<version>` on the commit, pushed to origin and read
+    /// back (dry-run unless `--execute`).
+    Tag {
+        #[command(flatten)]
+        source: Source,
+        /// The released version; the tag is `v<version>`.
+        #[arg(long)]
+        version: semver::Version,
+        /// The project name in the tag message (default: the repository directory's name).
+        #[arg(long)]
+        name: Option<String>,
+        /// Actually create and push the tag. Without this nothing is written.
+        #[arg(long)]
+        execute: bool,
     },
     /// Ask the index about every crate in the plan.
     Readback(Source),
@@ -190,6 +217,9 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             exclude,
             exclude_reason,
             keep,
+            tag,
+            tag_version,
+            tag_name,
         } => {
             if no_verify_crate.len() != reason.len() {
                 return Err("every --no-verify-crate needs its own --reason".into());
@@ -202,6 +232,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                 .zip(exclude_reason)
                 .map(|(krate, reason)| Exception { krate, reason })
                 .collect();
+            let any_excluded = !excluded.is_empty();
             let exceptions: Vec<Exception> = no_verify_crate
                 .into_iter()
                 .zip(reason)
@@ -268,7 +299,39 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                 "ledger: {}",
                 ledger_path.display().to_string().replace('\\', "/")
             );
-            Ok(summary.is_success() || (!execute && summary.report.stopped.is_none()))
+            let published = summary.is_success() || (!execute && summary.report.stopped.is_none());
+            let tagged = !tag
+                || tag_after_publish(
+                    &TagAfter {
+                        source: &source,
+                        execute,
+                        any_excluded,
+                        version: tag_version.as_ref(),
+                        name: tag_name,
+                        ledger: &ledger_path,
+                        run_id: &id,
+                    },
+                    &summary,
+                );
+            Ok(published && tagged)
+        }
+        Command::Tag {
+            source,
+            version,
+            name,
+            execute,
+        } => {
+            let name = name.unwrap_or_else(|| project_name(&source.repo));
+            let outcome = tag_release(&TagRequest {
+                repo: &source.repo,
+                name: &name,
+                version: &version,
+                sha: &source.sha,
+                execute,
+                identity: None,
+            })?;
+            println!("{}", describe_tag(&outcome, &version, &source.sha));
+            Ok(true)
         }
         Command::Readback(s) => {
             let work = work_dir(&run_id(&s.sha));
@@ -337,6 +400,113 @@ fn describe(o: &Outcome) -> String {
         Outcome::Skipped { blocked_by } => format!("skipped (blocked by {blocked_by})"),
         Outcome::Interrupted(why) => format!("INTERRUPTED: {why}"),
         Outcome::NotAttempted => "not attempted".into(),
+    }
+}
+
+fn describe_tag(o: &TagOutcome, version: &semver::Version, sha: &str) -> String {
+    match o {
+        TagOutcome::WouldTag => {
+            format!("would tag v{version} -> {sha} (dry run: nothing was created; use --execute)")
+        }
+        TagOutcome::AlreadyTagged => format!("already tagged v{version} -> {sha}"),
+        TagOutcome::Tagged => format!("tagged v{version} -> {sha} (read back from origin)"),
+    }
+}
+
+/// The repository directory's name, for the tag message.
+fn project_name(repo: &Path) -> String {
+    std::fs::canonicalize(repo)
+        .ok()
+        .and_then(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+        .unwrap_or_else(|| "release".to_owned())
+}
+
+/// What `publish --tag` needs beyond the summary.
+struct TagAfter<'a> {
+    source: &'a Source,
+    execute: bool,
+    any_excluded: bool,
+    version: Option<&'a semver::Version>,
+    name: Option<String>,
+    ledger: &'a Path,
+    run_id: &'a str,
+}
+
+/// Tag the release once a publish has put everything on the registry. `true` unless a tag that
+/// should have been made was not; "not yet" and "not for this run" are reported and are not failures.
+fn tag_after_publish(t: &TagAfter<'_>, summary: &Summary) -> bool {
+    if t.execute && !summary.is_success() {
+        println!(
+            "not tagged: the run did not finish; run the same command again to resume, it tags when done"
+        );
+        return true;
+    }
+    if t.any_excluded {
+        println!(
+            "not tagged: crates were excluded from this run; tag when the set is complete with \
+             `releaseant tag --sha {} --version <version> --execute`",
+            t.source.sha
+        );
+        return true;
+    }
+    let version = match release_version(&summary.plan, t.version) {
+        Ok(v) => v,
+        Err(why) => {
+            println!(
+                "{}not tagged: {why}",
+                unless_dry(t.execute, "PUBLISHED but ")
+            );
+            return false;
+        }
+    };
+    let name = t
+        .name
+        .clone()
+        .unwrap_or_else(|| project_name(&t.source.repo));
+    let outcome = tag_release(&TagRequest {
+        repo: &t.source.repo,
+        name: &name,
+        version: &version,
+        sha: &t.source.sha,
+        execute: t.execute,
+        identity: None,
+    });
+    match outcome {
+        Ok(o) => {
+            println!("{}", describe_tag(&o, &version, &t.source.sha));
+            if o == TagOutcome::Tagged {
+                record_tag(t, &version);
+            }
+            true
+        }
+        Err(why) => {
+            println!(
+                "{}not tagged: {why}\nfix that, then run `releaseant tag --sha {} --version {version} --execute`",
+                unless_dry(t.execute, "PUBLISHED but "),
+                t.source.sha
+            );
+            false
+        }
+    }
+}
+
+fn unless_dry(execute: bool, text: &'static str) -> &'static str {
+    if execute { text } else { "" }
+}
+
+/// The ledger notes the tag; a failure to write it is reported, the tag itself stands.
+fn record_tag(t: &TagAfter<'_>, version: &semver::Version) {
+    let event = Event {
+        ts: SystemClock.now_utc(),
+        run: t.run_id.to_owned(),
+        sha: t.source.sha.clone(),
+        crate_name: None,
+        version: Some(version.to_string()),
+        event: EventKind::Tagged,
+        detail: format!("v{version} read back from origin"),
+    };
+    if let Err(e) = Ledger::open(t.ledger).and_then(|l| l.append(&event)) {
+        println!("warning: the tag stands but the ledger could not record it: {e}");
     }
 }
 

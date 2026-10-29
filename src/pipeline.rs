@@ -234,6 +234,8 @@ pub struct Summary {
     pub verified: Vec<(String, Result<(), String>)>,
     /// Consumer-check result per exception crate that became visible.
     pub consumer: Vec<(String, Result<(), String>)>,
+    /// The plan that was run, without any excluded crates.
+    pub plan: Plan,
 }
 
 impl Summary {
@@ -409,6 +411,7 @@ pub fn publish(
         report,
         verified,
         consumer: consumer_results,
+        plan: prepared.plan,
     })
 }
 

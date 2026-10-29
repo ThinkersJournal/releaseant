@@ -19,5 +19,6 @@ pub mod plan;
 pub mod registry;
 pub mod run;
 pub mod source;
+pub mod tag;
 pub mod verify;
 pub mod yank;

@@ -38,6 +38,8 @@ pub enum EventKind {
     Finished,
     /// A version was yanked (the reason is in `detail`).
     Yanked,
+    /// The release was tagged in git (the tag is in `detail`, the version in `version`).
+    Tagged,
 }
 
 /// One ledger line.
