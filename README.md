@@ -7,8 +7,8 @@ holds an empty 0.0.0 placeholder).
 
 ## Install
 
-Not on crates.io yet. From a clone (Rust 1.88 or newer; `cargo install` puts the binary in `~/.cargo/bin`,
-which rustup already put on your `PATH`):
+Not on crates.io yet. From a clone (Rust 1.88 or newer; the build takes a few minutes; `cargo install` puts the
+binary in `~/.cargo/bin`, which rustup already put on your `PATH`):
 
 ```console
 git clone https://github.com/ThinkersJournal/releaseant
@@ -18,13 +18,44 @@ cargo install --path .
 
 ## Hello
 
-You have a git workspace where `releaseant-demo-app` depends on `releaseant-demo-core`, and it is committed.
-Each crate has the fields crates.io requires (`description` and `license`), and the dependency names a
-version as well as a path (`releaseant-demo-core = { path = "../releaseant-demo-core", version = "0.1.0" }`).
+Say you have this workspace of two crates, each with an empty `src/lib.rs`, committed in git (`git init`,
+`git add -A`, `git commit`). crates.io requires `description` and `license` in each crate, and ReleaseAnt needs
+a dependency on a crate of the workspace to name a `version` as well as a `path`:
+
+<!-- hello:begin -->
+```toml
+# Cargo.toml
+[workspace]
+members = ["releaseant-demo-core", "releaseant-demo-app"]
+resolver = "2"
+```
+
+```toml
+# releaseant-demo-core/Cargo.toml
+[package]
+name = "releaseant-demo-core"
+version = "0.1.0"
+edition = "2021"
+description = "A demo crate"
+license = "MIT OR Apache-2.0"
+```
+
+```toml
+# releaseant-demo-app/Cargo.toml
+[package]
+name = "releaseant-demo-app"
+version = "0.1.0"
+edition = "2021"
+description = "A demo crate that uses the other one"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+releaseant-demo-core = { path = "../releaseant-demo-core", version = "0.1.0" }
+```
+
 ReleaseAnt works from a commit, never from your working tree, so it needs the commit's full SHA. Run it from
 inside the repository (or add `--repo PATH`):
 
-<!-- hello:begin -->
 ```console
 $ SHA=$(git rev-parse HEAD)
 $ releaseant plan --sha $SHA
@@ -49,7 +80,8 @@ error: not a full 40-hex commit SHA: "main" (get one with `git rev-parse main`)
 <!-- hello:end -->
 
 The ledger is a plain file, one JSON event per line, appended before each action. A dry run writes it too, so
-`.releaseant/` shows up as untracked in `git status`.
+`.releaseant/` shows up as untracked in `git status`. Commit it if you want the record in git, or add it to
+`.gitignore`; ReleaseAnt does not mind either way.
 
 ## Publishing for real
 
