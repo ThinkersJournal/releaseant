@@ -2,8 +2,8 @@
 
 Ordered, verified, resumable publishing of Rust crates and workspaces to crates.io, with read-back.
 
-**Status: not ready for developer use** until its first release: version 0.0.11, not yet published (the
-crates.io name holds an empty 0.0.0 placeholder).
+**Status: not ready for developer use** until its first release: not yet published (the crates.io name
+holds an empty 0.0.0 placeholder).
 
 ## Install
 
