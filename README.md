@@ -18,9 +18,15 @@ cargo install --path .
 
 ## Hello
 
-Say you have this workspace of two crates, each with an empty `src/lib.rs`, committed in git (`git init`,
-`git add -A`, `git commit`). crates.io requires `description` and `license` in each crate, and ReleaseAnt needs
-a dependency on a crate of the workspace to name a `version` as well as a `path`:
+Say you have this workspace of two crates, each with an empty `src/lib.rs` and a `README.md`, committed in git
+(`git init`, `git add -A`, `git commit`). Before anything is uploaded, `plan` checks every crate's publish
+metadata. What crates.io refuses is an **error** and stops the plan: no `description`, neither `license` nor
+`license-file`, more than five `keywords` or one it does not accept, a category that is not one of its slugs, a
+`readme` or `license-file` that is not there. What it accepts without is a **warning**, listed and not stopping
+anything: no `repository`, README, `keywords`, `categories` or `rust-version`; name the ones you want enforced with
+`--require-metadata readme,keywords,rust-version`. Every problem of every crate is listed at once, so a set never
+dies half-published at the crate that lacked one. ReleaseAnt also needs a dependency on a crate of the workspace
+to name a `version` as well as a `path`:
 
 <!-- hello:begin -->
 ```toml
@@ -28,26 +34,43 @@ a dependency on a crate of the workspace to name a `version` as well as a `path`
 [workspace]
 members = ["releaseant-demo-core", "releaseant-demo-app"]
 resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/example/releaseant-demo"
+rust-version = "1.70"
+keywords = ["demo"]
+categories = ["development-tools"]
 ```
 
 ```toml
 # releaseant-demo-core/Cargo.toml
 [package]
 name = "releaseant-demo-core"
-version = "0.1.0"
-edition = "2021"
 description = "A demo crate"
-license = "MIT OR Apache-2.0"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+keywords.workspace = true
+categories.workspace = true
 ```
 
 ```toml
 # releaseant-demo-app/Cargo.toml
 [package]
 name = "releaseant-demo-app"
-version = "0.1.0"
-edition = "2021"
 description = "A demo crate that uses the other one"
-license = "MIT OR Apache-2.0"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 releaseant-demo-core = { path = "../releaseant-demo-core", version = "0.1.0" }
@@ -117,6 +140,8 @@ consumer after upload instead).
 - Each package is extracted and built before anything is uploaded.
 - A dependency outside the set that is not on the registry stops the run before anything is written.
 - A registry lookup that fails stops the run; it is never read as "not published".
+- Publish metadata the registry refuses (see Hello) stops the run before anything is written, with every problem
+  listed; the quality fields it accepts without are warnings, and `--require-metadata` makes them errors.
 
 More, in the clone: `docs/DESIGN.md` (how it works and why), `ROADMAP.md`, `CHANGELOG.md`.
 

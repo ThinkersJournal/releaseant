@@ -168,12 +168,7 @@ mod tests {
     use crate::registry::fake::FakeRegistry;
 
     fn pkg(name: &str, deps: Vec<Dependency>) -> Package {
-        Package {
-            name: name.into(),
-            version: "1.0.0".parse().unwrap(),
-            publish: None,
-            dependencies: deps,
-        }
+        Package::test(name, "1.0.0", deps)
     }
 
     fn dep(name: &str, req: &str, kind: Option<&str>) -> Dependency {

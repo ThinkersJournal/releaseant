@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.16
+
+- Pre-upload metadata check (ROADMAP R6), split by who refuses (PM, 2026-10-29). **Errors** stop `plan`, `verify` and `publish` before anything is written: no `description`, neither `license` nor `license-file`, more than five `keywords` or one crates.io refuses (ASCII, at most 20 characters, starting alphanumeric, only letters, digits, `_`, `-`, `+`), more than five `categories` or one that is not a crates.io slug, a named readme or licence file that is missing. **Warnings**, listed on stderr with exit 0: no `repository`, README, `keywords`, `categories` or `rust-version`. `--require-metadata FIELD,...` (on `plan`, `verify` and `publish`) turns chosen warnings into errors. Every problem of every planned crate is listed with what to add; crates outside the plan (excluded, `publish = false`) are not looked at. New modules `preflight` and `categories` (crates.io's 104 category slugs as of 2026-10-29), `PipelineError::Metadata`, `pipeline::check_metadata`, `PublishArgs::require_metadata`, `Summary::warnings`, more fields on `metadata::Package`. Found by mutating the README sample: deleting `description` used to leave `plan` and the dry-run `publish` green (cargo package only warns). At `origin/main` on 2026-10-29 every real set plans with zero errors and only warnings; see `docs/ADOPTION.md` open item 1.
+- The README sample is now a complete workspace (workspace-inherited metadata); README tests delete its `description` and expect `plan` to fail naming the crate, delete its README files and expect warnings, and exercise `--require-metadata`.
+- The run id, which names the scratch directory, now includes the process id: two runs on the same commit in the same second shared one scratch directory and the first to finish deleted the other's archive (found by parallel tests on identical demo commits).
+
 ## 0.0.15
 
 - `docs/PATENT-SWEEP.md` third pass: five of the seen-but-unread results read claim by claim (hits 22 to 26, starting with Amazon's log-based transaction manager, US20150378775A1, read through its grant US10282228B2), all outside as read. 26 read in all, none needs review; 17 results remain unread and are listed. One design constraint added.

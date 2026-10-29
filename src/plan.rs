@@ -269,12 +269,7 @@ mod tests {
     use crate::metadata::{Dependency, Package};
 
     fn pkg(name: &str, version: &str, deps: Vec<Dependency>) -> Package {
-        Package {
-            name: name.into(),
-            version: version.parse().unwrap(),
-            publish: None,
-            dependencies: deps,
-        }
+        Package::test(name, version, deps)
     }
 
     fn dep(name: &str, req: &str, kind: Option<&str>) -> Dependency {

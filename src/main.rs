@@ -1,5 +1,6 @@
 //! The `releaseant` command line. Dry-run is the default; uploading and yanking need `--execute`.
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
@@ -12,9 +13,10 @@ use releaseant::crates_io::{CratesIo, INDEX_URL, Index};
 use releaseant::externals::missing_externals;
 use releaseant::ledger::{Event, EventKind, Ledger};
 use releaseant::pipeline::{
-    CargoAddCheck, Exception, PipelineError, PublishArgs, Summary, package_all, prepare, publish,
-    readback,
+    CargoAddCheck, Exception, PipelineError, PublishArgs, Summary, check_metadata, package_all,
+    prepare, publish, readback,
 };
+use releaseant::preflight::{Problem, parse_require};
 use releaseant::registry::{Clock, Lookup, Registry};
 use releaseant::run::{Mode, Options, Outcome};
 use releaseant::tag::{TagOutcome, TagRequest, release_version, tag_release};
@@ -41,6 +43,28 @@ struct Source {
     sha: String,
 }
 
+#[derive(clap::Args, Clone)]
+struct MetadataPolicy {
+    /// Treat these missing quality fields as errors instead of warnings (comma-separated; one or more
+    /// of readme, keywords, rust-version, categories, repository). A missing description or licence,
+    /// or a value crates.io refuses, is always an error.
+    #[arg(long = "require-metadata", value_delimiter = ',')]
+    require_metadata: Vec<String>,
+}
+
+impl MetadataPolicy {
+    fn set(&self) -> Result<BTreeSet<String>, Box<dyn std::error::Error>> {
+        parse_require(&self.require_metadata).map_err(Into::into)
+    }
+}
+
+/// Metadata problems that did not stop the run, on stderr so a plan on stdout stays clean.
+fn print_warnings(warnings: &[Problem]) {
+    for w in warnings {
+        eprintln!("warning: {w}");
+    }
+}
+
 #[derive(Subcommand)]
 enum Command {
     /// Print the publish order for a commit.
@@ -53,9 +77,16 @@ enum Command {
         /// Show the plan without this crate, as `publish --exclude` would run it.
         #[arg(long = "exclude")]
         exclude: Vec<String>,
+        #[command(flatten)]
+        policy: MetadataPolicy,
     },
     /// Package the commit and build the extracted tarballs; uploads nothing.
-    Verify(Source),
+    Verify {
+        #[command(flatten)]
+        source: Source,
+        #[command(flatten)]
+        policy: MetadataPolicy,
+    },
     /// Verify, then publish (dry-run unless `--execute`). Running it again resumes.
     #[command(alias = "resume")]
     Publish {
@@ -83,6 +114,8 @@ enum Command {
         /// Why the matching `--exclude` is left out; recorded in the ledger.
         #[arg(long = "exclude-reason")]
         exclude_reason: Vec<String>,
+        #[command(flatten)]
+        policy: MetadataPolicy,
         /// Keep the scratch directory.
         #[arg(long)]
         keep: bool,
@@ -136,8 +169,16 @@ fn work_dir(run_id: &str) -> PathBuf {
     std::env::temp_dir().join(format!("releaseant-{run_id}"))
 }
 
+/// Names a run and its scratch directory. The process id is part of it: two runs on the same commit in
+/// the same second (a CI matrix, parallel tests) would otherwise share one scratch directory, and the
+/// first to finish would delete the other's archive.
 fn run_id(sha: &str) -> String {
-    format!("{}-{}", &sha[..8.min(sha.len())], now_unix())
+    format!(
+        "{}-{}-{}",
+        &sha[..8.min(sha.len())],
+        now_unix(),
+        std::process::id()
+    )
 }
 
 fn main() -> ExitCode {
@@ -158,18 +199,28 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             source: s,
             check_externals,
             exclude,
+            policy,
         } => {
+            let require = policy.set()?;
             let work = work_dir(&run_id(&s.sha));
             let prepared = prepare(&cargo, &s.repo, &s.sha, &work);
+            // The metadata check reads files in the archive, so it runs before the scratch directory goes.
+            let prepared = prepared
+                .map_err(Box::<dyn std::error::Error>::from)
+                .and_then(|mut p| {
+                    if let Some(unknown) = exclude
+                        .iter()
+                        .find(|n| !p.plan.order.iter().any(|c| &c.name == *n))
+                    {
+                        return Err(format!("--exclude {unknown}: not in the publish plan").into());
+                    }
+                    p.plan = p.plan.without(&exclude.into_iter().collect());
+                    let warnings = check_metadata(&p, &require)?;
+                    Ok((p, warnings))
+                });
             let _ = std::fs::remove_dir_all(&work);
-            let mut prepared = prepared?;
-            if let Some(unknown) = exclude
-                .iter()
-                .find(|n| !prepared.plan.order.iter().any(|c| &c.name == *n))
-            {
-                return Err(format!("--exclude {unknown}: not in the publish plan").into());
-            }
-            prepared.plan = prepared.plan.without(&exclude.into_iter().collect());
+            let (prepared, warnings) = prepared?;
+            print_warnings(&warnings);
             for c in &prepared.plan.order {
                 println!("{} {}", c.name, c.version);
             }
@@ -186,10 +237,12 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             }
             Ok(missing.is_empty())
         }
-        Command::Verify(s) => {
+        Command::Verify { source: s, policy } => {
+            let require = policy.set()?;
             let work = work_dir(&run_id(&s.sha));
             let result = (|| -> Result<bool, PipelineError> {
                 let prepared = prepare(&cargo, &s.repo, &s.sha, &work)?;
+                print_warnings(&check_metadata(&prepared, &require)?);
                 let packaged = package_all(&cargo, &prepared, &work.join("target"))?;
                 let results = verify_set(&cargo, &packaged, &work.join("verify"), &[])?;
                 let mut ok = true;
@@ -216,11 +269,13 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             reason,
             exclude,
             exclude_reason,
+            policy,
             keep,
             tag,
             tag_version,
             tag_name,
         } => {
+            let require_metadata = policy.set()?;
             if no_verify_crate.len() != reason.len() {
                 return Err("every --no-verify-crate needs its own --reason".into());
             }
@@ -260,6 +315,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                     opts,
                     exceptions,
                     excluded,
+                    require_metadata,
                 },
                 |dir, target| {
                     Box::new(CratesIo::new(
@@ -278,6 +334,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                 let _ = std::fs::remove_dir_all(&work);
             }
             let summary = summary?;
+            print_warnings(&summary.warnings);
             for (n, o) in &summary.report.outcomes {
                 println!("{n}: {}", describe(o));
             }

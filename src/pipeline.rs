@@ -1,5 +1,6 @@
 //! prepare -> package -> verify -> run -> consumer checks (DESIGN section 3).
 
+use std::collections::BTreeSet;
 use std::fmt;
 use std::fs;
 use std::io;
@@ -12,6 +13,7 @@ use crate::externals::{ExternalsError, MissingExternal, missing_externals};
 use crate::ledger::{Event, EventKind, Ledger, LedgerError};
 use crate::metadata::Metadata;
 use crate::plan::{Plan, PlanError, plan};
+use crate::preflight::{self, Problem};
 use crate::registry::{Clock, Lookup, Registry};
 use crate::run::{Mode, Options, Outcome, Report, RunContext, RunError, run};
 use crate::source::{self, SourceError};
@@ -55,6 +57,8 @@ pub enum PipelineError {
     Externals(ExternalsError),
     /// Dependencies outside the set that the registry cannot satisfy; nothing was uploaded.
     MissingExternals(Vec<MissingExternal>),
+    /// Crates in the plan whose publish metadata is incomplete; nothing was uploaded.
+    Metadata(Vec<Problem>),
 }
 
 impl fmt::Display for PipelineError {
@@ -86,6 +90,18 @@ impl fmt::Display for PipelineError {
                 write!(f, "exclusion names {c}, which is not in the publish plan")
             }
             Self::Externals(e) => write!(f, "{e}"),
+            Self::Metadata(v) => {
+                write!(
+                    f,
+                    "publish metadata is incomplete for {} problem(s); nothing was uploaded. \
+                     Fix these in the crates' Cargo.toml files and commit:",
+                    v.len()
+                )?;
+                for p in v {
+                    write!(f, "\n  {p}")?;
+                }
+                Ok(())
+            }
             Self::MissingExternals(v) => {
                 write!(
                     f,
@@ -140,6 +156,25 @@ pub fn prepare(
     let meta = cargo.metadata(&dir)?;
     let plan = plan(&meta)?;
     Ok(Prepared { dir, plan, meta })
+}
+
+/// Refuse a plan whose crates are missing metadata the registry refuses to publish without, naming
+/// every error of every crate; the quality fields it accepts without come back as warnings, and
+/// `require` turns the named ones into errors (see [`preflight`]). Run it while the archive
+/// directory exists: it also checks that each readme and licence file is there.
+///
+/// # Errors
+/// [`PipelineError::Metadata`] with all the errors.
+pub fn check_metadata(
+    prepared: &Prepared,
+    require: &BTreeSet<String>,
+) -> Result<Vec<Problem>, PipelineError> {
+    let report = preflight::problems(&prepared.meta, &prepared.plan, require);
+    if report.errors.is_empty() {
+        Ok(report.warnings)
+    } else {
+        Err(PipelineError::Metadata(report.errors))
+    }
 }
 
 /// Package the whole plan in one cargo call.
@@ -223,6 +258,8 @@ pub struct PublishArgs<'a> {
     pub exceptions: Vec<Exception>,
     /// Crates left out of this run on purpose, each with its reason (recorded in the ledger).
     pub excluded: Vec<Exception>,
+    /// Metadata fields that are only warnings unless named here (see [`preflight::REQUIRABLE`]).
+    pub require_metadata: BTreeSet<String>,
 }
 
 /// What a publish did.
@@ -236,6 +273,8 @@ pub struct Summary {
     pub consumer: Vec<(String, Result<(), String>)>,
     /// The plan that was run, without any excluded crates.
     pub plan: Plan,
+    /// Metadata problems that did not stop the run (quality fields the registry accepts without).
+    pub warnings: Vec<Problem>,
 }
 
 impl Summary {
@@ -313,6 +352,8 @@ pub fn publish(
             return Err(PipelineError::ExceptionForUnknownCrate(e.krate.clone()));
         }
     }
+    // Before anything else: a crate the registry would refuse at upload leaves a half-published set.
+    let warnings = check_metadata(&prepared, &args.require_metadata)?;
     let target_dir = args.work.join("target");
     let mut registry = make_registry(&prepared.dir, &target_dir);
     // Before anything is written or built: a dependency outside the set that the registry cannot
@@ -412,6 +453,7 @@ pub fn publish(
         verified,
         consumer: consumer_results,
         plan: prepared.plan,
+        warnings,
     })
 }
 
@@ -454,14 +496,24 @@ mod tests {
         fs::write(path, text).unwrap();
     }
 
+    /// A crate manifest with complete publish metadata (the readme file is the caller's to write).
     fn manifest(name: &str, deps: &str) -> String {
         format!(
-            "[package]\nname = \"{name}\"\nversion = \"0.0.1\"\nedition = \"2021\"\ndescription = \"probe\"\nlicense = \"MIT\"\n{deps}\n"
+            "[package]\nname = \"{name}\"\nversion = \"0.0.1\"\nedition = \"2021\"\ndescription = \"probe\"\nlicense = \"MIT\"\nrepository = \"https://example.invalid/probe\"\nreadme = \"README.md\"\nkeywords = [\"probe\"]\ncategories = [\"development-tools\"]\nrust-version = \"1.70\"\n{deps}\n"
         )
     }
 
     /// A repo whose `b` depends on `a` (so the plan is a, b); `bad_b` makes `b` build only from the tree.
     fn repo(p: &str, bad_b: bool) -> (tempfile::TempDir, String) {
+        repo_with(p, bad_b, |_, manifest| manifest)
+    }
+
+    /// [`repo`], with each crate's manifest passed through `tweak(crate name, manifest)` first.
+    fn repo_with(
+        p: &str,
+        bad_b: bool,
+        tweak: impl Fn(&str, String) -> String,
+    ) -> (tempfile::TempDir, String) {
         let d = tempfile::tempdir().unwrap();
         let r = d.path();
         let (a, b) = (format!("{p}-a"), format!("{p}-b"));
@@ -469,15 +521,20 @@ mod tests {
             &r.join("Cargo.toml"),
             &format!("[workspace]\nresolver = \"2\"\nmembers = [\"{a}\", \"{b}\"]\n"),
         );
-        write(&r.join(&a).join("Cargo.toml"), &manifest(&a, ""));
+        write(&r.join(&a).join("Cargo.toml"), &tweak(&a, manifest(&a, "")));
         write(&r.join(&a).join("src/lib.rs"), "");
+        write(&r.join(&a).join("README.md"), "probe");
         write(
             &r.join(&b).join("Cargo.toml"),
-            &manifest(
+            &tweak(
                 &b,
-                &format!("[dependencies]\n{a} = {{ path = \"../{a}\", version = \"0.0.1\" }}"),
+                manifest(
+                    &b,
+                    &format!("[dependencies]\n{a} = {{ path = \"../{a}\", version = \"0.0.1\" }}"),
+                ),
             ),
         );
+        write(&r.join(&b).join("README.md"), "probe");
         write(&r.join("outside.txt"), "outside the crate");
         write(
             &r.join(&b).join("src/lib.rs"),
@@ -529,6 +586,7 @@ mod tests {
             },
             exceptions,
             excluded: vec![],
+            require_metadata: BTreeSet::new(),
         }
     }
 
@@ -617,6 +675,7 @@ zzrl-not-yet-published = \"0.23.0\"",
             ),
         );
         write(&r.join(&a).join("src/lib.rs"), "");
+        write(&r.join(&a).join("README.md"), "probe");
         git(r, &["init", "-q"]);
         git(r, &["add", "-A"]);
         git(r, &["commit", "-q", "-m", "one"]);
@@ -640,6 +699,108 @@ zzrl-not-yet-published = \"0.23.0\"",
         }
         assert!(!ledger.exists(), "no ledger was created");
         assert!(!work.join("target").exists(), "nothing was packaged");
+    }
+
+    // The mutation that started ROADMAP R6: delete `description` from one crate of a set (and the licence
+    // from another) and the whole run stops before anything is written, naming every problem. The
+    // control is `publishes_in_dependency_order_from_the_archive_with_real_cargo`, the same fixture
+    // untouched.
+    #[test]
+    fn missing_metadata_stops_the_run_before_anything_is_written_and_names_every_problem() {
+        let p = pid();
+        let (a, b) = (format!("{p}-a"), format!("{p}-b"));
+        let (repo, sha) = repo_with(&p, false, |name, manifest| {
+            if name.ends_with("-a") {
+                manifest.replace("description = \"probe\"\n", "")
+            } else {
+                manifest.replace("license = \"MIT\"\n", "")
+            }
+        });
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let uploads = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let u2 = std::rc::Rc::clone(&uploads);
+        let err = publish(
+            &Cargo::from_env(),
+            &args(repo.path(), &sha, &ledger, &work, Mode::Execute, vec![]),
+            |_, _| {
+                let mut r = FakeRegistry::new();
+                r.on_upload = Some(Box::new(move |n, _| u2.borrow_mut().push(n.to_owned())));
+                Box::new(r)
+            },
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+        .unwrap_err();
+        let text = err.to_string();
+        match err {
+            PipelineError::Metadata(ps) => {
+                let got: Vec<(&str, &str)> =
+                    ps.iter().map(|p| (p.krate.as_str(), p.field)).collect();
+                assert_eq!(got, [(a.as_str(), "description"), (b.as_str(), "license")]);
+            }
+            other => panic!("expected Metadata, got {other}"),
+        }
+        assert!(text.contains("nothing was uploaded"), "{text}");
+        assert!(text.contains("description = "), "says what to add: {text}");
+        assert!(uploads.borrow().is_empty());
+        assert!(!ledger.exists(), "no ledger was created");
+        assert!(!work.join("target").exists(), "nothing was packaged");
+    }
+
+    // Quality fields the registry accepts without (here keywords and rust-version) are warnings: the run
+    // goes ahead and the summary lists them. Required, the same crates stop the run before a ledger exists.
+    #[test]
+    fn missing_quality_fields_are_warnings_unless_required() {
+        let p = pid();
+        let (a, b) = (format!("{p}-a"), format!("{p}-b"));
+        let (repo, sha) = repo_with(&p, false, |_, manifest| {
+            manifest
+                .replace("keywords = [\"probe\"]\n", "")
+                .replace("rust-version = \"1.70\"\n", "")
+        });
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let run = |ledger: &Path, work: &Path, require: &[&str]| {
+            let mut a = args(repo.path(), &sha, ledger, work, Mode::DryRun, vec![]);
+            a.require_metadata = require.iter().map(|s| (*s).to_owned()).collect();
+            publish(
+                &Cargo::from_env(),
+                &a,
+                |_, _| Box::new(FakeRegistry::new()),
+                &mut FakeClock::default(),
+                &mut NoConsumer,
+            )
+        };
+
+        let s = run(&ledger, &work, &[]).unwrap();
+        let got: Vec<(&str, &str)> = s
+            .warnings
+            .iter()
+            .map(|w| (w.krate.as_str(), w.field))
+            .collect();
+        assert_eq!(
+            got,
+            [
+                (a.as_str(), "keywords"),
+                (a.as_str(), "rust-version"),
+                (b.as_str(), "keywords"),
+                (b.as_str(), "rust-version")
+            ]
+        );
+        assert_eq!(s.report.outcomes.len(), 2, "both crates were planned");
+
+        let (ledger2, work2) = (tmp.path().join("l2.jsonl"), tmp.path().join("w2"));
+        match run(&ledger2, &work2, &["keywords"]) {
+            Err(PipelineError::Metadata(ps)) => {
+                let got: Vec<(&str, &str)> =
+                    ps.iter().map(|p| (p.krate.as_str(), p.field)).collect();
+                assert_eq!(got, [(a.as_str(), "keywords"), (b.as_str(), "keywords")]);
+                assert!(ps[0].detail.contains("--require-metadata"), "{}", ps[0]);
+            }
+            other => panic!("expected Metadata, got {other:?}"),
+        }
+        assert!(!ledger2.exists(), "nothing was written");
     }
 
     // T10: an exception needs a reason, is recorded, and the consumer check decides the outcome.
