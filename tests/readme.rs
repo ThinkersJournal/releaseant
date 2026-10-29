@@ -98,9 +98,10 @@ fn readme_steps(readme: &str) -> Vec<(String, String)> {
     steps
 }
 
-/// Exit-code-independent text of both streams, with path separators made uniform.
+/// Line endings only: a path separator that differs by platform is a defect in the output, not noise
+/// (the fresh-eyes trial found `.\.releaseant/ledger.jsonl` on Windows against the README's `./`).
 fn normalise(text: &str) -> String {
-    text.replace("\r\n", "\n").replace('\\', "/")
+    text.replace("\r\n", "\n")
 }
 
 #[test]

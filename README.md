@@ -2,14 +2,27 @@
 
 Ordered, verified, resumable publishing of Rust crates and workspaces to crates.io, with read-back.
 
-**Status: not ready for developer use.** Version 0.0.11, not yet published (the crates.io name holds an
-empty 0.0.0 placeholder), and the fresh-eyes trial (a newcomer reaching the Hello result from this README
-alone) has not passed yet.
+**Status: not ready for developer use** until its first release: version 0.0.11, not yet published (the
+crates.io name holds an empty 0.0.0 placeholder).
+
+## Install
+
+Not on crates.io yet. From a clone (Rust 1.88 or newer; `cargo install` puts the binary in `~/.cargo/bin`,
+which rustup already put on your `PATH`):
+
+```console
+git clone https://github.com/ThinkersJournal/releaseant
+cd releaseant
+cargo install --path .
+```
 
 ## Hello
 
 You have a git workspace where `releaseant-demo-app` depends on `releaseant-demo-core`, and it is committed.
-ReleaseAnt works from a commit, never from your working tree, so it needs the commit's full SHA:
+Each crate has the fields crates.io requires (`description` and `license`), and the dependency names a
+version as well as a path (`releaseant-demo-core = { path = "../releaseant-demo-core", version = "0.1.0" }`).
+ReleaseAnt works from a commit, never from your working tree, so it needs the commit's full SHA. Run it from
+inside the repository (or add `--repo PATH`):
 
 <!-- hello:begin -->
 ```console
@@ -26,7 +39,8 @@ ledger: ./.releaseant/ledger.jsonl
 
 `plan` is the order dependencies must go up in. `publish` packages the commit, builds every packaged
 `.crate` the way a consumer would, and asks crates.io what is already there, but uploads nothing until you
-add `--execute`. A branch name is refused, and says how to get the SHA:
+add `--execute`. It needs network (the crates.io index) and builds every crate, so expect about the time
+`cargo build` takes. A branch name is refused, and says how to get the SHA:
 
 ```console
 $ releaseant plan --sha main
@@ -65,16 +79,6 @@ consumer after upload instead).
 - A dependency outside the set that is not on the registry stops the run before anything is written.
 - A registry lookup that fails stops the run; it is never read as "not published".
 
-## Install
-
-Not on crates.io yet. From a clone (Rust 1.88 or newer):
-
-```console
-git clone https://github.com/ThinkersJournal/releaseant
-cd releaseant
-cargo install --path .
-```
-
-More: `docs/DESIGN.md` (how it works and why), `ROADMAP.md`, `CHANGELOG.md`.
+More, in the clone: `docs/DESIGN.md` (how it works and why), `ROADMAP.md`, `CHANGELOG.md`.
 
 Part of the ant family of shared building blocks. Licensed under MIT OR Apache-2.0.
