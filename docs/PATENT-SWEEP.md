@@ -2,7 +2,7 @@
 
 Date: 2026-10-29; Run by: releaseant lane, Sonnet 5.5; Method: AI-assisted web search (US-only), then independent claims read in full with `tools/patent-claims.py` (Google Patents pages); NOT legal advice; NOT a freedom-to-operate opinion. There is no attorney.
 
-**Status: first pass, complete for the routes run; the sweep stays INCOMPLETE until the PM accepts the routes not run as sufficient.** Twelve queries were run (six general web, six restricted to patents.google.com and patents.justia.com). The USPTO full-text scan, Espacenet, WIPO, assignee searches and direct Google Patents query URLs were NOT run. Ideas 6, 7, 8 and 9 had no patent-site query (idea 6 and 7 only the general query Q6; 8 and 9 none). **No hit needs review.** Thirteen patents were read; one more family's continuations and several results were not (listed under "Seen, not read").
+**Status: two passes (2026-10-29), complete for the routes run; the sweep stays INCOMPLETE until the PM accepts the routes not run as sufficient.** Sixteen queries were run (six general web; ten restricted to patents.google.com, six of those also to patents.justia.com). The first pass found nothing on ideas 6 to 9; the PM's publish condition for the first crates.io publish was one `patents.google.com` query each for ideas 6 to 9 with a positive control, and the second pass (Q13 to Q16) did that. The USPTO full-text scan, Espacenet, WIPO, assignee searches and direct Google Patents query URLs were NOT run (recorded limits). **No hit needs review.** Twenty-one patents were read, every independent claim; one more family's continuations and several results were not (listed under "Seen, not read").
 
 ## Ideas swept
 What ReleaseAnt does that might be new or unusual (mechanisms, not features), from `docs/DESIGN.md` and the code at 5501221:
@@ -14,7 +14,7 @@ What ReleaseAnt does that might be new or unusual (mechanisms, not features), fr
 6. The files come from `git archive` of a full commit SHA (a branch name is refused), independent of the user's line-ending configuration.
 7. Before anything is written, a dependency outside the set that the registry cannot satisfy stops the run.
 8. A crate can be excluded from a run with a recorded reason; crates that need it must find it on the registry.
-9. A yank is allowed only for a version the ledger shows this tool published, with a reason of a recorded kind. (Not searched.)
+9. A yank is allowed only for a version the ledger shows this tool published, with a reason of a recorded kind. (Q16 only; nothing relevant found.)
 
 ## Queries (source, query, date 2026-10-29)
 General web search, US-only:
@@ -36,6 +36,16 @@ Restricted to `patents.google.com` and `patents.justia.com`:
 | Q10 | 4, 1 | `rate limited upload to package repository wait indicated time then continue publishing remaining packages dependent packages published first` |
 | Q11 | 5 | `build extracted package archive in clean environment before release to repository ensure packaged files sufficient to build` |
 | Q12 | 4 | `automatically retry publishing artifact to repository after rate limit response waiting time specified by server, dependency ordered release of multiple artifacts` |
+
+Second pass, restricted to `patents.google.com` (the PM's condition for ideas 6 to 9):
+| # | Idea | Query |
+|---|---|---|
+| Q13 | 6 | `creating release archive from specific commit identifier of version control repository rather than working directory for publishing software package to registry` |
+| Q14 | 7 | `before publishing package determine whether dependency of the package is available in package repository, prevent publication if required dependency version not published` |
+| Q15 | 8 | `exclude package from release with recorded reason stored in log of release operation, dependent packages require excluded package already published` |
+| Q16 | 9 | `withdraw or yank published software package version from repository only if recorded as published by the release tool, reason category recorded` |
+
+Positive control for Q13 to Q16: each returned ten `patents.google.com` pages, so the restriction reaches the site; Q14 and Q15 also returned `US20120324417A1` and `US6847970B2`, which this sweep had already found by other queries, so the same patents surface from independent queries. The control proves the queries reach patents, not that they ask the only possible question. Q16 returned only software-installer and update-notification patents, none about withdrawing a published package version (nothing relevant to read for idea 9).
 
 Positive control: Q7 to Q11 returned patent pages on adjacent topics, so the restriction reaches Google Patents and Justia. Q1 to Q6 returned open-source tools and documentation and almost no patents; **0 patents on ideas 3, 4 and 6 is a statement about these queries, not about the world.** Q4 and Q12 found only generic retry/backoff patents, none read.
 
@@ -59,9 +69,17 @@ Claims read: every independent claim, in full, from Google Patents text (machine
 | 11 | US5721824A | Multiple-package installation with package dependencies | Sun Microsystems | Expired (lifetime) | 1, 8, 14 | install order from dependency lists | install-time action list and trailer script. Expired | clear (expired) |
 | 12 | US6847970B2 | Methods and apparatus for managing dependencies in distributed systems | IBM | Expired (lifetime) | 1, 31, 41 | relationships between components | very broad claim, expired (est. 2023-05-03) | clear (expired) |
 | 13 | EP3748494A1 | A tool for analysing a software distribution package | BlackBerry | Withdrawn | 1 | analyses a built package | compares required and declared device permissions. Withdrawn | clear (withdrawn) |
+| 14 | US7451167B2 | Verification of file system log data using per-entry checksums | Network Appliance | Expired (lifetime), est. 2025-02-08 | 1, 6, 13, 15 | an append-only log of operations whose entries can be verified | a storage server's write-request log with a checksum in every entry and a selectable checksum algorithm, or a serial-numbered NVRAM log with a header count. Our ledger is a plain file of events with no per-entry checksum and no algorithm choice. Expired | clear (expired) |
+| 15 | US10628389B2 | Verification of data provenance for existing computer systems | Merck Sharp & Dohme | Active, est. 2038-04-16 | 1, 8, 14 | hashes recorded in an append-only structure and later rechecked | database logs replayed into a local copy, aggregated into a hashable slice, hashes buffered and committed to a **distributed ledger** in one transaction. We write a local file; no distributed ledger, no aggregation, no hash buffer | clear (watch: do not commit ledger hashes to a distributed or blockchain ledger) |
+| 16 | US20120246618A1 | Method and a system for generating a software product | individual | Expired, fee related | 1 | builds a module and publishes it to a repository, with dependencies in module metadata | a server-built "nest" describing the client's development environment, added to the module metadata. We have no nest. Expired | clear (expired) |
+| 17 | US9639350B2 (application US20160170745A1) | Tagging non-upstream source code | Red Hat | Active, est. 2034-12-28 (fees paid 2020, 2024) | grant 1, 8, 15; application 1, 8, 15 | idea 6: separates files that belong to a commit from those that do not in a version-controlled repository | each claim requires labeling committed objects "upstream" and uncommitted objects "non-upstream" with identifiers, and transferring the non-upstream ones to a code depot for the next version. `git archive` of a SHA simply leaves uncommitted files out: no labeling, no transfer. The grant adds the identifiers to the application's wording | clear (watch: do not detect uncommitted files and move them somewhere) |
+| 18 | US10691436B1 | Systems and methods for tracking source code deployments | Atlassian | Active, est. 2038-12-10 | 1, 6, 11 | idea 6: a deployment tied to a source revision identifier | a request to preview promotion to a testing, staging or production environment, listing undeployed revisions between the selected and the latest deployment. We have no environments and no preview of undeployed revisions | clear |
+| 19 | US9348582B2 | Systems and methods for software dependency management | LinkedIn | Expired, fee related | 1, 13, 18 | idea 7: checks dependency metadata for a valid version | finds a third product depending on a vulnerable version of a second and upgrades that dependency. We upgrade nothing; we only stop. Lapsed | clear |
+| 20 | US7222341B2 | Method and system for processing software dependencies in management of software packages | Microsoft | Expired, fee related (est. 2019-11-09) | 1, 13, 14, 16 | idea 7: checks whether a dependency is present before proceeding | acquires and installs a missing dependency recursively on the local computer and updates an installed-software database. We refuse to proceed and install nothing. Expired | clear (expired) |
+| 21 | US10409567B2 | Trimming unused dependencies using package graph and module graph | Microsoft | Active, est. 2037-03-26 | 1, 13, 21 | idea 8: leaves packages out of an application's version | two alternating traversals of a package graph and a module graph to trim unused dependencies at compile time. Our exclusion is a named flag with a reason, and no traversal of a module graph | clear |
 
 ## Seen, not read (so unread, never clear)
-`US10628389B2` (data provenance), `US7451167B2` (verification of log data with per-entry checksums: the only result about verifying a log, by title, so read it first in a second pass), `US20120246618A1`, `US6117187A`, `US20010029605A1`, `US7363633B1`, `US20140245290A1`, `US7013461B2`, `US9141378B2`, `US20100169863A1`, `WO2017195160A1`, `US8370443B2`, and the eBay continuations named above. Family members of the other hits were not looked up. Nothing was found, and nothing read, on ideas 3 (read-back), 4 (server-advised wait), 6, 7, 8 and 9 beyond the generic patents above.
+From the first pass: `US6117187A`, `US20010029605A1`, `US7363633B1`, `US20140245290A1`, `US7013461B2`, `US9141378B2`, `US20100169863A1`, `WO2017195160A1`, `US8370443B2`. From the second pass: `US20150378775A1` (log-based transaction constraint management: the closest title to our ledger that remains unread, read it first next), `US9760349B1`, `US9558017B2`, `US20060161898A1`, `EP1492002A2`, `US8006240B2`, `US20060020937A1`, `US10572321B2`, `US11055081B2`, `US20200097867A1`, `US20180239894A1`, `US20200389521A1`, `US8041792B2`. Also unread: the eBay continuations `US9201632B2` and `US10019256B2`, and the family members of every other hit. (The first pass's three priority reads, US7451167B2, US10628389B2 and US20120246618A1, are now hits 14 to 16.) For ideas 3 (read-back) and 4 (server-advised wait) nothing beyond generic patents was found; for idea 9 nothing relevant was found at all.
 
 ## Design constraints from this sweep (what not to add without a re-sweep)
 - No staged "commit all or roll all back" publish across crates (hit 1).
@@ -70,6 +88,8 @@ Claims read: every independent claim, in full, from Google Patents text (machine
 - No function-level dependency graph or release-to-release graph comparison (hit 4).
 - No de-duplication of graph nodes by dependency sub-tree identity (hit 5).
 - No prioritised policy-violation scanning of repository artifacts (hit 7).
+- No committing of ledger hashes to a distributed or blockchain ledger (hit 15).
+- No detection of uncommitted files with a move to another store (hit 17); `git archive` of a SHA leaving them out is the whole mechanism.
 
 ## Needs review (to the PM)
 None.
@@ -79,6 +99,6 @@ None.
 - Status and expiry dates are Google Patents' estimates, not the official record; a "fee related" expiry should be confirmed on USPTO.
 - Claim text is machine-converted. Only independent claims were read; dependent claims narrow them and were not analysed.
 - Several hits were granted applications; their continuations and other family members were not chased (eBay's two are named).
-- Ideas 3, 4, 6, 7, 8 and 9 have thin or no patent-site coverage; a clear result on them means these queries found nothing readable, not that nothing exists.
+- Ideas 3, 4, 6, 7, 8 and 9 have one or two queries each (ideas 6 to 9 one `patents.google.com` query each, from the second pass); a clear result on them means these queries found nothing that overlaps, not that nothing exists. Idea 9 (yank) returned nothing relevant to read.
 - Open-source prior art is noted for context only; it is not an invalidity analysis.
 - Re-sweep when ReleaseAnt adds a new family of capability, and at least yearly.

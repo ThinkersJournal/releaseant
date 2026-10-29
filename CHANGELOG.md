@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.13
+
+- `docs/PATENT-SWEEP.md` second pass (the PM's condition for the first crates.io publish): one `patents.google.com` query each for ideas 6 to 9 with a positive control, and eight more patents read claim by claim (including the three priority reads from the first pass). 21 read in all, none needs review. A fourth published application, Red Hat's "Tagging non-upstream source code", was checked for a grant (US9639350B2) and the grant was read; two design constraints added.
+
 ## 0.0.12
 
 - `docs/PATENT-SWEEP.md`: first-pass patent sweep of the code at 0.0.11 (13 patents read claim by claim, none needs review; routes not run and ideas with thin coverage are listed in the file). It is not complete until the PM accepts those gaps. The README no longer repeats the version number.
