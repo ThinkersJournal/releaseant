@@ -47,6 +47,10 @@ pub enum PipelineError {
     ExceptionWithoutReason(String),
     /// An exception names a crate that is not in the plan.
     ExceptionForUnknownCrate(String),
+    /// An exclusion has no reason.
+    ExclusionWithoutReason(String),
+    /// An exclusion names a crate that is not in the publish plan.
+    ExclusionForUnknownCrate(String),
     /// The registry could not be asked about the external dependencies.
     Externals(ExternalsError),
     /// Dependencies outside the set that the registry cannot satisfy; nothing was uploaded.
@@ -74,6 +78,12 @@ impl fmt::Display for PipelineError {
             }
             Self::ExceptionForUnknownCrate(c) => {
                 write!(f, "exception names {c}, which is not in the publish plan")
+            }
+            Self::ExclusionWithoutReason(c) => {
+                write!(f, "excluding {c} needs a non-empty reason")
+            }
+            Self::ExclusionForUnknownCrate(c) => {
+                write!(f, "exclusion names {c}, which is not in the publish plan")
             }
             Self::Externals(e) => write!(f, "{e}"),
             Self::MissingExternals(v) => {
@@ -211,6 +221,8 @@ pub struct PublishArgs<'a> {
     pub opts: Options,
     /// Recorded exceptions to verification.
     pub exceptions: Vec<Exception>,
+    /// Crates left out of this run on purpose, each with its reason (recorded in the ledger).
+    pub excluded: Vec<Exception>,
 }
 
 /// What a publish did.
@@ -271,8 +283,29 @@ pub fn publish(
             return Err(PipelineError::ExceptionWithoutReason(e.krate.clone()));
         }
     }
+    for e in &args.excluded {
+        if e.reason.trim().is_empty() {
+            return Err(PipelineError::ExclusionWithoutReason(e.krate.clone()));
+        }
+    }
     fs::create_dir_all(args.work)?;
-    let prepared = prepare(cargo, args.repo, args.sha, args.work)?;
+    let mut prepared = prepare(cargo, args.repo, args.sha, args.work)?;
+    for e in &args.excluded {
+        if !prepared.plan.order.iter().any(|c| c.name == e.krate) {
+            return Err(PipelineError::ExclusionForUnknownCrate(e.krate.clone()));
+        }
+    }
+    // Remember the versions before the crates leave the plan; the ledger names them.
+    let excluded: Vec<(&Exception, Version)> = args
+        .excluded
+        .iter()
+        .filter_map(|e| {
+            let v = prepared.plan.order.iter().find(|c| c.name == e.krate)?;
+            Some((e, v.version.clone()))
+        })
+        .collect();
+    let names = args.excluded.iter().map(|e| e.krate.clone()).collect();
+    prepared.plan = prepared.plan.without(&names);
     for e in &args.exceptions {
         if !prepared.plan.order.iter().any(|c| c.name == e.krate) {
             return Err(PipelineError::ExceptionForUnknownCrate(e.krate.clone()));
@@ -296,6 +329,16 @@ pub fn publish(
             .map(|c| c.version.clone())
             .expect("checked above")
     };
+    for (e, v) in &excluded {
+        record(
+            &ledger,
+            clock,
+            args,
+            EventKind::Exception,
+            Some((&e.krate, v)),
+            &format!("excluded from this run: {}", e.reason),
+        )?;
+    }
     for e in &args.exceptions {
         let v = version_of(&e.krate);
         record(
@@ -482,7 +525,16 @@ mod tests {
                 ..Options::default()
             },
             exceptions,
+            excluded: vec![],
         }
+    }
+
+    fn excluding<'a>(mut a: PublishArgs<'a>, krate: &str, reason: &str) -> PublishArgs<'a> {
+        a.excluded.push(Exception {
+            krate: krate.to_owned(),
+            reason: reason.to_owned(),
+        });
+        a
     }
 
     fn pid() -> String {
@@ -662,6 +714,101 @@ zzrl-not-yet-published = \"0.23.0\"",
         )
         .unwrap_err();
         assert!(matches!(err, PipelineError::ExceptionForUnknownCrate(_)));
+    }
+
+    // An exclusion leaves the crate out of the whole run (nothing packaged, verified or uploaded for
+    // it) and the ledger says who was left out and why. The first publish test is the negative control:
+    // without the exclusion both crates go up.
+    #[test]
+    fn an_excluded_crate_is_left_out_and_the_ledger_records_why() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let uploads = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let u2 = std::rc::Rc::clone(&uploads);
+        let b = format!("{p}-b");
+        let s = publish(
+            &Cargo::from_env(),
+            &excluding(
+                args(repo.path(), &sha, &ledger, &work, Mode::Execute, vec![]),
+                &b,
+                "waits for the fuel release",
+            ),
+            |_, _| {
+                let mut r = FakeRegistry::new();
+                r.on_upload = Some(Box::new(move |n, _| u2.borrow_mut().push(n.to_owned())));
+                Box::new(r)
+            },
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+        .unwrap();
+        assert!(s.is_success(), "{s:?}");
+        assert_eq!(*uploads.borrow(), [format!("{p}-a")]);
+        assert_eq!(s.verified.len(), 1, "the excluded crate is not verified");
+        assert!(s.report.outcomes.iter().all(|(n, _)| *n != b));
+        let text = fs::read_to_string(&ledger).unwrap();
+        assert!(
+            text.contains("excluded from this run: waits for the fuel release"),
+            "{text}"
+        );
+        assert!(text.contains(&b));
+    }
+
+    #[test]
+    fn an_exclusion_needs_a_reason_and_a_crate_in_the_plan() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let go = |krate: &str, reason: &str| {
+            publish(
+                &Cargo::from_env(),
+                &excluding(
+                    args(repo.path(), &sha, &ledger, &work, Mode::DryRun, vec![]),
+                    krate,
+                    reason,
+                ),
+                |_, _| Box::new(FakeRegistry::new()),
+                &mut FakeClock::default(),
+                &mut NoConsumer,
+            )
+            .unwrap_err()
+        };
+        assert!(matches!(
+            go(&format!("{p}-b"), "  "),
+            PipelineError::ExclusionWithoutReason(_)
+        ));
+        assert!(matches!(
+            go("nope", "x"),
+            PipelineError::ExclusionForUnknownCrate(_)
+        ));
+        assert!(!ledger.exists(), "refused before anything was written");
+    }
+
+    // Excluding a crate that another planned crate needs does not make it go away: the dependent
+    // still needs it on the registry, and the run stops before writing or building if it is not.
+    #[test]
+    fn excluding_a_dependency_that_is_not_on_the_registry_stops_the_run() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let err = publish(
+            &Cargo::from_env(),
+            &excluding(
+                args(repo.path(), &sha, &ledger, &work, Mode::Execute, vec![]),
+                &format!("{p}-a"),
+                "held back",
+            ),
+            |_, _| Box::new(FakeRegistry::new()),
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+        .unwrap_err();
+        assert!(matches!(err, PipelineError::MissingExternals(_)), "{err}");
+        assert!(!ledger.exists());
     }
 
     // Real consumer check against a crate that is on crates.io (needs network).

@@ -94,7 +94,14 @@ pub fn missing_externals(
     plan: &Plan,
     registry: &mut dyn Registry,
 ) -> Result<Vec<MissingExternal>, ExternalsError> {
-    let members: BTreeSet<&str> = meta.packages.iter().map(|p| p.name.as_str()).collect();
+    // The plan orders its own members. A publishable member that is not in the plan was excluded
+    // by name, so it is as external as any other crate: the registry must already hold it.
+    let members: BTreeSet<&str> = meta
+        .packages
+        .iter()
+        .filter(|p| !p.is_publishable() || plan.order.iter().any(|c| c.name == p.name))
+        .map(|p| p.name.as_str())
+        .collect();
     let mut cache: BTreeMap<String, Vec<(semver::Version, bool)>> = BTreeMap::new();
     let mut missing = Vec::new();
     for planned in &plan.order {
@@ -266,6 +273,29 @@ mod tests {
     }
 
     // T8 again: a registry that cannot be asked is an error, never "missing" and never "fine".
+    // A recorded exclusion turns a member into an external: its dependents still need it on the registry.
+    #[test]
+    fn an_excluded_member_a_planned_crate_needs_must_be_on_the_registry() {
+        let meta = Metadata {
+            packages: vec![pkg("app", vec![dep("lib", "^1", None)]), pkg("lib", vec![])],
+        };
+        let cut = plan(&meta)
+            .unwrap()
+            .without(&std::collections::BTreeSet::from(["lib".to_owned()]));
+        let r = missing_externals(&meta, &cut, &mut FakeRegistry::new()).unwrap();
+        assert_eq!(r.len(), 1, "{r:?}");
+        assert_eq!(
+            (r[0].dependent.as_str(), r[0].dependency.as_str()),
+            ("app", "lib")
+        );
+        let mut published = FakeRegistry::new().with_published("lib", "1.0.0");
+        assert!(
+            missing_externals(&meta, &cut, &mut published)
+                .unwrap()
+                .is_empty()
+        );
+    }
+
     #[test]
     fn registry_failure_is_an_error() {
         let mut reg = FakeRegistry::new();

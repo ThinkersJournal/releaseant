@@ -48,6 +48,9 @@ enum Command {
         /// Also ask the index whether every dependency outside the set is satisfiable (needs network).
         #[arg(long)]
         check_externals: bool,
+        /// Show the plan without this crate, as `publish --exclude` would run it.
+        #[arg(long = "exclude")]
+        exclude: Vec<String>,
     },
     /// Package the commit and build the extracted tarballs; uploads nothing.
     Verify(Source),
@@ -71,6 +74,13 @@ enum Command {
         /// Why the matching `--no-verify-crate` is skipped.
         #[arg(long)]
         reason: Vec<String>,
+        /// Leave this crate out of the run (needs a matching `--exclude-reason`). Crates that need it
+        /// still need it on the registry.
+        #[arg(long = "exclude")]
+        exclude: Vec<String>,
+        /// Why the matching `--exclude` is left out; recorded in the ledger.
+        #[arg(long = "exclude-reason")]
+        exclude_reason: Vec<String>,
         /// Keep the scratch directory.
         #[arg(long)]
         keep: bool,
@@ -120,11 +130,19 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
         Command::Plan {
             source: s,
             check_externals,
+            exclude,
         } => {
             let work = work_dir(&run_id(&s.sha));
             let prepared = prepare(&cargo, &s.repo, &s.sha, &work);
             let _ = std::fs::remove_dir_all(&work);
-            let prepared = prepared?;
+            let mut prepared = prepared?;
+            if let Some(unknown) = exclude
+                .iter()
+                .find(|n| !prepared.plan.order.iter().any(|c| &c.name == *n))
+            {
+                return Err(format!("--exclude {unknown}: not in the publish plan").into());
+            }
+            prepared.plan = prepared.plan.without(&exclude.into_iter().collect());
             for c in &prepared.plan.order {
                 println!("{} {}", c.name, c.version);
             }
@@ -169,11 +187,21 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             max_wait,
             no_verify_crate,
             reason,
+            exclude,
+            exclude_reason,
             keep,
         } => {
             if no_verify_crate.len() != reason.len() {
                 return Err("every --no-verify-crate needs its own --reason".into());
             }
+            if exclude.len() != exclude_reason.len() {
+                return Err("every --exclude needs its own --exclude-reason".into());
+            }
+            let excluded: Vec<Exception> = exclude
+                .into_iter()
+                .zip(exclude_reason)
+                .map(|(krate, reason)| Exception { krate, reason })
+                .collect();
             let exceptions: Vec<Exception> = no_verify_crate
                 .into_iter()
                 .zip(reason)
@@ -200,6 +228,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                     run_id: &id,
                     opts,
                     exceptions,
+                    excluded,
                 },
                 |dir, target| {
                     Box::new(CratesIo::new(
