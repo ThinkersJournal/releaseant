@@ -66,6 +66,13 @@ releaseant publish --sha $SHA --execute
 - `releaseant yank NAME VERSION --reason kind:text --ledger FILE` yanks a version it published, with the reason
   recorded (dry run unless `--execute`).
 
+Tag the release in git in the same action: add `--tag` (`releaseant publish --sha $SHA --execute --tag`). Once every
+crate is on the registry it creates an annotated `v<version>` on exactly that commit, pushes only that tag to
+`origin` and reads it back. It refuses a commit that is on no origin branch and never moves an existing tag; a
+second run finds it already tagged. When the crates are at several versions, say which one with
+`--tag-version 0.32.0`; a run with `--exclude` is not tagged. Without `--execute` it only checks that the tag
+could be made. `releaseant tag --sha $SHA --version 0.1.0 [--execute]` does the same on its own.
+
 Leave a crate out on purpose, with the reason recorded in the ledger (crates that need it still need it on the
 registry): `--exclude NAME --exclude-reason "waits for the other project's release"`. Skip the pre-upload build for
 one crate that cannot build on this machine: `--no-verify-crate NAME --reason "needs CUDA"` (it is checked as a
