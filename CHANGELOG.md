@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.15
+
+- `docs/PATENT-SWEEP.md` third pass: five of the seen-but-unread results read claim by claim (hits 22 to 26, starting with Amazon's log-based transaction manager, US20150378775A1, read through its grant US10282228B2), all outside as read. 26 read in all, none needs review; 17 results remain unread and are listed. One design constraint added.
+- `docs/ADOPTION.md`: the R5 adoption note with dry-run evidence for Unpopped (4 crates) and PersistAnt (9) at their tagged releases and at current `main`, compared with the order `workspace-publish.py` actually published in (from crates.io's `created_at`) and with a real-registry `readback` of all 13 crates; adoption order and a first-real-use sequence; six open items, the first found by this work (a missing `description` or `license` is not caught before upload).
+- README: a sample workspace (the three manifests), the install time, and what to do with `.releaseant/`, after a second fresh-eyes trial. `tests/readme.rs` now builds the demo workspace from the README's own `toml` blocks, so the sample is the sample that runs (checked by mutation: a wrong dependency version in the README fails the test).
+
 ## 0.0.14
 
 - Tag after publish (CIRESNAVE-EXPECTATIONS 6.20; replaces `tools/tag-release.sh`): `releaseant tag --sha S --version V [--name N] [--execute]` and `publish --execute --tag [--tag-version V] [--tag-name N]`. An annotated `v<version>` on exactly the published commit, pushed alone to origin and read back; the commit must be on an origin branch; an existing tag is never moved, whether local, on origin, annotated or lightweight (the script's `^{}` lookup missed a lightweight one); dry-run unless `--execute`. `--tag` tags only when the run has put everything on the registry and nothing was excluded, picks the one shared version or asks for `--tag-version`, and records an `EventKind::Tagged` ledger event. New module `tag`, `Summary::plan`.
