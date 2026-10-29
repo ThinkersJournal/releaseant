@@ -262,7 +262,12 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             if !execute {
                 println!("dry run: nothing was uploaded (use --execute)");
             }
-            println!("ledger: {}", ledger_path.display());
+            // Forward slashes work on every platform and keep the output the same everywhere
+            // (the default path would print as `.\.releaseant/ledger.jsonl` on Windows).
+            println!(
+                "ledger: {}",
+                ledger_path.display().to_string().replace('\\', "/")
+            );
             Ok(summary.is_success() || (!execute && summary.report.stopped.is_none()))
         }
         Command::Readback(s) => {

@@ -33,7 +33,10 @@ pub enum SourceError {
 impl fmt::Display for SourceError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotFullSha(s) => write!(f, "not a full 40-hex commit SHA: {s:?}"),
+            Self::NotFullSha(s) => write!(
+                f,
+                "not a full 40-hex commit SHA: {s:?} (get one with `git rev-parse {s}`)"
+            ),
             Self::DestinationNotEmpty => write!(f, "destination directory is not empty"),
             Self::NotACommit(s) => write!(f, "{s} is not a commit in this repository"),
             Self::NotARepository { repo, why } => {
@@ -161,6 +164,16 @@ mod tests {
         );
         assert!(!out.path().join("untracked.txt").exists());
         assert!(!out.path().join(".git").exists());
+    }
+
+    // A stranger types `--sha HEAD` or `--sha main` first. The error must say what to do next.
+    #[test]
+    fn a_branch_name_is_refused_with_the_command_that_gets_the_sha() {
+        let msg = SourceError::NotFullSha("main".into()).to_string();
+        assert!(msg.contains("git rev-parse main"), "{msg}");
+        // The wording for a too-short SHA (the other way to get here) is just as actionable.
+        let msg = SourceError::NotFullSha("6c1b56c".into()).to_string();
+        assert!(msg.contains("git rev-parse 6c1b56c"), "{msg}");
     }
 
     // Found when a shell-quoting slip made `--repo` name a directory that did not exist and the
