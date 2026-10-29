@@ -17,6 +17,13 @@ pub enum SourceError {
     DestinationNotEmpty,
     /// The SHA is not a commit in the repository.
     NotACommit(String),
+    /// `--repo` is not a git repository (missing, or not one), with git's own message.
+    NotARepository {
+        /// The path as given.
+        repo: String,
+        /// What git said.
+        why: String,
+    },
     /// git failed.
     Git(String),
     /// I/O error.
@@ -29,6 +36,9 @@ impl fmt::Display for SourceError {
             Self::NotFullSha(s) => write!(f, "not a full 40-hex commit SHA: {s:?}"),
             Self::DestinationNotEmpty => write!(f, "destination directory is not empty"),
             Self::NotACommit(s) => write!(f, "{s} is not a commit in this repository"),
+            Self::NotARepository { repo, why } => {
+                write!(f, "{repo} is not a git repository: {why}")
+            }
             Self::Git(m) => write!(f, "git failed: {m}"),
             Self::Io(e) => write!(f, "I/O: {e}"),
         }
@@ -61,6 +71,19 @@ pub fn archive(repo: &Path, sha: &str, dest: &Path) -> Result<(), SourceError> {
     }
     if dest.exists() && dest.read_dir()?.next().is_some() {
         return Err(SourceError::DestinationNotEmpty);
+    }
+    // `cat-file` exits 128 for a missing directory and for an unknown SHA alike, so ask first
+    // whether `repo` is a repository at all and pass git's own words on.
+    let probe = Command::new("git")
+        .arg("-C")
+        .arg(repo)
+        .args(["rev-parse", "--git-dir"])
+        .output()?;
+    if !probe.status.success() {
+        return Err(SourceError::NotARepository {
+            repo: repo.display().to_string(),
+            why: String::from_utf8_lossy(&probe.stderr).trim().to_owned(),
+        });
     }
     let commit = format!("{sha}^{{commit}}");
     let check = Command::new("git")
@@ -138,6 +161,35 @@ mod tests {
         );
         assert!(!out.path().join("untracked.txt").exists());
         assert!(!out.path().join(".git").exists());
+    }
+
+    // Found when a shell-quoting slip made `--repo` name a directory that did not exist and the
+    // tool answered "not a commit". The control (a real repository and an unknown SHA is still
+    // `NotACommit`) is in the test below.
+    #[test]
+    fn a_missing_or_non_repository_path_is_reported_as_such_with_gits_message() {
+        let tmp = tempfile::tempdir().unwrap();
+        let out = tempfile::tempdir().unwrap();
+        let sha = "6c1b56cb6574f6d49035bf36e5de88df8262e124";
+
+        let missing = tmp.path().join("C:Projects$r");
+        match archive(&missing, sha, out.path()) {
+            Err(SourceError::NotARepository { repo, why }) => {
+                assert!(repo.contains("C:Projects$r"), "{repo}");
+                assert!(
+                    why.contains("cannot change to") || why.contains("No such file"),
+                    "git's own message is kept: {why}"
+                );
+            }
+            other => panic!("expected NotARepository, got {other:?}"),
+        }
+
+        // A directory that exists but is no repository (the tempdir is not inside one).
+        assert!(matches!(
+            archive(tmp.path(), sha, out.path()),
+            Err(SourceError::NotARepository { .. })
+        ));
+        assert_eq!(fs::read_dir(out.path()).unwrap().count(), 0);
     }
 
     #[test]
