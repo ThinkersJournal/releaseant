@@ -13,6 +13,7 @@ use std::process::Command;
 
 use semver::Version;
 
+use crate::ledger::{Event, EventKind};
 use crate::plan::Plan;
 use crate::run::Outcome;
 use crate::source::is_full_sha;
@@ -216,18 +217,45 @@ pub fn crate_tag(krate: &str, version: &Version) -> String {
 /// `(landed, missing)` as [`landed_crates`] returns them: `(name, version)` and `(name, why)`.
 pub type Landed = (Vec<(String, Version)>, Vec<(String, String)>);
 
-/// Which of the crates a partial run selected are on the registry after it (so may be tagged), and
-/// which are not, with why. In a dry run nothing was uploaded, so every selected crate counts as
-/// landed and the tags are only checked.
+/// Which of the crates a partial run selected are on the registry after it **from this commit** (so
+/// may be tagged), and which are not, with why. In a dry run nothing was uploaded, so every selected
+/// crate that is absent counts as landed and the tags are only checked.
+///
+/// A crate that was already on the registry is tagged only if the ledger shows `sha` uploading it (a
+/// resume of the same run); otherwise an earlier run published it from a commit this one cannot
+/// name, and a tag on `sha` would point at source the registry never saw.
 #[must_use]
-pub fn landed_crates(plan: &Plan, outcomes: &[(String, Outcome)], execute: bool) -> Landed {
+pub fn landed_crates(
+    plan: &Plan,
+    outcomes: &[(String, Outcome)],
+    execute: bool,
+    sha: &str,
+    ledger: &[Event],
+) -> Landed {
+    let uploaded_from_sha = |name: &str| {
+        ledger.iter().any(|e| {
+            e.sha == sha
+                && e.crate_name.as_deref() == Some(name)
+                && matches!(
+                    e.event,
+                    EventKind::UploadStarted | EventKind::UploadFinished
+                )
+        })
+    };
     let (mut landed, mut missing) = (Vec::new(), Vec::new());
     for c in &plan.order {
         let outcome = outcomes.iter().find(|(n, _)| *n == c.name).map(|(_, o)| o);
         match outcome {
-            Some(Outcome::Visible | Outcome::AlreadyPublished) => {
+            Some(Outcome::Visible) => {
                 landed.push((c.name.clone(), c.version.clone()));
             }
+            Some(Outcome::AlreadyPublished) if uploaded_from_sha(&c.name) => {
+                landed.push((c.name.clone(), c.version.clone()));
+            }
+            Some(Outcome::AlreadyPublished) => missing.push((
+                c.name.clone(),
+                "published earlier, commit unknown".to_owned(),
+            )),
             Some(Outcome::WouldUpload) if !execute => {
                 landed.push((c.name.clone(), c.version.clone()));
             }
@@ -605,7 +633,10 @@ mod tests {
             ("b".to_owned(), Outcome::Missing),
             ("c".to_owned(), Outcome::AlreadyPublished),
         ];
-        let (landed, missing) = landed_crates(&plan, &outcomes, true);
+        let sha = "1".repeat(40);
+        // c was uploaded by this very sha (a resume of the same run).
+        let ledger = vec![ev(&sha, "c", EventKind::UploadFinished)];
+        let (landed, missing) = landed_crates(&plan, &outcomes, true, &sha, &ledger);
         assert_eq!(
             landed,
             [
@@ -620,8 +651,92 @@ mod tests {
             ("b".to_owned(), Outcome::WouldUpload),
             ("c".to_owned(), Outcome::WouldUpload),
         ];
-        assert_eq!(landed_crates(&plan, &dry, false).0.len(), 3);
+        assert_eq!(landed_crates(&plan, &dry, false, &sha, &[]).0.len(), 3);
         // Control: the same outcomes in an execute run are not landed.
-        assert_eq!(landed_crates(&plan, &dry, true).0.len(), 0);
+        assert_eq!(landed_crates(&plan, &dry, true, &sha, &[]).0.len(), 0);
+    }
+
+    fn ev(sha: &str, krate: &str, kind: EventKind) -> Event {
+        Event {
+            ts: "t".into(),
+            run: "r".into(),
+            sha: sha.to_owned(),
+            crate_name: Some(krate.to_owned()),
+            version: Some("0.1.0".into()),
+            event: kind,
+            detail: String::new(),
+        }
+    }
+
+    // A crate that was already on the registry is tagged only when this sha uploaded it: an
+    // earlier run from another commit (or no ledger record at all) leaves it untagged, named.
+    #[test]
+    fn an_already_published_crate_is_tagged_only_if_this_sha_uploaded_it() {
+        let plan = planned(&[("a", "0.1.0")]);
+        let outcomes = vec![("a".to_owned(), Outcome::AlreadyPublished)];
+        let (this, other) = ("1".repeat(40), "2".repeat(40));
+        let by_other = vec![ev(&other, "a", EventKind::UploadFinished)];
+        let (landed, missing) = landed_crates(&plan, &outcomes, true, &this, &by_other);
+        assert!(landed.is_empty());
+        assert_eq!(
+            missing,
+            [(
+                "a".to_owned(),
+                "published earlier, commit unknown".to_owned()
+            )]
+        );
+        let (landed, _) = landed_crates(&plan, &outcomes, true, &this, &[]);
+        assert!(landed.is_empty(), "no ledger record is no evidence");
+        // An event of this sha for another crate or another kind is not evidence either.
+        let noise = vec![
+            ev(&this, "b", EventKind::UploadFinished),
+            ev(&this, "a", EventKind::Classified),
+        ];
+        assert!(
+            landed_crates(&plan, &outcomes, true, &this, &noise)
+                .0
+                .is_empty()
+        );
+        // Control: the ledger showing this sha uploading it makes it landed.
+        let by_this = vec![ev(&this, "a", EventKind::UploadStarted)];
+        assert_eq!(
+            landed_crates(&plan, &outcomes, true, &this, &by_this)
+                .0
+                .len(),
+            1
+        );
+    }
+
+    // A crate tag that exists on a different commit is never moved.
+    #[test]
+    fn a_crate_tag_already_on_another_commit_is_refused() {
+        let f = Fixture::new();
+        let (first, second) = (f.pushed[0].clone(), f.pushed[1].clone());
+        let v: Version = "0.1.0".parse().unwrap();
+        let tag = crate_tag("demo-kernels", &v);
+        assert_eq!(
+            f.run_as(&tag, "demo-kernels", &v, &first, true),
+            Ok(TagOutcome::Tagged)
+        );
+        match f.run_as(&tag, "demo-kernels", &v, &second, true) {
+            Err(TagError::TagPointsElsewhere {
+                tag: t,
+                have,
+                want,
+                place,
+            }) => assert_eq!(
+                (t, have, want, place),
+                (tag.clone(), first.clone(), second, "origin")
+            ),
+            other => panic!("expected TagPointsElsewhere, got {other:?}"),
+        }
+        assert_eq!(
+            git(
+                &f.origin,
+                &["rev-parse", &format!("refs/tags/{tag}^{{commit}}")]
+            ),
+            first,
+            "the tag did not move"
+        );
     }
 }

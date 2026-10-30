@@ -615,7 +615,23 @@ fn tag_after_publish(t: &TagAfter<'_>, summary: &Summary) -> bool {
 /// `<crate>-v<version>`, and a selected crate that is not is named and left untagged. `true` unless
 /// a tag that should have been made was not.
 fn tag_selected(t: &TagAfter<'_>, summary: &Summary) -> bool {
-    let (landed, missing) = landed_crates(&summary.plan, &summary.report.outcomes, t.execute);
+    let events = match Ledger::open(t.ledger).and_then(|l| l.read()) {
+        Ok(e) => e,
+        Err(e) => {
+            println!(
+                "{}not tagged: the ledger could not be read to check which commit published what: {e}",
+                unless_dry(t.execute, "PUBLISHED but ")
+            );
+            return false;
+        }
+    };
+    let (landed, missing) = landed_crates(
+        &summary.plan,
+        &summary.report.outcomes,
+        t.execute,
+        &t.source.sha,
+        &events,
+    );
     for (krate, why) in &missing {
         println!("not tagged: {krate} is not on the registry after this run ({why})");
     }

@@ -3,6 +3,7 @@
 ## 0.0.31
 
 - `publish --only NAME --tag` tags each selected crate that is on the registry as an annotated `<crate>-v<version>` on the run's commit, pushed and read back; there is no project tag for a partial run, and a selected crate that did not land is named and left untagged while the others are tagged (PM ruling, DESIGN section 15). `--tag-version` cannot be combined with `--only`. `releaseant tag --crate NAME` tags one crate on its own. The whole-project `v<version>` is unchanged and still comes only from a run that publishes the entire plan. Ledger: one `tagged` event per tag, with the crate and the tag name. Library: `TagRequest::tag`, `tag::{release_tag, crate_tag, landed_crates}`.
+- A crate that was already on the registry is tagged only when the ledger shows this commit uploading it (a resume of the same run); one published earlier from another commit is reported as `published earlier, commit unknown` and left untagged, because a tag on this commit would point at source the registry never saw. A crate tag that exists on another commit is refused, never moved.
 - Not done: the patent re-sweep for this capability family (ROADMAP, owed before any release).
 
 ## 0.0.30
