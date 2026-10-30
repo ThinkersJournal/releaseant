@@ -3,7 +3,7 @@
 ## 0.0.25
 
 - `docs/PATENT-SWEEP.md`: sixth pass, the WIPO Patentscope pass (route B) through the web search tool limited to `patentscope.wipo.int`, nine dated queries (P1 to P9), one per idea. Five returned no patent record, four returned unrelated records; one record (WO2002057918) read with `tools/patent-claims.py`, outside as read. Recorded as low-confidence "found nothing"; the sweep stays INCOMPLETE; what was not searched or read is listed.
-- `docs/FIRST-REAL-USE.md`: "Notes from the PM's two real publishes" (unpopped 0.34.11, configurant 0.5.33): three candidates for the ROADMAP, second-hand and labelled so.
+- `docs/FIRST-REAL-USE.md`: "Notes from the PM's two real publishes" (unpopped 0.34.11, configurant 0.5.33): three first-hand candidates from the PM (silent run, no `--only`, tagging a partial publish) plus two second-hand, labelled so.
 
 ## 0.0.22
 
