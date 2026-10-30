@@ -206,3 +206,12 @@ checks. The lane will read the ledger's events against the registry and say what
   sample in R4 (`tests/fixtures/rate_limited.txt`), not from this batch.
 - A kill between an upload and its read-back, and a lagging index: covered by fake-registry tests only.
 - Windows only: every real run so far was on this machine.
+
+## Notes from the PM's two real publishes (2026-10-30)
+
+Unpopped 0.34.11 (4 crates) and ConfigurAnt 0.5.33 (5 crates) were published by the PM with `publish --execute` and `tools/tag-release.sh` (a third, Vulkane, partly by hand), each ending with a read-back of every crate on crates.io and the tag. The three below are **first-hand, from the PM who ran them** ([NOTICE] to this lane, 2026-10-30); this lane ran none of it. They are ROADMAP candidates, not done.
+1. **`publish --execute` prints nothing until it finishes** (ConfigurAnt: about 20 minutes silent; the PM polled the log by guessing). Wanted: one line per crate for verifying, uploading and read back, with elapsed time.
+2. **No partial publish.** For Vulkane the plan listed all 5 crates and marked none as already on the registry; the PM wanted only `vulkane-kernels-source` (a brand-new crate) and fell back to plain `cargo publish -p` from a clean archive. Wanted: `--only <crate>`, and a plan that marks each crate's registry state.
+3. **Tagging is a separate script, and a partial publish cannot be tagged honestly** (`v0.16.3` would claim the whole project). Wanted: a tag name per release, or tagging only when the whole plan is published.
+
+Second-hand, from the unpopped and configurant lanes (who did not run the publishes): the ruling for unpopped first named an already-published version (0.34.3), caught only by another lane's crates.io read, so `plan` could refuse a target version the registry already holds for a crate this ledger did not publish; and merges were held between configurant #72 and the publish by a message, not a lock, so `publish` could refuse when the commit is no longer `origin/main`'s tip.

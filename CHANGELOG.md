@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.25
+
+- `docs/PATENT-SWEEP.md`: sixth pass, the WIPO Patentscope pass (route B) through the web search tool limited to `patentscope.wipo.int`, nine dated queries (P1 to P9), one per idea. Five returned no patent record, four returned unrelated records; one record (WO2002057918) read with `tools/patent-claims.py`, outside as read. Recorded as low-confidence "found nothing"; the sweep stays INCOMPLETE; what was not searched or read is listed.
+- `docs/FIRST-REAL-USE.md`: "Notes from the PM's two real publishes" (unpopped 0.34.11, configurant 0.5.33): three first-hand candidates from the PM (silent run, no `--only`, tagging a partial publish) plus two second-hand, labelled so.
+
 ## 0.0.22
 
 - `docs/FIRST-REAL-USE.md`: the first real run (configurant `64e090a`, 0.5.22, five crates, `releaseant 0.0.21`, run by the PM, exit 0) is recorded as *observed*: 404 s in all, per-crate upload times, the 23-event ledger in order, `published and read back` five times and the tag read back from origin. Verified afterwards against crates.io (all five at 0.5.22) and the origin tag. Failure and recovery paths are still unseen and are marked so.

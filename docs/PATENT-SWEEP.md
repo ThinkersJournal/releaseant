@@ -2,7 +2,7 @@
 
 Date: 2026-10-29; Run by: releaseant lane, Sonnet 5.5; Method: AI-assisted web search (US-only), then independent claims read in full with `tools/patent-claims.py` (Google Patents pages); NOT legal advice; NOT a freedom-to-operate opinion. There is no attorney.
 
-**Status: five passes (2026-10-29 to 2026-10-30), complete for the routes run; the sweep is INCOMPLETE; on 2026-10-30 the PM accepted the 43 reads as sufficient for the first crates.io publish, with the routes not run listed under "Routes not run" below.** Sixteen queries were run (six general web; ten restricted to patents.google.com, six of those also to patents.justia.com). The first pass found nothing on ideas 6 to 9; the PM's publish condition for the first crates.io publish was one `patents.google.com` query each for ideas 6 to 9 with a positive control, and the second pass (Q13 to Q16) did that. The USPTO full-text scan, Espacenet, WIPO, assignee searches and direct Google Patents query URLs were NOT run (recorded limits). The third pass (no new queries) read five of the results the second pass had seen but not read, as the PM asked, the fourth pass (no new queries) six more (hits 27 to 32), and the fifth pass (no new queries) the last eleven results seen but unread (hits 33 to 43). **Every one of the 43 hits is outside as read** (the table's verdict word is the process's `clear`; "outside as read" is the claim being made: on the independent claims I read, from machine-converted text, nothing we do falls inside them, and that is not a clearance). **No hit needs review.** Forty-three patents were read, every independent claim (hits 33 to 43 from a summarising fetch, see Limitations); no result seen by a query is now unread. Two continuations, two grants and every hit's other family members were not read (listed under "Seen, not read").
+**Status: six passes (2026-10-29 to 2026-10-30; the sixth is the Patentscope pass, found nothing), complete for the routes run; the sweep is INCOMPLETE; on 2026-10-30 the PM accepted the 43 reads as sufficient for the first crates.io publish, with the routes not run listed under "Routes not run" below.** Sixteen queries were run (six general web; ten restricted to patents.google.com, six of those also to patents.justia.com). The first pass found nothing on ideas 6 to 9; the PM's publish condition for the first crates.io publish was one `patents.google.com` query each for ideas 6 to 9 with a positive control, and the second pass (Q13 to Q16) did that. The USPTO full-text scan, Espacenet, WIPO, assignee searches and direct Google Patents query URLs were NOT run (recorded limits). The third pass (no new queries) read five of the results the second pass had seen but not read, as the PM asked, the fourth pass (no new queries) six more (hits 27 to 32), and the fifth pass (no new queries) the last eleven results seen but unread (hits 33 to 43). **Every one of the 43 hits is outside as read** (the table's verdict word is the process's `clear`; "outside as read" is the claim being made: on the independent claims I read, from machine-converted text, nothing we do falls inside them, and that is not a clearance). **No hit needs review.** Forty-three patents were read, every independent claim (hits 33 to 43 from a summarising fetch, see Limitations); no result seen by a query is now unread. Two continuations, two grants and every hit's other family members were not read (listed under "Seen, not read").
 
 ## Ideas swept
 What ReleaseAnt does that might be new or unusual (mechanisms, not features), from `docs/DESIGN.md` and the code at 5501221:
@@ -118,12 +118,32 @@ Every result a query returned has now been read (hits 1 to 43). Not read: the eB
 ## Needs review (to the PM)
 None.
 
+## Sixth pass: WIPO Patentscope (route B), 2026-10-30
+Run by: releaseant lane, Sonnet 5.5, at 19c14798 (0.0.24). Tool: the lane's web search limited to `patentscope.wipo.int` (it is not Patentscope's own query interface: no boolean, no CPC, no date or assignee filter, and its search UI was not driven). One query per idea 1 to 9, all dated 2026-10-30.
+| # | Idea | Query | Returned |
+|---|---|---|---|
+| P1 | 1 | `software package dependency graph publish order package registry` | 4 Patentscope help/search pages, no patent record |
+| P2 | 2 | `append-only ledger resume interrupted release skip already published packages` | no results |
+| P3 | 3 | `verify uploaded package by reading registry index checksum after publish` | 10 records, all checksums in storage, telecom or network protocols (WO2002057918, WO2003100610, WO2002096140, WO2021029962, WO2017068488, WO2006047721, WO2013050954, WO2018016003, WO2018014103, WO2003013098) |
+| P4 | 4 | `rate limit retry-after wait resume bulk upload packages registry` | 1 Patentscope help PDF |
+| P5 | 5 | `extract packaged archive build test before publishing to package repository` | 4 records, all physical packaging (WO2004065218, WO2018140867, WO2006057608, WO1996023708) |
+| P6 | 6 | `publish software from source control commit archive full commit identifier instead of working directory` | no results |
+| P7 | 7 | `dependency not available in registry stop release before upload` | 1 Patentscope help PDF |
+| P8 | 8 | `exclude software component from release run with recorded reason` | 4 records, all unrelated hardware (WO2016170304, WO2017013418, WO2019100118, WO1999044523) |
+| P9 | 9 | `withdraw yank published software package version only if published by same tool recorded reason` | 1 Patentscope help PDF |
+
+**Read:** only WO2002057918 (Oracle, "Data integrity verification mechanism", Google Patents shows Ceased), the one P3 record nearest idea 3, claim 1 with `tools/patent-claims.py` (WO2002057918A2; the A1 page does not exist on Google Patents): a checksum is computed on a block in volatile memory, a logical check is run, and the block is written to nonvolatile memory if it passes. We compare a registry index's checksum with the SHA-256 of an uploaded file, after the upload; no block, no volatile or nonvolatile memory, no pre-write logical check. **Outside as read** (21,480 characters, one claim block, only claim 1 analysed; the claim text is machine-converted).
+
+**What this pass is worth.** Little. Five of nine queries returned no patent record at all (help pages or nothing), and the other four returned records unrelated to the idea. Patentscope's results here are indexed by title, so a mechanism described only in a claim or description would not surface. The control that the filter reaches records: P3 returned ten WO records, so `patentscope.wipo.int` records are searchable by this tool; that proves the filter works, not that a relevant record would be found. httpant's pass on the same source found the same (PM-visible in `httpant/docs/PATENT-SWEEP.md`). **Treat P1 to P9 as having found nothing, with low confidence that anything could have been found.** The sweep stays INCOMPLETE; the wording stays "outside as read", never "clear".
+
+**NOT searched or read in this pass:** Patentscope's own query interface (boolean, CPC `G06F8/60`, `G06F8/71`, assignee and date fields), the national collections inside Patentscope, any family member of any hit, the nine other P3 records beyond their titles, dependent claims. Routes A, C, D and E below are still not run.
+
 ## Routes not run (PM ruling 2026-10-30)
 The PM accepted the 43 reads as sufficient for the first publish. The wording stays "outside as read", never "clear", and this is not legal advice. Costs are the lane's estimates in tokens, unmeasured.
 | route | what | estimate | ruling |
 |---|---|---|---|
 | A | USPTO full-text (ppubs) | 150-300k; the search UI is JavaScript and may be unreachable by a fetch tool | not run |
-| B | WIPO Patentscope | 100-200k; partly reachable by URL | **scheduled** (ROADMAP R6, a spare-token week) |
+| B | WIPO Patentscope | 100-200k; partly reachable by URL | **run 2026-10-30 through the web search tool only** (sixth pass above); its own query interface NOT driven |
 | C | Espacenet | 150-300k; needs a free OPS API key | not run |
 | D | assignee searches (Microsoft, Red Hat, Atlassian, Sonatype, JFrog, GitHub) | 300-400k | not run |
 | E | CPC browsing (G06F8/60, G06F8/71) | 100-200k | not run |
