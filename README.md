@@ -134,7 +134,7 @@ Tag the release in git in the same action: add `--tag` (`releaseant publish --sh
 crate is on the registry it creates an annotated `v<version>` on exactly that commit, pushes only that tag to
 `origin` and reads it back. It refuses a commit that is on no origin branch and never moves an existing tag; a
 second run finds it already tagged. When the crates are at several versions, say which one with
-`--tag-version 0.32.0`; a run with `--exclude` is not tagged. Without `--execute` it only checks that the tag
+`--tag-version 0.32.0`; a run with `--exclude` is not tagged. A run with `--only` has no project tag (it would claim more than was published): each selected crate that is on the registry gets its own annotated `<crate>-v<version>` (`releaseant tag --crate NAME --version V` does the same on its own), and the project's `v<version>` comes from the full run that finishes the set. Without `--execute` it only checks that the tag
 could be made. `releaseant tag --sha $SHA --version 0.1.0 [--execute]` does the same on its own.
 
 Leave a crate out on purpose, with the reason recorded in the ledger (crates that need it still need it on the

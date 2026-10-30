@@ -137,3 +137,65 @@ fn tag_dry_run_then_execute_then_again_then_a_commit_not_on_origin() {
     assert!(text(&out).contains("on no origin branch"), "{}", text(&out));
     assert!(text(&out).contains("git push"), "{}", text(&out));
 }
+
+// A crate released on its own (`tag --crate`) gets `<crate>-v<version>` and no `v<version>`.
+#[test]
+fn tag_crate_makes_a_crate_tag_and_not_the_project_tag() {
+    let tmp = tempfile::tempdir().unwrap();
+    let (origin, work) = (tmp.path().join("origin.git"), tmp.path().join("work"));
+    fs::create_dir_all(&origin).unwrap();
+    git(&origin, &["init", "-q", "--bare", "-b", "main"]);
+    fs::create_dir_all(&work).unwrap();
+    git(&work, &["init", "-q", "-b", "main"]);
+    git(&work, &["config", "user.name", "t"]);
+    git(&work, &["config", "user.email", "t@example.invalid"]);
+    git(
+        &work,
+        &["remote", "add", "origin", origin.to_str().unwrap()],
+    );
+    fs::write(work.join("a"), "a").unwrap();
+    git(&work, &["add", "-A"]);
+    git(&work, &["commit", "-q", "-m", "one"]);
+    let sha = git(&work, &["rev-parse", "HEAD"]);
+    git(&work, &["push", "-q", "origin", "main"]);
+
+    let out = releaseant(
+        &work,
+        &[
+            "tag",
+            "--sha",
+            &sha,
+            "--version",
+            "0.1.0",
+            "--crate",
+            "demo-kernels",
+            "--execute",
+        ],
+    );
+    assert!(out.status.success(), "{}", text(&out));
+    assert!(
+        text(&out).contains(&format!(
+            "tagged demo-kernels-v0.1.0 -> {sha} (read back from origin)"
+        )),
+        "{}",
+        text(&out)
+    );
+    let tags = git(&origin, &["tag", "--list"]);
+    assert_eq!(tags, "demo-kernels-v0.1.0", "and no v0.1.0");
+    // `publish --only` cannot be combined with a version to tag.
+    let out = releaseant(
+        &work,
+        &[
+            "publish",
+            "--sha",
+            &sha,
+            "--only",
+            "x",
+            "--tag",
+            "--tag-version",
+            "0.1.0",
+        ],
+    );
+    assert!(!out.status.success());
+    assert!(text(&out).contains("cannot be used with"), "{}", text(&out));
+}
