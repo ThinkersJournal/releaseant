@@ -39,6 +39,12 @@ pub struct Package {
     /// `repository`.
     #[serde(default)]
     pub repository: Option<String>,
+    /// `homepage`.
+    #[serde(default)]
+    pub homepage: Option<String>,
+    /// `documentation`.
+    #[serde(default)]
+    pub documentation: Option<String>,
     /// The readme path relative to the package directory: as written, or `README.md` when cargo found
     /// one next to the manifest; `None` when there is none or `readme = false`.
     #[serde(default)]
@@ -90,6 +96,8 @@ impl Package {
             license: Some("MIT".into()),
             license_file: None,
             repository: Some("https://example.invalid/repo".into()),
+            homepage: Some("https://example.invalid/".into()),
+            documentation: Some("https://docs.example.invalid/".into()),
             readme: Some("README.md".into()),
             keywords: vec!["test".into()],
             categories: vec!["development-tools".into()],

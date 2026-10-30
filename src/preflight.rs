@@ -16,6 +16,10 @@
 //! **Warnings**, listed and not stopping anything, because the registry accepts the crate without:
 //! no `repository`, no readme, no `keywords`, no `categories`, no `rust-version`. A caller turns
 //! chosen ones into errors with [`parse_require`] (`--require-metadata readme,keywords,...`).
+//!
+//! **Opt-in only**: `homepage` and `documentation` are never warned about, because crates.io links
+//! docs.rs and the repository when they are absent and most crates set neither. They can still be
+//! named in `--require-metadata` or `releaseant.toml`, and then a missing one is an error.
 
 use std::collections::BTreeSet;
 use std::fmt;
@@ -37,6 +41,8 @@ pub const REQUIRABLE: &[&str] = &[
     "rust-version",
     "categories",
     "repository",
+    "homepage",
+    "documentation",
 ];
 
 /// One thing wrong with one crate's publish metadata.
@@ -213,6 +219,28 @@ fn check_fields(pkg: &Package, require: &BTreeSet<String>, report: &mut Report) 
         blank(&pkg.rust_version),
         "missing: add `rust-version = \"1.88\"` (the oldest Rust the crate builds with) under [package]",
     );
+
+    // Opt-in fields: never a warning, an error only when asked for.
+    for (field, missing, detail) in [
+        (
+            "homepage",
+            blank(&pkg.homepage),
+            "missing: add `homepage = \"https://...\"` under [package]",
+        ),
+        (
+            "documentation",
+            blank(&pkg.documentation),
+            "missing: add `documentation = \"https://...\"` under [package]",
+        ),
+    ] {
+        if missing && require.contains(field) {
+            report.errors.push(Problem {
+                krate: pkg.name.clone(),
+                field,
+                detail: format!("{detail} (required by --require-metadata or releaseant.toml)"),
+            });
+        }
+    }
 }
 
 /// The readme and the licence file, when the manifest names them, must exist in the package directory
@@ -355,6 +383,25 @@ mod tests {
         assert_eq!(r, Report::default());
         // And nothing required: the same crate has only warnings.
         assert!(check(vec![p]).errors.is_empty());
+    }
+
+    #[test]
+    fn homepage_and_documentation_are_never_warnings_and_errors_only_when_required() {
+        let mut p = pkg();
+        p.homepage = None;
+        p.documentation = Some(String::new());
+        // Not required: nothing at all, not even a warning.
+        assert_eq!(check(vec![p.clone()]), Report::default());
+        // Required: both are errors.
+        let require: BTreeSet<String> = ["homepage".to_owned(), "documentation".to_owned()].into();
+        let r = check_with(vec![p], &require);
+        assert_eq!(
+            fields(&r.errors),
+            [("a", "homepage"), ("a", "documentation")]
+        );
+        assert!(r.warnings.is_empty(), "{:?}", r.warnings);
+        // Control: required and present is no problem.
+        assert_eq!(check_with(vec![pkg()], &require), Report::default());
     }
 
     #[test]

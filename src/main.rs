@@ -46,7 +46,7 @@ struct Source {
 #[derive(clap::Args, Clone)]
 struct MetadataPolicy {
     /// Treat these missing quality fields as errors instead of warnings (comma-separated; one or more
-    /// of readme, keywords, rust-version, categories, repository). A missing description or licence,
+    /// of readme, keywords, rust-version, categories, repository, homepage, documentation). A missing description or licence,
     /// or a value crates.io refuses, is always an error.
     #[arg(long = "require-metadata", value_delimiter = ',')]
     require_metadata: Vec<String>,
