@@ -13,8 +13,8 @@ use releaseant::crates_io::{CratesIo, INDEX_URL, Index};
 use releaseant::externals::missing_externals;
 use releaseant::ledger::{Event, EventKind, Ledger};
 use releaseant::pipeline::{
-    CargoAddCheck, Exception, PipelineError, PublishArgs, Summary, check_metadata, package_all,
-    prepare, publish, readback,
+    CargoAddCheck, Exception, PipelineError, PublishArgs, Summary, check_metadata, describe_state,
+    package_all, prepare, publish, readback,
 };
 use releaseant::preflight::{Problem, parse_require};
 use releaseant::registry::{Clock, Lookup, Registry};
@@ -82,6 +82,12 @@ enum Command {
         /// Show the plan without this crate, as `publish --exclude` would run it.
         #[arg(long = "exclude")]
         exclude: Vec<String>,
+        /// Show only this crate, as `publish --only` would run it (repeatable).
+        #[arg(long = "only", conflicts_with = "exclude")]
+        only: Vec<String>,
+        /// After each crate, say whether the registry already has that version (needs network).
+        #[arg(long)]
+        registry: bool,
         #[command(flatten)]
         policy: MetadataPolicy,
     },
@@ -119,6 +125,11 @@ enum Command {
         /// Why the matching `--exclude` is left out; recorded in the ledger.
         #[arg(long = "exclude-reason")]
         exclude_reason: Vec<String>,
+        /// Run only this crate (repeatable): every other crate of the plan is left out, recorded in
+        /// the ledger as `not selected by --only`. Crates it needs must be on the registry already.
+        /// The run is not tagged.
+        #[arg(long = "only", conflicts_with = "exclude")]
+        only: Vec<String>,
         #[command(flatten)]
         policy: MetadataPolicy,
         /// Keep the scratch directory.
@@ -204,6 +215,8 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             source: s,
             check_externals,
             exclude,
+            only,
+            registry,
             policy,
         } => {
             let require = policy.set()?;
@@ -219,6 +232,22 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                     {
                         return Err(format!("--exclude {unknown}: not in the publish plan").into());
                     }
+                    if let Some(unknown) = only
+                        .iter()
+                        .find(|n| !p.plan.order.iter().any(|c| &c.name == *n))
+                    {
+                        return Err(format!("--only {unknown}: not in the publish plan").into());
+                    }
+                    let exclude: Vec<String> = if only.is_empty() {
+                        exclude
+                    } else {
+                        p.plan
+                            .order
+                            .iter()
+                            .map(|c| c.name.clone())
+                            .filter(|n| !only.contains(n))
+                            .collect()
+                    };
                     p.plan = p.plan.without(&exclude.into_iter().collect());
                     let warnings = check_metadata(&p, &require)?;
                     Ok((p, warnings))
@@ -226,8 +255,16 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             let _ = std::fs::remove_dir_all(&work);
             let (prepared, warnings) = prepared?;
             print_warnings(&warnings);
-            for c in &prepared.plan.order {
-                println!("{} {}", c.name, c.version);
+            if registry {
+                let mut idx = IndexRegistry(Index::new(INDEX_URL));
+                let states = readback(&prepared, &mut idx);
+                for (c, (_, state)) in prepared.plan.order.iter().zip(&states) {
+                    println!("{} {} ({})", c.name, c.version, describe_state(state));
+                }
+            } else {
+                for c in &prepared.plan.order {
+                    println!("{} {}", c.name, c.version);
+                }
             }
             if !check_externals {
                 return Ok(true);
@@ -274,6 +311,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             reason,
             exclude,
             exclude_reason,
+            only,
             policy,
             keep,
             tag,
@@ -292,7 +330,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                 .zip(exclude_reason)
                 .map(|(krate, reason)| Exception { krate, reason })
                 .collect();
-            let any_excluded = !excluded.is_empty();
+            let any_excluded = !excluded.is_empty() || !only.is_empty();
             let exceptions: Vec<Exception> = no_verify_crate
                 .into_iter()
                 .zip(reason)
@@ -320,6 +358,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                     opts,
                     exceptions,
                     excluded,
+                    only,
                     require_metadata,
                     on_warnings: Some(&|w| print_warnings(w)),
                     on_progress: Some(stderr_progress()),

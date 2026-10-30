@@ -55,6 +55,10 @@ pub enum PipelineError {
     ExclusionWithoutReason(String),
     /// An exclusion names a crate that is not in the publish plan.
     ExclusionForUnknownCrate(String),
+    /// `--only` names a crate that is not in the publish plan.
+    OnlyForUnknownCrate(String),
+    /// `--only` and `--exclude` were both given (one way to say which crates are left out).
+    OnlyWithExclusions,
     /// The registry could not be asked about the external dependencies.
     Externals(ExternalsError),
     /// Dependencies outside the set that the registry cannot satisfy; nothing was uploaded.
@@ -92,6 +96,12 @@ impl fmt::Display for PipelineError {
             }
             Self::ExclusionForUnknownCrate(c) => {
                 write!(f, "exclusion names {c}, which is not in the publish plan")
+            }
+            Self::OnlyForUnknownCrate(c) => {
+                write!(f, "--only names {c}, which is not in the publish plan")
+            }
+            Self::OnlyWithExclusions => {
+                write!(f, "--only and --exclude cannot be combined")
             }
             Self::Externals(e) => write!(f, "{e}"),
             Self::Config(e) => write!(f, "{e}"),
@@ -257,6 +267,19 @@ impl ConsumerCheck for CargoAddCheck {
     }
 }
 
+/// The ledger reason for a crate left out because `--only` named others.
+pub const NOT_SELECTED: &str = "not selected by --only";
+
+/// The registry state of a planned crate, as `plan --registry` prints it.
+#[must_use]
+pub fn describe_state(lookup: &Lookup) -> String {
+    match lookup {
+        Lookup::Present { .. } => "on registry".to_owned(),
+        Lookup::Absent => "not on registry".to_owned(),
+        Lookup::Unknown(why) => format!("registry unknown: {why}"),
+    }
+}
+
 /// Shows metadata warnings to the person running the command.
 pub type WarningSink<'a> = &'a dyn Fn(&[Problem]);
 
@@ -278,6 +301,9 @@ pub struct PublishArgs<'a> {
     pub exceptions: Vec<Exception>,
     /// Crates left out of this run on purpose, each with its reason (recorded in the ledger).
     pub excluded: Vec<Exception>,
+    /// Run only these crates: every other crate of the plan is left out, recorded as excluded with
+    /// the reason [`NOT_SELECTED`]. Empty means the whole plan. Cannot be combined with `excluded`.
+    pub only: Vec<String>,
     /// Metadata fields that are only warnings unless named here (see [`preflight::REQUIRABLE`]).
     pub require_metadata: BTreeSet<String>,
     /// Called with the metadata warnings as soon as they are known, before anything is built or
@@ -356,22 +382,45 @@ pub fn publish(
         }
     }
     fs::create_dir_all(args.work)?;
+    if !args.only.is_empty() && !args.excluded.is_empty() {
+        return Err(PipelineError::OnlyWithExclusions);
+    }
     let mut prepared = prepare(cargo, args.repo, args.sha, args.work)?;
-    for e in &args.excluded {
+    let mut left_out = args.excluded.clone();
+    if !args.only.is_empty() {
+        if let Some(unknown) = args
+            .only
+            .iter()
+            .find(|n| !prepared.plan.order.iter().any(|c| &c.name == *n))
+        {
+            return Err(PipelineError::OnlyForUnknownCrate(unknown.clone()));
+        }
+        left_out.extend(
+            prepared
+                .plan
+                .order
+                .iter()
+                .filter(|c| !args.only.contains(&c.name))
+                .map(|c| Exception {
+                    krate: c.name.clone(),
+                    reason: NOT_SELECTED.to_owned(),
+                }),
+        );
+    }
+    for e in &left_out {
         if !prepared.plan.order.iter().any(|c| c.name == e.krate) {
             return Err(PipelineError::ExclusionForUnknownCrate(e.krate.clone()));
         }
     }
     // Remember the versions before the crates leave the plan; the ledger names them.
-    let excluded: Vec<(&Exception, Version)> = args
-        .excluded
+    let excluded: Vec<(&Exception, Version)> = left_out
         .iter()
         .filter_map(|e| {
             let v = prepared.plan.order.iter().find(|c| c.name == e.krate)?;
             Some((e, v.version.clone()))
         })
         .collect();
-    let names = args.excluded.iter().map(|e| e.krate.clone()).collect();
+    let names = left_out.iter().map(|e| e.krate.clone()).collect();
     prepared.plan = prepared.plan.without(&names);
     for e in &args.exceptions {
         if !prepared.plan.order.iter().any(|c| c.name == e.krate) {
@@ -643,6 +692,7 @@ mod tests {
             },
             exceptions,
             excluded: vec![],
+            only: vec![],
             require_metadata: BTreeSet::new(),
             on_warnings: None,
             on_progress: None,
@@ -1258,6 +1308,132 @@ zzrl-not-yet-published = \"0.23.0\"",
         .unwrap_err();
         assert!(matches!(err, PipelineError::MissingExternals(_)), "{err}");
         assert!(!ledger.exists());
+    }
+
+    fn only<'a>(mut a: PublishArgs<'a>, names: &[&str]) -> PublishArgs<'a> {
+        a.only = names.iter().map(|n| (*n).to_owned()).collect();
+        a
+    }
+
+    // `--only` runs exactly the named crates; the others are recorded as left out with the flag's
+    // reason. Control: without it both crates go up (publishes_in_dependency_order...).
+    #[test]
+    fn only_runs_the_named_crates_and_records_the_rest_as_not_selected() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let uploads = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
+        let u2 = std::rc::Rc::clone(&uploads);
+        let (an, bn) = (format!("{p}-a"), format!("{p}-b"));
+        let s = publish(
+            &Cargo::from_env(),
+            &only(
+                args(repo.path(), &sha, &ledger, &work, Mode::Execute, vec![]),
+                &[&an],
+            ),
+            |_, _| {
+                let mut r = FakeRegistry::new();
+                r.on_upload = Some(Box::new(move |n, _| u2.borrow_mut().push(n.to_owned())));
+                Box::new(r)
+            },
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+        .unwrap();
+        assert!(s.is_success(), "{s:?}");
+        assert_eq!(*uploads.borrow(), std::slice::from_ref(&an));
+        assert_eq!(
+            s.verified.len(),
+            1,
+            "the crate not selected is not verified"
+        );
+        let events = Ledger::open(&ledger).unwrap().read().unwrap();
+        let left_out: Vec<_> = events
+            .iter()
+            .filter(|e| e.event == EventKind::Exception)
+            .collect();
+        assert_eq!(left_out.len(), 1, "{events:?}");
+        assert_eq!(left_out[0].crate_name.as_deref(), Some(bn.as_str()));
+        assert_eq!(
+            left_out[0].detail,
+            format!("excluded from this run: {NOT_SELECTED}")
+        );
+    }
+
+    // The crate named needs a crate that was not selected and is not on the registry: stops before
+    // anything is written (the same check as for --exclude).
+    #[test]
+    fn only_a_dependent_without_its_dependency_on_the_registry_stops_the_run() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let err = publish(
+            &Cargo::from_env(),
+            &only(
+                args(repo.path(), &sha, &ledger, &work, Mode::Execute, vec![]),
+                &[&format!("{p}-b")],
+            ),
+            |_, _| Box::new(FakeRegistry::new()),
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+        .unwrap_err();
+        assert!(matches!(err, PipelineError::MissingExternals(_)), "{err}");
+        assert!(!ledger.exists());
+    }
+
+    #[test]
+    fn only_refuses_an_unknown_crate_and_a_combination_with_exclusions() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let go = |a: PublishArgs<'_>| {
+            publish(
+                &Cargo::from_env(),
+                &a,
+                |_, _| Box::new(FakeRegistry::new()),
+                &mut FakeClock::default(),
+                &mut NoConsumer,
+            )
+            .unwrap_err()
+        };
+        let base = || args(repo.path(), &sha, &ledger, &work, Mode::DryRun, vec![]);
+        assert!(matches!(
+            go(only(base(), &["nope"])),
+            PipelineError::OnlyForUnknownCrate(_)
+        ));
+        assert!(matches!(
+            go(only(
+                excluding(base(), &format!("{p}-b"), "x"),
+                &[&format!("{p}-a")]
+            )),
+            PipelineError::OnlyWithExclusions
+        ));
+        assert!(!ledger.exists(), "refused before anything was written");
+    }
+
+    // A lookup that fails reads as unknown, never as "not on registry".
+    #[test]
+    fn plan_registry_states_are_distinct_and_a_failed_lookup_is_unknown() {
+        let present = Lookup::Present {
+            checksum: "x".into(),
+        };
+        let (a, b, c) = (
+            describe_state(&present),
+            describe_state(&Lookup::Absent),
+            describe_state(&Lookup::Unknown("timeout".into())),
+        );
+        assert_eq!(
+            [a.as_str(), b.as_str(), c.as_str()],
+            [
+                "on registry",
+                "not on registry",
+                "registry unknown: timeout"
+            ]
+        );
     }
 
     // Real consumer check against a crate that is on crates.io (needs network).
