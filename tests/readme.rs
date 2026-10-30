@@ -403,3 +403,45 @@ fn deleting_a_description_from_the_readme_sample_makes_plan_fail_naming_it() {
         "only the crate with the problem is named: {stderr}"
     );
 }
+
+// `plan --only` shows just the named crate (control: without it, both); an unknown name, and `--only`
+// with `--exclude`, are refused.
+#[test]
+fn plan_only_shows_the_named_crates_and_refuses_bad_selections() {
+    let (code, out, _) = plan_demo(true, &[]);
+    assert_eq!(
+        (code, out.as_str()),
+        (
+            Some(0),
+            "releaseant-demo-core 0.1.0
+releaseant-demo-app 0.1.0
+"
+        )
+    );
+    let (code, out, _) = plan_demo(true, &["--only", "releaseant-demo-core"]);
+    assert_eq!(
+        (code, out.as_str()),
+        (
+            Some(0),
+            "releaseant-demo-core 0.1.0
+"
+        )
+    );
+    let (code, _, err) = plan_demo(true, &["--only", "nope"]);
+    assert_ne!(code, Some(0));
+    assert!(
+        err.contains("--only nope: not in the publish plan"),
+        "{err}"
+    );
+    let (code, _, err) = plan_demo(
+        true,
+        &[
+            "--only",
+            "releaseant-demo-core",
+            "--exclude",
+            "releaseant-demo-app",
+        ],
+    );
+    assert_ne!(code, Some(0));
+    assert!(err.contains("cannot be used with"), "{err}");
+}

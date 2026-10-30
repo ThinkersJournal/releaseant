@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.29
+
+- `publish --only NAME` (repeatable) runs just the named crates: every other crate of the plan is left out through the `--exclude` path (not packaged or verified, recorded in the ledger as `excluded from this run: not selected by --only`), and a named crate that needs a left-out crate needs it on the registry already. Not combinable with `--exclude` (clap, and `PipelineError::OnlyWithExclusions` for library callers); an unknown name is an error; a partial run is not tagged. `plan --only` shows the same selection.
+- `plan --registry` prints `(on registry)`, `(not on registry)` or `(registry unknown: why)` after each crate; a failed lookup is never "not on registry". The default `plan` output is unchanged (R6 row 2, DESIGN section 14). Seen on this repo: `releaseant 0.0.28 (not on registry)`; the "on registry" state is covered by the unit test of the wording and the existing index-lookup tests, not by a live crate of this repo.
+
 ## 0.0.28
 
 - `docs/DESIGN.md` section 14: design for `--only` (partial publish) and `plan --registry` (R6 row 2, from the Vulkane publish). Design only; no code change yet.
