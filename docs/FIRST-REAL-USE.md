@@ -5,7 +5,9 @@ full dry run of the same set (below). **Nothing here uploads or tags anything un
 command line.** ReleaseAnt does not read or store the registry token; cargo finds it.
 
 What is observed and what is not: lines marked *(rehearsal)* are what the dry run printed on 2026-10-30 against
-configurant `origin/main` `c7cf82d698cb76eac8519b472f7edfe9d8eb3c31` (0.5.19) with `releaseant 0.0.16`.
+configurant `origin/main` `daa0fd1a1ac12099d551118badf2d4f1014acf01` (0.5.21) with `releaseant 0.0.19` built from
+releaseant `origin/main` `d99f1d8`. (The first rehearsal, on 2026-10-30 earlier, was at `c7cf82d` / 0.5.19 with 0.0.16;
+configurant moved on, so the numbers below are the second one. The batch is whatever configurant `main` is when the PM picks.)
 Lines marked *(design)* come from `docs/DESIGN.md` or the code and have **not** been seen against the real
 registry. The upload, read-back and tag steps of a real run have never run end to end; this is the first time.
 
@@ -15,26 +17,48 @@ Five crates, new versions of crates that already exist on crates.io (checked in 
 as their latest, so none is a first-ever publish):
 
 ```
-configurant 0.5.19            published in this order (rehearsal, plan):
-configurant-scan 0.5.19         configurant, configurant-scan, configurant-gui,
-configurant-gui 0.5.19          configurant-secrets, configurant-tui
-configurant-secrets 0.5.19
-configurant-tui 0.5.19
+configurant 0.5.21            published in this order (rehearsal, plan):
+configurant-scan 0.5.21         configurant, configurant-scan, configurant-gui,
+configurant-gui 0.5.21          configurant-secrets, configurant-tui
+configurant-secrets 0.5.21
+configurant-tui 0.5.21
 ```
 
-One version means one tag: `v0.5.19`, no `--tag-version` needed. Use the real release commit's SHA in place of
-`$SHA` below (the rehearsal used current `origin/main`; the version you publish is whatever is in that commit).
+One version means one tag: `v0.5.21`, no `--tag-version` needed. Use the real release commit's SHA in place of
+`$SHA` below (the version you publish is whatever is in that commit, see section 0).
+
+## 0. Get a binary, and how the version flows
+
+No `releaseant` binary is installed or on `PATH`; build one from `origin/main` of the releaseant repository, in a
+worktree (never the primary checkout, never a branch worktree with unmerged work). One cargo build at a time:
+
+```
+git -C C:/Projects/releaseant fetch origin
+git -C C:/Projects/releaseant worktree add --detach C:/Projects/releaseant-wt-bin origin/main   # or, if it exists: git -C <it> checkout --detach origin/main
+cd C:/Projects/releaseant-wt-bin && CARGO_BUILD_JOBS=2 cargo build --release
+alias releaseant=C:/Projects/releaseant-wt-bin/target/release/releaseant.exe    # or use the full path
+releaseant --version                                                            # rehearsal: releaseant 0.0.19
+```
+
+The build took 38 s *(rehearsal)*. In every command below `releaseant` means that binary.
+
+The version flow, so nothing is typed by hand: the crate set and the version come from the `Cargo.toml` files **at the
+commit `$SHA`** (read with `git archive`; the working tree is never read, so a shared checkout on another commit or with
+uncommitted files changes nothing: the rehearsal ran while configurant's primary checkout was on `c7cf82d`, not on the
+commit published). `plan` prints each `name version`; that version is what is uploaded, and the tag is `v<version>`
+on `$SHA`. Before the run, check that every crate's version is higher than the registry's latest (rehearsal: the
+registry had 0.5.16 for all five, the commit has 0.5.21) and that `git ls-remote --tags origin v<version>` is empty.
 
 ## 1. Before you start
 
-Run these in the order shown; each says what it should print. Commands are Git Bash; in PowerShell set
+Run these in the order shown (after section 0); each says what it should print. Commands are Git Bash; in PowerShell set
 `$SHA = git -C C:\Projects\configurant rev-parse origin/main` and use `$SHA` the same way.
 
 | # | Check | Command | Expect |
 |---|---|---|---|
 | 1 | The release commit is on origin | `git -C C:/Projects/configurant fetch origin` then `SHA=$(git -C C:/Projects/configurant rev-parse origin/main)` | a 40-hex SHA; it must be the commit you mean to publish. `releaseant tag` refuses a commit on no origin branch |
 | 2 | The set and its order | `releaseant plan --repo C:/Projects/configurant --sha $SHA` | the 5 crates above, one version, exit 0. Any `error:` stops here (nothing was written) |
-| 3 | Nothing is published yet | `releaseant readback --repo C:/Projects/configurant --sha $SHA` | `ABSENT` for all five *(rehearsal)*. If any says `present`, someone already published: stop |
+| 3 | Nothing is published yet | `releaseant readback --repo C:/Projects/configurant --sha $SHA` | `ABSENT` for all five *(rehearsal)*, **and exit code 1** (it exits 1 whenever any crate is absent: that is expected here, not a failure). If any says `present`, someone already published: stop |
 | 4 | Metadata | `releaseant plan ... --require-metadata keywords,rust-version,readme` | the same 5 lines and **nothing on stderr** *(rehearsal: no warnings for this set)*. A `warning:` or `error:` line says which crate and what to add |
 | 5 | The token | `cargo login`, or `CARGO_REGISTRY_TOKEN` in the environment | cargo finds it; ReleaseAnt never looks. A missing token would show up as `INTERRUPTED: unrecognised upload result for configurant: ...` carrying cargo's own message, before anything is uploaded *(design: not seen)* |
 | 6 | Git can push the tag | the configurant checkout's `origin` push credentials and `user.name`/`user.email` | the tag uses the repository's own identity (`git -C C:/Projects/configurant config user.name`). Do not `gh auth switch` (portfolio rule) |
@@ -43,7 +67,8 @@ Run these in the order shown; each says what it should print. Commands are Git B
 Where the ledger goes: by default `<repo>/.releaseant/ledger.jsonl`, which puts an untracked directory into the
 shared configurant checkout. The rehearsal used `--ledger` with a path **outside** every repository and left the
 checkout untouched; use the same path for the real run and for any resume (a resume must find the same file).
-Suggested: `--ledger C:/Projects/.release-ledgers/configurant-0.5.19.jsonl` (create the directory first).
+Suggested: `--ledger C:/Projects/.release-ledgers/configurant-0.5.21.jsonl` (create the directory first; the rehearsal's ledger is
+`rehearsal-daa0fd1.jsonl` there: **use a different file for the real run**, since a run at the same commit resumes the file it finds).
 
 ## 2. The rehearsal (done; repeat it if the commit changes)
 
@@ -62,13 +87,15 @@ configurant-secrets: would upload
 configurant-tui: would upload
 dry run: nothing was uploaded (use --execute)
 ledger: <ledger path>
-would tag v0.5.19 -> c7cf82d698cb76eac8519b472f7edfe9d8eb3c31 (dry run: nothing was created; use --execute)
+would tag v0.5.21 -> daa0fd1a1ac12099d551118badf2d4f1014acf01 (dry run: nothing was created; use --execute)
 ```
 
-It took **753 seconds (12.5 minutes)** of wall time on a machine where other lanes were also building (two to
-three cargo processes besides ours); nearly all of it is the pre-upload build of each extracted crate. On a quiet
-machine expect less. A real run adds the uploads, the index waits and the read-back; **that time is not
-measured**. The dry run's ledger had 7 events: `planned`, five `verified`, `finished complete`.
+It took **217 seconds** of wall time (the first rehearsal, 0.0.16 at 0.5.19, took 753 s while several other lanes
+were building), with `CARGO_BUILD_JOBS=2` on a loaded machine; nearly all of it is the pre-upload build of each
+extracted crate, so it varies with the load. A real run adds the uploads, the index waits and the read-back; **that time is not
+measured**. The dry run's ledger had 7 events, in this order: five `verified`, then `planned`, then `finished complete`
+(verification runs before the plan is recorded, so a run that fails verification leaves no `planned` event; the
+earlier version of this runbook had the order wrong).
 
 ## 3. The real run
 
@@ -107,12 +134,12 @@ After the crates: a `consumer check` line only for crates you skipped verificati
 All of these should hold; the first four are what "done" means.
 
 1. Exit code 0, and **five** lines `...: published and read back`.
-2. The tag line: `tagged v0.5.19 -> <SHA> (read back from origin)`.
+2. The tag line: `tagged v0.5.21 -> <SHA> (read back from origin)`.
 3. `releaseant readback --repo C:/Projects/configurant --sha $SHA` prints `present (<sha256>)` for all five.
-4. `git -C C:/Projects/configurant ls-remote --tags origin v0.5.19^{}` prints the same `<SHA>` you published from.
+4. `git -C C:/Projects/configurant ls-remote --tags origin v0.5.21^{}` prints the same `<SHA>` you published from.
 5. The ledger's last events: `visible` for each crate, `finished complete`, then `tagged`
    (`python -c "import json,sys;[print(json.loads(l)['event'],json.loads(l).get('crate','')) for l in open(sys.argv[1])]" <ledger path>`).
-6. Optional spot check against the registry's own record: `https://crates.io/api/v1/crates/configurant/0.5.19`
+6. Optional spot check against the registry's own record: `https://crates.io/api/v1/crates/configurant/0.5.21`
    shows a `checksum` that starts the same as the one `readback` printed.
 
 ## 6. When something goes wrong
@@ -132,23 +159,23 @@ All of these should hold; the first four are what "done" means.
 
 The crates are fine; do not publish again. The line ends with the exact command to finish. Read `<why>`:
 
-| `<why>` says | Cause | Fix, then run `releaseant tag --repo C:/Projects/configurant --sha $SHA --version 0.5.19 --execute` |
+| `<why>` says | Cause | Fix, then run `releaseant tag --repo C:/Projects/configurant --sha $SHA --version 0.5.21 --execute` |
 |---|---|---|
 | `is on no origin branch; push it first` | the SHA is not on any origin branch | `git push origin <branch>` so origin has the commit |
-| `already points at X on origin, not Y; tags are never moved` | `v0.5.19` exists on another commit (or a lightweight tag does) | **do not move it.** Decide with the lane which commit the release is; if the existing tag is wrong, that is a PM decision outside this tool |
-| `already points at X on local, not Y` | a stale local tag of that name in the shared checkout | `git -C C:/Projects/configurant tag -d v0.5.19` (local only), then re-run |
+| `already points at X on origin, not Y; tags are never moved` | `v0.5.21` exists on another commit (or a lightweight tag does) | **do not move it.** Decide with the lane which commit the release is; if the existing tag is wrong, that is a PM decision outside this tool |
+| `already points at X on local, not Y` | a stale local tag of that name in the shared checkout | `git -C C:/Projects/configurant tag -d v0.5.21` (local only), then re-run |
 | `git failed: ...` on the push | credentials, network or a protected tag rule | fix it; the tag was created locally and is reused by the re-run |
-| `pushed v0.5.19 but origin shows ...` | the read-back disagrees with the push | stop; send the lane the output |
-| `the crates are at several versions` | not expected for this batch | pass `--tag-version 0.5.19` |
+| `pushed v0.5.21 but origin shows ...` | the read-back disagrees with the push | stop; send the lane the output |
+| `the crates are at several versions` | not expected for this batch | pass `--tag-version 0.5.21` |
 
 Re-running the whole `publish ... --execute --tag` command also works: it finds everything already published and
-only tags. A second `tag` run on a tagged commit prints `already tagged v0.5.19 -> <SHA>`.
+only tags. A second `tag` run on a tagged commit prints `already tagged v0.5.21 -> <SHA>`.
 
 ### Yanking (only if a published version is wrong)
 
 ```
-releaseant yank NAME 0.5.19 --reason <kind>:<text> --ledger <ledger path>            # dry run
-releaseant yank NAME 0.5.19 --reason <kind>:<text> --ledger <ledger path> --execute
+releaseant yank NAME 0.5.21 --reason <kind>:<text> --ledger <ledger path>            # dry run
+releaseant yank NAME 0.5.21 --reason <kind>:<text> --ledger <ledger path> --execute
 ```
 
 `kind` is one of `security`, `broken-build`, `wrong-contents`, `licence`, `other`. It refuses a version the ledger
