@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.22
+
+- `docs/FIRST-REAL-USE.md`: the first real run (configurant `64e090a`, 0.5.22, five crates, `releaseant 0.0.21`, run by the PM, exit 0) is recorded as *observed*: 404 s in all, per-crate upload times, the 23-event ledger in order, `published and read back` five times and the tag read back from origin. Verified afterwards against crates.io (all five at 0.5.22) and the origin tag. Failure and recovery paths are still unseen and are marked so.
+
 ## 0.0.21
 
 - `docs/FIRST-REAL-USE.md` re-done after a second dry run at configurant `daa0fd1` (0.5.21, 0.0.19 built from releaseant `origin/main`; exit 0, empty stderr, 217 s): a new section 0 says how to get a binary (none is installed) and how the version flows from the commit's manifests to the tag; `readback` exits 1 when crates are absent (expected before a first publish); the ledger order is five `verified`, then `planned`, then `finished` (the runbook had `planned` first, wrong since 0.0.6).

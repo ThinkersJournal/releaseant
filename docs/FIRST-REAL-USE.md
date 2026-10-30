@@ -9,7 +9,12 @@ configurant `origin/main` `daa0fd1a1ac12099d551118badf2d4f1014acf01` (0.5.21) wi
 releaseant `origin/main` `d99f1d8`. (The first rehearsal, on 2026-10-30 earlier, was at `c7cf82d` / 0.5.19 with 0.0.16;
 configurant moved on, so the numbers below are the second one. The batch is whatever configurant `main` is when the PM picks.)
 Lines marked *(design)* come from `docs/DESIGN.md` or the code and have **not** been seen against the real
-registry. The upload, read-back and tag steps of a real run have never run end to end; this is the first time.
+registry. Lines marked *(observed)* are from the first real run, 2026-10-30, `releaseant 0.0.21` publishing configurant
+`64e090a825a53ebd14436e202ff6e7032742aad1` (0.5.22, the same five crates), exit 0: upload, read-back and tag ran end to
+end there for the first time. The PM ran it; the stdout figures below are as the PM relayed them, the times and event
+order are read from its ledger `C:/Projects/.release-ledgers/configurant-0.5.22.jsonl` (23 events), and the registry
+and the tag were read back by the lane afterwards (all five crates at 0.5.22 on crates.io; `v0.5.22` an annotated
+tag on origin whose peeled commit is that SHA).
 
 ## The batch
 
@@ -92,8 +97,11 @@ would tag v0.5.21 -> daa0fd1a1ac12099d551118badf2d4f1014acf01 (dry run: nothing 
 
 It took **217 seconds** of wall time (the first rehearsal, 0.0.16 at 0.5.19, took 753 s while several other lanes
 were building), with `CARGO_BUILD_JOBS=2` on a loaded machine; nearly all of it is the pre-upload build of each
-extracted crate, so it varies with the load. A real run adds the uploads, the index waits and the read-back; **that time is not
-measured**. The dry run's ledger had 7 events, in this order: five `verified`, then `planned`, then `finished complete`
+extracted crate, so it varies with the load. *(observed)* The real run took **404 seconds** (ledger: first event 05:01:54Z, `tagged` 05:08:38Z), 394 s of
+them between the first `upload_started` and the last `visible`. Per crate, `upload_started` to `upload_finished`:
+configurant 44 s, configurant-scan 87 s, configurant-gui 184 s, configurant-secrets 9 s, configurant-tui 67 s; each
+`visible` followed its `upload_finished` by 0 to 1 s, and the tag was created and read back 9 s after `finished`.
+No rate limit or index wait was met (no `waiting` or `classified` event). The dry run's ledger had 7 events, in this order: five `verified`, then `planned`, then `finished complete`
 (verification runs before the plan is recorded, so a run that fails verification leaves no `planned` event; the
 earlier version of this runbook had the order wrong).
 
@@ -112,7 +120,9 @@ reach them).
 
 ## 4. Reading the output
 
-Per crate, one line `name: <outcome>` *(design: `describe` in `src/main.rs`)*:
+Per crate, one line `name: <outcome>` *(design: `describe` in `src/main.rs`; of the rows below only
+`published and read back` has been seen in a real run, five times, *observed*; every other row is still design or
+fake-registry tests)*:
 
 | Outcome | Meaning | What to do |
 |---|---|---|
@@ -134,11 +144,13 @@ After the crates: a `consumer check` line only for crates you skipped verificati
 All of these should hold; the first four are what "done" means.
 
 1. Exit code 0, and **five** lines `...: published and read back`.
-2. The tag line: `tagged v0.5.21 -> <SHA> (read back from origin)`.
+2. The tag line: `tagged v0.5.21 -> <SHA> (read back from origin)` (*observed* for v0.5.22 -> `64e090a8...`).
 3. `releaseant readback --repo C:/Projects/configurant --sha $SHA` prints `present (<sha256>)` for all five.
 4. `git -C C:/Projects/configurant ls-remote --tags origin v0.5.21^{}` prints the same `<SHA>` you published from.
 5. The ledger's last events: `visible` for each crate, `finished complete`, then `tagged`
    (`python -c "import json,sys;[print(json.loads(l)['event'],json.loads(l).get('crate','')) for l in open(sys.argv[1])]" <ledger path>`).
+   *(observed)* the whole real ledger was, in order: five `verified`, `planned`, then per crate `upload_started`,
+   `upload_finished`, `visible` (15 events), `finished complete`, `tagged` (`v0.5.22 read back from origin`): 23 in all.
 6. Optional spot check against the registry's own record: `https://crates.io/api/v1/crates/configurant/0.5.21`
    shows a `checksum` that starts the same as the one `readback` printed.
 
@@ -188,7 +200,8 @@ checks. The lane will read the ledger's events against the registry and say what
 
 ## 8. Not covered, because it has not been seen
 
-- A real upload, real read-back and a real tag push through this tool: this is the first.
+- Every failure and recovery path: the first real run met none of them (no retry, no rate limit, no resume, no
+  `INTERRUPTED`, no `PUBLISHED but not tagged`), so sections 4 and 6 are still design and fake-registry tests.
 - crates.io's rate limits for these crates: unmeasured; the classification of a real 429 is from a captured
   sample in R4 (`tests/fixtures/rate_limited.txt`), not from this batch.
 - A kill between an upload and its read-back, and a lagging index: covered by fake-registry tests only.
