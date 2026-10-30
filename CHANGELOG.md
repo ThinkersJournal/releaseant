@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.26
+
+- `docs/DESIGN.md` section 13: design for per-step progress lines on stderr during `publish` (R6 row 1, the PM's silent 20-minute run). Design only; no code change yet.
+
 ## 0.0.25
 
 - `docs/PATENT-SWEEP.md`: sixth pass, the WIPO Patentscope pass (route B) through the web search tool limited to `patentscope.wipo.int`, nine dated queries (P1 to P9), one per idea. Five returned no patent record, four returned unrelated records; one record (WO2002057918) read with `tools/patent-claims.py`, outside as read. Recorded as low-confidence "found nothing"; the sweep stays INCOMPLETE; what was not searched or read is listed.
