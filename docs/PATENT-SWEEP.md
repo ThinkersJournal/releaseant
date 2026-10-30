@@ -2,7 +2,7 @@
 
 Date: 2026-10-29; Run by: releaseant lane, Sonnet 5.5; Method: AI-assisted web search (US-only), then independent claims read in full with `tools/patent-claims.py` (Google Patents pages); NOT legal advice; NOT a freedom-to-operate opinion. There is no attorney.
 
-**Status: five passes (2026-10-29 to 2026-10-30), complete for the routes run; the sweep stays INCOMPLETE until the PM accepts the routes not run as sufficient.** Sixteen queries were run (six general web; ten restricted to patents.google.com, six of those also to patents.justia.com). The first pass found nothing on ideas 6 to 9; the PM's publish condition for the first crates.io publish was one `patents.google.com` query each for ideas 6 to 9 with a positive control, and the second pass (Q13 to Q16) did that. The USPTO full-text scan, Espacenet, WIPO, assignee searches and direct Google Patents query URLs were NOT run (recorded limits). The third pass (no new queries) read five of the results the second pass had seen but not read, as the PM asked, the fourth pass (no new queries) six more (hits 27 to 32), and the fifth pass (no new queries) the last eleven results seen but unread (hits 33 to 43). **Every one of the 43 hits is outside as read** (the table's verdict word is the process's `clear`; "outside as read" is the claim being made: on the independent claims I read, from machine-converted text, nothing we do falls inside them, and that is not a clearance). **No hit needs review.** Forty-three patents were read, every independent claim (hits 33 to 43 from a summarising fetch, see Limitations); no result seen by a query is now unread. Two continuations, two grants and every hit's other family members were not read (listed under "Seen, not read").
+**Status: five passes (2026-10-29 to 2026-10-30), complete for the routes run; the sweep is INCOMPLETE; on 2026-10-30 the PM accepted the 43 reads as sufficient for the first crates.io publish, with the routes not run listed under "Routes not run" below.** Sixteen queries were run (six general web; ten restricted to patents.google.com, six of those also to patents.justia.com). The first pass found nothing on ideas 6 to 9; the PM's publish condition for the first crates.io publish was one `patents.google.com` query each for ideas 6 to 9 with a positive control, and the second pass (Q13 to Q16) did that. The USPTO full-text scan, Espacenet, WIPO, assignee searches and direct Google Patents query URLs were NOT run (recorded limits). The third pass (no new queries) read five of the results the second pass had seen but not read, as the PM asked, the fourth pass (no new queries) six more (hits 27 to 32), and the fifth pass (no new queries) the last eleven results seen but unread (hits 33 to 43). **Every one of the 43 hits is outside as read** (the table's verdict word is the process's `clear`; "outside as read" is the claim being made: on the independent claims I read, from machine-converted text, nothing we do falls inside them, and that is not a clearance). **No hit needs review.** Forty-three patents were read, every independent claim (hits 33 to 43 from a summarising fetch, see Limitations); no result seen by a query is now unread. Two continuations, two grants and every hit's other family members were not read (listed under "Seen, not read").
 
 ## Ideas swept
 What ReleaseAnt does that might be new or unusual (mechanisms, not features), from `docs/DESIGN.md` and the code at 5501221:
@@ -117,6 +117,16 @@ Every result a query returned has now been read (hits 1 to 43). Not read: the eB
 
 ## Needs review (to the PM)
 None.
+
+## Routes not run (PM ruling 2026-10-30)
+The PM accepted the 43 reads as sufficient for the first publish. The wording stays "outside as read", never "clear", and this is not legal advice. Costs are the lane's estimates in tokens, unmeasured.
+| route | what | estimate | ruling |
+|---|---|---|---|
+| A | USPTO full-text (ppubs) | 150-300k; the search UI is JavaScript and may be unreachable by a fetch tool | not run |
+| B | WIPO Patentscope | 100-200k; partly reachable by URL | **scheduled** (ROADMAP R6, a spare-token week) |
+| C | Espacenet | 150-300k; needs a free OPS API key | not run |
+| D | assignee searches (Microsoft, Red Hat, Atlassian, Sonatype, JFrog, GitHub) | 300-400k | not run |
+| E | CPC browsing (G06F8/60, G06F8/71) | 100-200k | not run |
 
 ## Limitations
 - AI-assisted search and read; no attorney. Search coverage is a general web search plus patent-site-restricted queries, not a structured patent search. USPTO full text, Espacenet, WIPO, assignee and inventor searches, and classification (CPC) browsing were not run.

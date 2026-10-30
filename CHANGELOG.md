@@ -2,7 +2,7 @@
 
 ## 0.0.20
 
-- `docs/PATENT-SWEEP.md` fifth pass: the last eleven results seen but unread read claim by claim (hits 33 to 43), all outside as read; 43 read in all, none needs review, no result a query returned is unread. Claims for these came through a summarising fetch (paraphrase), recorded under Limitations. The sweep stays INCOMPLETE until the PM accepts the routes not run.
+- `docs/PATENT-SWEEP.md` fifth pass: the last eleven results seen but unread read claim by claim (hits 33 to 43), all outside as read; 43 read in all, none needs review, no result a query returned is unread. Claims for these came through a summarising fetch (paraphrase), recorded under Limitations. The sweep stays INCOMPLETE; the PM accepted the 43 reads as sufficient for the first publish (2026-10-30), listed the routes not run with costs in the sweep, and scheduled WIPO Patentscope as a ROADMAP row.
 
 ## 0.0.19
 
