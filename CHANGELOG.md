@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.30
+
+- `docs/DESIGN.md` section 15: design for tagging a partial publish (R6 row 3): per-crate `<crate>-v<version>` tags for `--only --tag`, full runs unchanged. Needs the PM's answer on the tag shape before code; notes that a patent re-sweep is owed for the new capability family. Design only.
+
 ## 0.0.29
 
 - `publish --only NAME` (repeatable) runs just the named crates: every other crate of the plan is left out through the `--exclude` path (not packaged or verified, recorded in the ledger as `excluded from this run: not selected by --only`), and a named crate that needs a left-out crate needs it on the registry already. Not combinable with `--exclude` (clap, and `PipelineError::OnlyWithExclusions` for library callers); an unknown name is an error; a partial run is not tagged. `plan --only` shows the same selection.
