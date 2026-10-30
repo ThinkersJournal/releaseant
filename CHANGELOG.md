@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.31
+
+- `publish --only NAME --tag` tags each selected crate that is on the registry as an annotated `<crate>-v<version>` on the run's commit, pushed and read back; there is no project tag for a partial run, and a selected crate that did not land is named and left untagged while the others are tagged (PM ruling, DESIGN section 15). `--tag-version` cannot be combined with `--only`. `releaseant tag --crate NAME` tags one crate on its own. The whole-project `v<version>` is unchanged and still comes only from a run that publishes the entire plan. Ledger: one `tagged` event per tag, with the crate and the tag name. Library: `TagRequest::tag`, `tag::{release_tag, crate_tag, landed_crates}`.
+- Not done: the patent re-sweep for this capability family (ROADMAP, owed before any release).
+
 ## 0.0.30
 
 - `docs/DESIGN.md` section 15: design for tagging a partial publish (R6 row 3): per-crate `<crate>-v<version>` tags for `--only --tag`, full runs unchanged. Records the PM's ruling (per-crate tags for a partial publish; `v<version>` only when the whole plan is published) and that a patent re-sweep is owed, now a ROADMAP row. Design only.

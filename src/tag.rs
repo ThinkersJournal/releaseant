@@ -14,6 +14,7 @@ use std::process::Command;
 use semver::Version;
 
 use crate::plan::Plan;
+use crate::run::Outcome;
 use crate::source::is_full_sha;
 
 /// A self-contained git identity for the tag (tests). `None` in a [`TagRequest`] uses the
@@ -31,9 +32,11 @@ pub struct Identity {
 pub struct TagRequest<'a> {
     /// The git repository (its `origin` remote is where the tag goes).
     pub repo: &'a Path,
-    /// The project name, for the tag message (`<name> <version>`).
+    /// The project or crate name, for the tag message (`<name> <version>`).
     pub name: &'a str,
-    /// The released version; the tag is `v<version>`.
+    /// The tag to create: [`release_tag`] for the whole project, [`crate_tag`] for one crate.
+    pub tag: &'a str,
+    /// The released version (in the tag message).
     pub version: &'a Version,
     /// The full commit SHA the release was published from.
     pub sha: &'a str,
@@ -124,7 +127,7 @@ pub fn tag_release(req: &TagRequest<'_>) -> Result<TagOutcome, TagError> {
     if !is_full_sha(req.sha) {
         return Err(TagError::NotFullSha(req.sha.to_owned()));
     }
-    let tag = format!("v{}", req.version);
+    let tag = req.tag.to_owned();
     let git = |args: &[&str]| run_git(req.repo, &[], args);
 
     git(&["fetch", "-q", "origin"])?;
@@ -195,6 +198,44 @@ pub fn tag_release(req: &TagRequest<'_>) -> Result<TagOutcome, TagError> {
             got: got.unwrap_or_default(),
         }),
     }
+}
+
+/// The tag for a release of the whole project, `v<version>`: made only when the entire plan is
+/// published, so it never claims more than was published.
+#[must_use]
+pub fn release_tag(version: &Version) -> String {
+    format!("v{version}")
+}
+
+/// The tag for one crate published on its own, `<crate>-v<version>`: it names exactly what it claims.
+#[must_use]
+pub fn crate_tag(krate: &str, version: &Version) -> String {
+    format!("{krate}-v{version}")
+}
+
+/// `(landed, missing)` as [`landed_crates`] returns them: `(name, version)` and `(name, why)`.
+pub type Landed = (Vec<(String, Version)>, Vec<(String, String)>);
+
+/// Which of the crates a partial run selected are on the registry after it (so may be tagged), and
+/// which are not, with why. In a dry run nothing was uploaded, so every selected crate counts as
+/// landed and the tags are only checked.
+#[must_use]
+pub fn landed_crates(plan: &Plan, outcomes: &[(String, Outcome)], execute: bool) -> Landed {
+    let (mut landed, mut missing) = (Vec::new(), Vec::new());
+    for c in &plan.order {
+        let outcome = outcomes.iter().find(|(n, _)| *n == c.name).map(|(_, o)| o);
+        match outcome {
+            Some(Outcome::Visible | Outcome::AlreadyPublished) => {
+                landed.push((c.name.clone(), c.version.clone()));
+            }
+            Some(Outcome::WouldUpload) if !execute => {
+                landed.push((c.name.clone(), c.version.clone()));
+            }
+            Some(o) => missing.push((c.name.clone(), format!("{o:?}"))),
+            None => missing.push((c.name.clone(), "no outcome".to_owned())),
+        }
+    }
+    (landed, missing)
 }
 
 /// The version a publish run is tagged with: the one version every crate in the plan shares (a
@@ -336,10 +377,22 @@ mod tests {
 
         fn run(&self, sha: &str, execute: bool) -> Result<TagOutcome, TagError> {
             let v: Version = "0.1.0".parse().unwrap();
+            self.run_as("v0.1.0", "demo", &v, sha, execute)
+        }
+
+        fn run_as(
+            &self,
+            tag: &str,
+            name: &str,
+            v: &Version,
+            sha: &str,
+            execute: bool,
+        ) -> Result<TagOutcome, TagError> {
             tag_release(&TagRequest {
                 repo: &self.work,
-                name: "demo",
-                version: &v,
+                tag,
+                name,
+                version: v,
                 sha,
                 execute,
                 identity: Some(&Self::id()),
@@ -494,5 +547,81 @@ mod tests {
         let f = Fixture::new();
         let err = f.run("main", true).unwrap_err();
         assert!(err.to_string().contains("git rev-parse main"), "{err}");
+    }
+
+    // A partial release: the crate is tagged under its own name on the exact commit, the project's
+    // `v<version>` is not made, and a second run finds it already tagged.
+    #[test]
+    fn a_crate_tag_names_the_crate_and_claims_nothing_about_the_project() {
+        let f = Fixture::new();
+        let first = f.pushed[0].clone();
+        let v: Version = "0.1.0".parse().unwrap();
+        let tag = crate_tag("demo-kernels", &v);
+        assert_eq!(tag, "demo-kernels-v0.1.0");
+        assert_eq!(
+            f.run_as(&tag, "demo-kernels", &v, &first, true),
+            Ok(TagOutcome::Tagged)
+        );
+        assert_eq!(
+            git(
+                &f.origin,
+                &["rev-parse", &format!("refs/tags/{tag}^{{commit}}")]
+            ),
+            first
+        );
+        assert!(
+            git(&f.origin, &["cat-file", "-p", &format!("refs/tags/{tag}")])
+                .contains("demo-kernels 0.1.0")
+        );
+        assert_eq!(f.origin_tag(), None, "no whole-project v0.1.0 was made");
+        assert_eq!(
+            f.run_as(&tag, "demo-kernels", &v, &first, true),
+            Ok(TagOutcome::AlreadyTagged)
+        );
+        // Control: the whole-project tag is a different name and still works.
+        assert_eq!(release_tag(&v), "v0.1.0");
+        assert_eq!(f.run(&first, true), Ok(TagOutcome::Tagged));
+    }
+
+    fn planned(names: &[(&str, &str)]) -> Plan {
+        Plan {
+            order: names
+                .iter()
+                .map(|(n, v)| crate::plan::PlannedCrate {
+                    name: (*n).to_owned(),
+                    version: v.parse().unwrap(),
+                    depends_on: Default::default(),
+                })
+                .collect(),
+        }
+    }
+
+    // Only selected crates that are on the registry are tagged; the others are named with why.
+    #[test]
+    fn landed_crates_separates_what_is_on_the_registry_from_what_is_not() {
+        let plan = planned(&[("a", "0.1.0"), ("b", "0.2.0"), ("c", "0.3.0")]);
+        let outcomes = vec![
+            ("a".to_owned(), Outcome::Visible),
+            ("b".to_owned(), Outcome::Missing),
+            ("c".to_owned(), Outcome::AlreadyPublished),
+        ];
+        let (landed, missing) = landed_crates(&plan, &outcomes, true);
+        assert_eq!(
+            landed,
+            [
+                ("a".to_owned(), "0.1.0".parse().unwrap()),
+                ("c".to_owned(), "0.3.0".parse().unwrap())
+            ]
+        );
+        assert_eq!(missing, [("b".to_owned(), "Missing".to_owned())]);
+        // A dry run uploaded nothing: every selected crate is checked, none is "missing".
+        let dry = vec![
+            ("a".to_owned(), Outcome::WouldUpload),
+            ("b".to_owned(), Outcome::WouldUpload),
+            ("c".to_owned(), Outcome::WouldUpload),
+        ];
+        assert_eq!(landed_crates(&plan, &dry, false).0.len(), 3);
+        // Control: the same outcomes in an execute run are not landed.
+        assert_eq!(landed_crates(&plan, &dry, true).0.len(), 0);
     }
 }

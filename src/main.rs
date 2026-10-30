@@ -19,7 +19,9 @@ use releaseant::pipeline::{
 use releaseant::preflight::{Problem, parse_require};
 use releaseant::registry::{Clock, Lookup, Registry};
 use releaseant::run::{Mode, Options, Outcome};
-use releaseant::tag::{TagOutcome, TagRequest, release_version, tag_release};
+use releaseant::tag::{
+    TagOutcome, TagRequest, crate_tag, landed_crates, release_tag, release_version, tag_release,
+};
 use releaseant::verify::verify_set;
 use releaseant::yank::{CargoYank, YankOutcome, yank};
 
@@ -136,11 +138,12 @@ enum Command {
         #[arg(long)]
         keep: bool,
         /// When the run has published everything, tag the commit `v<version>` on origin and read it
-        /// back (with `--execute`; without it, check that the tag could be made).
+        /// back (with `--execute`; without it, check that the tag could be made). With `--only`
+        /// there is no project tag: each selected crate on the registry gets `<crate>-v<version>`.
         #[arg(long)]
         tag: bool,
         /// The version to tag, when the crates are at several versions.
-        #[arg(long)]
+        #[arg(long, conflicts_with = "only")]
         tag_version: Option<semver::Version>,
         /// The project name in the tag message (default: the repository directory's name).
         #[arg(long)]
@@ -151,9 +154,12 @@ enum Command {
     Tag {
         #[command(flatten)]
         source: Source,
-        /// The released version; the tag is `v<version>`.
+        /// The released version; the tag is `v<version>` (`<crate>-v<version>` with `--crate`).
         #[arg(long)]
         version: semver::Version,
+        /// Tag one crate released on its own: `<crate>-v<version>`, not the whole-project tag.
+        #[arg(long = "crate")]
+        krate: Option<String>,
         /// The project name in the tag message (default: the repository directory's name).
         #[arg(long)]
         name: Option<String>,
@@ -330,7 +336,8 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                 .zip(exclude_reason)
                 .map(|(krate, reason)| Exception { krate, reason })
                 .collect();
-            let any_excluded = !excluded.is_empty() || !only.is_empty();
+            let any_excluded = !excluded.is_empty();
+            let only_names = only.clone();
             let exceptions: Vec<Exception> = no_verify_crate
                 .into_iter()
                 .zip(reason)
@@ -408,6 +415,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                         source: &source,
                         execute,
                         any_excluded,
+                        only: &only_names,
                         version: tag_version.as_ref(),
                         name: tag_name,
                         ledger: &ledger_path,
@@ -420,19 +428,24 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
         Command::Tag {
             source,
             version,
+            krate,
             name,
             execute,
         } => {
-            let name = name.unwrap_or_else(|| project_name(&source.repo));
+            let tag = krate
+                .as_ref()
+                .map_or_else(|| release_tag(&version), |k| crate_tag(k, &version));
+            let name = krate.or(name).unwrap_or_else(|| project_name(&source.repo));
             let outcome = tag_release(&TagRequest {
                 repo: &source.repo,
+                tag: &tag,
                 name: &name,
                 version: &version,
                 sha: &source.sha,
                 execute,
                 identity: None,
             })?;
-            println!("{}", describe_tag(&outcome, &version, &source.sha));
+            println!("{}", describe_tag(&outcome, &tag, &source.sha));
             Ok(true)
         }
         Command::Readback(s) => {
@@ -505,13 +518,13 @@ fn describe(o: &Outcome) -> String {
     }
 }
 
-fn describe_tag(o: &TagOutcome, version: &semver::Version, sha: &str) -> String {
+fn describe_tag(o: &TagOutcome, tag: &str, sha: &str) -> String {
     match o {
         TagOutcome::WouldTag => {
-            format!("would tag v{version} -> {sha} (dry run: nothing was created; use --execute)")
+            format!("would tag {tag} -> {sha} (dry run: nothing was created; use --execute)")
         }
-        TagOutcome::AlreadyTagged => format!("already tagged v{version} -> {sha}"),
-        TagOutcome::Tagged => format!("tagged v{version} -> {sha} (read back from origin)"),
+        TagOutcome::AlreadyTagged => format!("already tagged {tag} -> {sha}"),
+        TagOutcome::Tagged => format!("tagged {tag} -> {sha} (read back from origin)"),
     }
 }
 
@@ -528,6 +541,7 @@ struct TagAfter<'a> {
     source: &'a Source,
     execute: bool,
     any_excluded: bool,
+    only: &'a [String],
     version: Option<&'a semver::Version>,
     name: Option<String>,
     ledger: &'a Path,
@@ -537,6 +551,9 @@ struct TagAfter<'a> {
 /// Tag the release once a publish has put everything on the registry. `true` unless a tag that
 /// should have been made was not; "not yet" and "not for this run" are reported and are not failures.
 fn tag_after_publish(t: &TagAfter<'_>, summary: &Summary) -> bool {
+    if !t.only.is_empty() {
+        return tag_selected(t, summary);
+    }
     if t.execute && !summary.is_success() {
         println!(
             "not tagged: the run did not finish; run the same command again to resume, it tags when done"
@@ -565,8 +582,10 @@ fn tag_after_publish(t: &TagAfter<'_>, summary: &Summary) -> bool {
         .name
         .clone()
         .unwrap_or_else(|| project_name(&t.source.repo));
+    let tag = release_tag(&version);
     let outcome = tag_release(&TagRequest {
         repo: &t.source.repo,
+        tag: &tag,
         name: &name,
         version: &version,
         sha: &t.source.sha,
@@ -575,9 +594,9 @@ fn tag_after_publish(t: &TagAfter<'_>, summary: &Summary) -> bool {
     });
     match outcome {
         Ok(o) => {
-            println!("{}", describe_tag(&o, &version, &t.source.sha));
+            println!("{}", describe_tag(&o, &tag, &t.source.sha));
             if o == TagOutcome::Tagged {
-                record_tag(t, &version);
+                record_tag(t, None, &version, &tag);
             }
             true
         }
@@ -592,20 +611,60 @@ fn tag_after_publish(t: &TagAfter<'_>, summary: &Summary) -> bool {
     }
 }
 
+/// A partial run (`--only`) has no project tag: each selected crate that is on the registry gets
+/// `<crate>-v<version>`, and a selected crate that is not is named and left untagged. `true` unless
+/// a tag that should have been made was not.
+fn tag_selected(t: &TagAfter<'_>, summary: &Summary) -> bool {
+    let (landed, missing) = landed_crates(&summary.plan, &summary.report.outcomes, t.execute);
+    for (krate, why) in &missing {
+        println!("not tagged: {krate} is not on the registry after this run ({why})");
+    }
+    let mut ok = true;
+    for (krate, version) in landed {
+        let tag = crate_tag(&krate, &version);
+        let outcome = tag_release(&TagRequest {
+            repo: &t.source.repo,
+            tag: &tag,
+            name: &krate,
+            version: &version,
+            sha: &t.source.sha,
+            execute: t.execute,
+            identity: None,
+        });
+        match outcome {
+            Ok(o) => {
+                println!("{}", describe_tag(&o, &tag, &t.source.sha));
+                if o == TagOutcome::Tagged {
+                    record_tag(t, Some(&krate), &version, &tag);
+                }
+            }
+            Err(why) => {
+                println!(
+                    "{}not tagged: {why}\nfix that, then run `releaseant tag --sha {} --crate {krate} --version {version} --execute`",
+                    unless_dry(t.execute, "PUBLISHED but "),
+                    t.source.sha
+                );
+                ok = false;
+            }
+        }
+    }
+    ok
+}
+
 fn unless_dry(execute: bool, text: &'static str) -> &'static str {
     if execute { text } else { "" }
 }
 
 /// The ledger notes the tag; a failure to write it is reported, the tag itself stands.
-fn record_tag(t: &TagAfter<'_>, version: &semver::Version) {
+fn record_tag(t: &TagAfter<'_>, krate: Option<&str>, version: &semver::Version, tag: &str) {
     let event = Event {
         ts: SystemClock.now_utc(),
         run: t.run_id.to_owned(),
         sha: t.source.sha.clone(),
-        crate_name: None,
+        crate_name: krate.map(str::to_owned),
         version: Some(version.to_string()),
         event: EventKind::Tagged,
-        detail: format!("v{version} read back from origin"),
+        detail: format!("{tag} read back from origin"),
     };
     if let Err(e) = Ledger::open(t.ledger).and_then(|l| l.append(&event)) {
         println!("warning: the tag stands but the ledger could not record it: {e}");
