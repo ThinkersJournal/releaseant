@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.20
+
+- `docs/PATENT-SWEEP.md` fifth pass: the last eleven results seen but unread read claim by claim (hits 33 to 43), all outside as read; 43 read in all, none needs review, no result a query returned is unread. Claims for these came through a summarising fetch (paraphrase), recorded under Limitations. The sweep stays INCOMPLETE until the PM accepts the routes not run.
+
 ## 0.0.19
 
 - `publish` prints the metadata warnings as soon as they are known, before the first build or upload, instead of after the run: a run that fails or is interrupted later (a missing external, a cargo refusal) used to lose them, and a long run showed them last. `PublishArgs::on_warnings` is the hook (`None` keeps the old behaviour of reading `Summary::warnings`); `plan` and `verify` already printed them up front. Test `warnings_are_shown_before_anything_is_built`; control: moving the call to the end of `publish` makes it fail (the scratch `target` directory exists by then).
