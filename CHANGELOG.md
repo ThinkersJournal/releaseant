@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.21
+
+- `docs/FIRST-REAL-USE.md` re-done after a second dry run at configurant `daa0fd1` (0.5.21, 0.0.19 built from releaseant `origin/main`; exit 0, empty stderr, 217 s): a new section 0 says how to get a binary (none is installed) and how the version flows from the commit's manifests to the tag; `readback` exits 1 when crates are absent (expected before a first publish); the ledger order is five `verified`, then `planned`, then `finished` (the runbook had `planned` first, wrong since 0.0.6).
+
 ## 0.0.20
 
 - `docs/PATENT-SWEEP.md` fifth pass: the last eleven results seen but unread read claim by claim (hits 33 to 43), all outside as read; 43 read in all, none needs review, no result a query returned is unread. Claims for these came through a summarising fetch (paraphrase), recorded under Limitations. The sweep stays INCOMPLETE; the PM accepted the 43 reads as sufficient for the first publish (2026-10-30), listed the routes not run with costs in the sweep, and scheduled WIPO Patentscope as a ROADMAP row.
