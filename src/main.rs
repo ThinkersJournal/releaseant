@@ -61,11 +61,7 @@ impl MetadataPolicy {
 /// Metadata problems that did not stop the run, on stderr so a plan on stdout stays clean.
 /// Progress lines on stderr, each led by the time since the command started (`[03:12]`).
 fn stderr_progress() -> releaseant::progress::ProgressSink {
-    let started = std::time::Instant::now();
-    std::rc::Rc::new(move |line: &str| {
-        let s = started.elapsed().as_secs();
-        eprintln!("[{:02}:{:02}] {line}", s / 60, s % 60);
-    })
+    releaseant::progress::writer_sink(std::io::stderr())
 }
 
 fn print_warnings(warnings: &[Problem]) {

@@ -713,6 +713,46 @@ mod tests {
         );
     }
 
+    struct BrokenPipe;
+
+    impl std::io::Write for BrokenPipe {
+        fn write(&mut self, _: &[u8]) -> io::Result<usize> {
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, "reader gone"))
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, "reader gone"))
+        }
+    }
+
+    // A progress writer that cannot write must not change the publish: same result, same uploads.
+    #[test]
+    fn a_progress_writer_that_fails_does_not_change_the_publish() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let mut a = args(repo.path(), &sha, &ledger, &work, Mode::Execute, vec![]);
+        a.on_progress = Some(crate::progress::writer_sink(BrokenPipe));
+        let s = publish(
+            &Cargo::from_env(),
+            &a,
+            |_, _| Box::new(FakeRegistry::new()),
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+        .unwrap();
+        assert!(s.is_success(), "{s:?}");
+        let kinds: Vec<_> = Ledger::open(&ledger)
+            .unwrap()
+            .read()
+            .unwrap()
+            .iter()
+            .map(|e| e.event)
+            .collect();
+        assert!(kinds.contains(&EventKind::Finished) && kinds.contains(&EventKind::Visible));
+    }
+
     #[test]
     fn publishes_in_dependency_order_from_the_archive_with_real_cargo() {
         let p = pid();

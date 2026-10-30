@@ -56,6 +56,20 @@ pub fn describe(e: &Event, took: Option<u64>) -> String {
     }
 }
 
+/// A sink that writes `[MM:SS] line` to `out`, MM:SS being the time since the sink was made.
+///
+/// A write that fails (a closed pipe, a reader that exited) is ignored: progress is display only
+/// and must never stop a publish between two steps. (`eprintln!` panics on such an error.)
+#[must_use]
+pub fn writer_sink(out: impl std::io::Write + 'static) -> ProgressSink {
+    let started = Instant::now();
+    let out = RefCell::new(out);
+    Rc::new(move |line: &str| {
+        let s = started.elapsed().as_secs();
+        let _ = writeln!(out.borrow_mut(), "[{:02}:{:02}] {line}", s / 60, s % 60);
+    })
+}
+
 /// An observer for a ledger that sends [`describe`]'s line for each event to `sink`.
 #[must_use]
 pub fn observer(sink: ProgressSink) -> Observer {
