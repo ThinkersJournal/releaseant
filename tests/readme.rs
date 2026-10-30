@@ -135,6 +135,28 @@ fn normalise(text: &str) -> String {
     text.replace("\r\n", "\n")
 }
 
+/// Splits output into (progress lines with their `[MM:SS]` elapsed time zeroed, everything else).
+/// Progress goes to stderr and the rest to stdout, so a terminal interleaves them in a way the test,
+/// which reads the two streams separately, cannot reproduce; the two parts are compared separately.
+fn split_progress(text: &str) -> (Vec<String>, Vec<String>) {
+    let (mut progress, mut rest) = (Vec::new(), Vec::new());
+    for line in normalise(text).lines() {
+        let b = line.as_bytes();
+        let timed = b.len() > 8
+            && b[0] == b'['
+            && b[3] == b':'
+            && b[6] == b']'
+            && b[7] == b' '
+            && [1, 2, 4, 5].iter().all(|&i| b[i].is_ascii_digit());
+        if timed {
+            progress.push(format!("[00:00] {}", &line[8..]));
+        } else {
+            rest.push(line.to_owned());
+        }
+    }
+    (progress, rest)
+}
+
 #[test]
 fn the_readme_hello_world_does_what_the_readme_says() {
     let readme =
@@ -189,8 +211,8 @@ fn the_readme_hello_world_does_what_the_readme_says() {
         ));
         // The SHA in an error message is the user's, not part of the contract.
         assert_eq!(
-            got,
-            normalise(expected),
+            split_progress(&got),
+            split_progress(expected),
             "README output is stale for: {cmd}"
         );
         ran_releaseant += 1;
