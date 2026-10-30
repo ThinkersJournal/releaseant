@@ -256,6 +256,9 @@ impl ConsumerCheck for CargoAddCheck {
     }
 }
 
+/// Shows metadata warnings to the person running the command.
+pub type WarningSink<'a> = &'a dyn Fn(&[Problem]);
+
 /// Inputs to [`publish`].
 pub struct PublishArgs<'a> {
     /// The repository to publish from.
@@ -276,6 +279,9 @@ pub struct PublishArgs<'a> {
     pub excluded: Vec<Exception>,
     /// Metadata fields that are only warnings unless named here (see [`preflight::REQUIRABLE`]).
     pub require_metadata: BTreeSet<String>,
+    /// Called with the metadata warnings as soon as they are known, before anything is built or
+    /// uploaded, so a run that fails later has still shown them.
+    pub on_warnings: Option<WarningSink<'a>>,
 }
 
 /// What a publish did.
@@ -370,6 +376,9 @@ pub fn publish(
     }
     // Before anything else: a crate the registry would refuse at upload leaves a half-published set.
     let warnings = check_metadata(&prepared, &args.require_metadata)?;
+    if let Some(show) = args.on_warnings {
+        show(&warnings);
+    }
     let target_dir = args.work.join("target");
     let mut registry = make_registry(&prepared.dir, &target_dir);
     // Before anything is written or built: a dependency outside the set that the registry cannot
@@ -616,6 +625,7 @@ mod tests {
             exceptions,
             excluded: vec![],
             require_metadata: BTreeSet::new(),
+            on_warnings: None,
         }
     }
 
@@ -775,6 +785,40 @@ zzrl-not-yet-published = \"0.23.0\"",
         assert!(uploads.borrow().is_empty());
         assert!(!ledger.exists(), "no ledger was created");
         assert!(!work.join("target").exists(), "nothing was packaged");
+    }
+
+    // The warnings reach the caller before the first build, not only in the summary at the end: the
+    // callback sees the scratch `target` directory absent, and a run that fails afterwards (the unknown
+    // exception crate) has still shown them.
+    #[test]
+    fn warnings_are_shown_before_anything_is_built() {
+        let p = pid();
+        let (repo, sha) = repo_with(&p, false, |_, manifest| {
+            manifest.replace(
+                "keywords = [\"probe\"]
+",
+                "",
+            )
+        });
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let seen = std::cell::RefCell::new(Vec::new());
+        let show = |ws: &[Problem]| {
+            seen.borrow_mut()
+                .push((ws.len(), work.join("target").exists()))
+        };
+        let mut a = args(repo.path(), &sha, &ledger, &work, Mode::DryRun, vec![]);
+        a.on_warnings = Some(&show);
+        let s = publish(
+            &Cargo::from_env(),
+            &a,
+            |_, _| Box::new(FakeRegistry::new()),
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+        .unwrap();
+        assert_eq!(*seen.borrow(), [(s.warnings.len(), false)]);
+        assert!(s.warnings.len() >= 2, "the control: warnings exist");
     }
 
     // Quality fields the registry accepts without (here keywords and rust-version) are warnings: the run

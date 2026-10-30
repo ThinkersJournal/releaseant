@@ -316,6 +316,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                     exceptions,
                     excluded,
                     require_metadata,
+                    on_warnings: Some(&|w| print_warnings(w)),
                 },
                 |dir, target| {
                     Box::new(CratesIo::new(
@@ -334,7 +335,6 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                 let _ = std::fs::remove_dir_all(&work);
             }
             let summary = summary?;
-            print_warnings(&summary.warnings);
             for (n, o) in &summary.report.outcomes {
                 println!("{n}: {}", describe(o));
             }
