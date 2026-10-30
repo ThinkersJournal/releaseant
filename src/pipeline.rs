@@ -15,10 +15,11 @@ use crate::ledger::{Event, EventKind, Ledger, LedgerError};
 use crate::metadata::Metadata;
 use crate::plan::{Plan, PlanError, plan};
 use crate::preflight::{self, Problem};
+use crate::progress::{ProgressSink, observer};
 use crate::registry::{Clock, Lookup, Registry};
 use crate::run::{Mode, Options, Outcome, Report, RunContext, RunError, run};
 use crate::source::{self, SourceError};
-use crate::verify::{PackagedCrate, verify_set};
+use crate::verify::{PackagedCrate, verify_set_with};
 
 /// A recorded exception to a rule: this crate skips pre-upload verification, for this reason.
 #[derive(Debug, Clone)]
@@ -282,6 +283,9 @@ pub struct PublishArgs<'a> {
     /// Called with the metadata warnings as soon as they are known, before anything is built or
     /// uploaded, so a run that fails later has still shown them.
     pub on_warnings: Option<WarningSink<'a>>,
+    /// Called with one line of text per step as the run goes (packaging, each verification, and
+    /// a line for every ledger event), so a long run is not silent.
+    pub on_progress: Option<ProgressSink>,
 }
 
 /// What a publish did.
@@ -387,7 +391,15 @@ pub fn publish(
     if !missing.is_empty() {
         return Err(PipelineError::MissingExternals(missing));
     }
-    let ledger = Ledger::open(args.ledger)?;
+    let mut ledger = Ledger::open(args.ledger)?;
+    if let Some(sink) = &args.on_progress {
+        ledger = ledger.observed_by(observer(sink.clone()));
+    }
+    let say = |line: String| {
+        if let Some(sink) = &args.on_progress {
+            sink(&line);
+        }
+    };
     let version_of = |name: &str| {
         prepared
             .plan
@@ -419,9 +431,16 @@ pub fn publish(
         )?;
     }
 
+    say(format!("packaging {} crates", prepared.plan.order.len()));
     let packaged = package_all(cargo, &prepared, &target_dir)?;
     let skip: Vec<String> = args.exceptions.iter().map(|e| e.krate.clone()).collect();
-    let verified = verify_set(cargo, &packaged, &args.work.join("verify"), &skip)?;
+    let verified = verify_set_with(
+        cargo,
+        &packaged,
+        &args.work.join("verify"),
+        &skip,
+        &|name, i, total| say(format!("verifying {name} ({i} of {total})")),
+    )?;
     let failed: Vec<(String, String)> = verified
         .iter()
         .filter_map(|(n, r)| r.as_ref().err().map(|why| (n.clone(), why.clone())))
@@ -626,6 +645,7 @@ mod tests {
             excluded: vec![],
             require_metadata: BTreeSet::new(),
             on_warnings: None,
+            on_progress: None,
         }
     }
 
@@ -639,6 +659,58 @@ mod tests {
 
     fn pid() -> String {
         format!("zzrlpipe{}", std::process::id())
+    }
+
+    // Every ledger event of the run produced one progress line (compared by kind, not a bare
+    // count), and the package/verify stages announced themselves; with no sink the run is unchanged.
+    #[test]
+    fn progress_lines_mirror_the_ledger_and_cover_package_and_verify() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let lines: std::rc::Rc<std::cell::RefCell<Vec<String>>> = std::rc::Rc::default();
+        let l2 = std::rc::Rc::clone(&lines);
+        let mut a = args(repo.path(), &sha, &ledger, &work, Mode::Execute, vec![]);
+        a.on_progress = Some(std::rc::Rc::new(move |l: &str| {
+            l2.borrow_mut().push(l.to_owned());
+        }));
+        let s = publish(
+            &Cargo::from_env(),
+            &a,
+            |_, _| Box::new(FakeRegistry::new()),
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+        .unwrap();
+        assert!(s.is_success(), "{s:?}");
+        let got = lines.borrow().clone();
+        let (an, bn) = (format!("{p}-a"), format!("{p}-b"));
+        assert_eq!(got[0], "packaging 2 crates", "{got:?}");
+        assert_eq!(got[1], format!("verifying {an} (1 of 2)"));
+        assert_eq!(got[2], format!("verifying {bn} (2 of 2)"));
+        let events = Ledger::open(&ledger).unwrap().read().unwrap();
+        let from_ledger: Vec<String> = events
+            .iter()
+            .map(|e| crate::progress::describe(e, None))
+            .collect();
+        let tail: Vec<String> = got[3..]
+            .iter()
+            .map(|l| {
+                // upload durations are the only part the ledger cannot reproduce
+                l.split(" (").next().unwrap().to_owned()
+            })
+            .collect();
+        let want: Vec<String> = from_ledger
+            .iter()
+            .map(|l| l.split(" (").next().unwrap().to_owned())
+            .collect();
+        assert_eq!(tail, want, "one line per ledger event, in order");
+        assert!(got.iter().any(|l| l == &format!("uploading {an} 0.0.1")));
+        assert!(
+            got.iter()
+                .any(|l| l == &format!("{bn} 0.0.1: read back, visible"))
+        );
     }
 
     #[test]

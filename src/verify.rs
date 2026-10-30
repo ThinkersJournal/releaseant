@@ -61,6 +61,21 @@ pub fn verify_set(
     scratch: &Path,
     skip: &[String],
 ) -> io::Result<Vec<(String, Result<(), String>)>> {
+    verify_set_with(cargo, crates, scratch, skip, &|_, _, _| {})
+}
+
+/// [`verify_set`], calling `before(name, index, total)` (1-based, over the crates actually built)
+/// before each crate's build starts.
+///
+/// # Errors
+/// I/O errors preparing the throwaway workspace.
+pub fn verify_set_with(
+    cargo: &Cargo,
+    crates: &[PackagedCrate],
+    scratch: &Path,
+    skip: &[String],
+    before: &dyn Fn(&str, usize, usize),
+) -> io::Result<Vec<(String, Result<(), String>)>> {
     fs::create_dir_all(scratch)?;
     let mut dirs = Vec::new();
     for c in crates {
@@ -80,10 +95,12 @@ pub fn verify_set(
     }
     fs::write(scratch.join("Cargo.toml"), manifest)?;
 
-    Ok(dirs
+    let built: Vec<&(String, String)> = dirs.iter().filter(|(n, _)| !skip.contains(n)).collect();
+    Ok(built
         .iter()
-        .filter(|(n, _)| !skip.contains(n))
-        .map(|(n, _)| {
+        .enumerate()
+        .map(|(i, (n, _))| {
+            before(n, i + 1, built.len());
             let r = cargo.check(scratch, n).map_err(|e| e.to_string());
             (n.clone(), r)
         })

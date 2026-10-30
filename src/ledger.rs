@@ -7,6 +7,7 @@ use std::fmt;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use serde::{Deserialize, Serialize};
 
@@ -95,11 +96,23 @@ impl From<io::Error> for LedgerError {
     }
 }
 
+/// Called with each event after it has been written and synced (progress display only).
+pub type Observer = Rc<dyn Fn(&Event)>;
+
 /// An open ledger file.
-#[derive(Debug)]
 pub struct Ledger {
     path: PathBuf,
     torn_bytes_dropped: usize,
+    observer: Option<Observer>,
+}
+
+impl fmt::Debug for Ledger {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Ledger")
+            .field("path", &self.path)
+            .field("torn_bytes_dropped", &self.torn_bytes_dropped)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Ledger {
@@ -134,9 +147,18 @@ impl Ledger {
         let ledger = Self {
             path,
             torn_bytes_dropped: dropped,
+            observer: None,
         };
         ledger.read()?; // refuse to append to a ledger that is already corrupt
         Ok(ledger)
+    }
+
+    /// Have `observer` told of every event appended from now on, after it is on disk. The ledger is
+    /// unchanged by it: an observer cannot fail an append or alter what was written.
+    #[must_use]
+    pub fn observed_by(mut self, observer: Observer) -> Self {
+        self.observer = Some(observer);
+        self
     }
 
     /// Bytes of a torn final line removed by [`Self::open`].
@@ -161,6 +183,9 @@ impl Ledger {
         let mut f = OpenOptions::new().append(true).open(&self.path)?;
         f.write_all(line.as_bytes())?;
         f.sync_data()?;
+        if let Some(observe) = &self.observer {
+            observe(event);
+        }
         Ok(())
     }
 

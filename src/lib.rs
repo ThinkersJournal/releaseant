@@ -19,6 +19,7 @@ pub mod metadata;
 pub mod pipeline;
 pub mod plan;
 pub mod preflight;
+pub mod progress;
 pub mod registry;
 pub mod run;
 pub mod source;

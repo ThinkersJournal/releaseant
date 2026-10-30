@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.27
+
+- `publish` prints one progress line per step on stderr with the time since the command started (`[03:12] uploading foo 0.1.0`, `upload returned foo 0.1.0 (17 s)`, `read back, visible`, waits, skips), so a long run is no longer silent (R6 row 1, DESIGN section 13). The lines mirror the ledger (the ledger gains an observer called after each append); packaging and each verification get their own lines. stdout, exit codes and the ledger are unchanged. Library: `progress` module, `PublishArgs::on_progress`, `verify::verify_set_with`.
+
 ## 0.0.26
 
 - `docs/DESIGN.md` section 13: design for per-step progress lines on stderr during `publish` (R6 row 1, the PM's silent 20-minute run). Design only; no code change yet.
