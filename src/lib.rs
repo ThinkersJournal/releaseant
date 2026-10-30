@@ -11,6 +11,7 @@ pub mod cargo;
 pub mod categories;
 pub mod classify;
 pub mod clock;
+pub mod config;
 pub mod crates_io;
 pub mod externals;
 pub mod ledger;

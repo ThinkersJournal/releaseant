@@ -68,11 +68,20 @@ fn readme_manifests(readme: &str) -> Vec<(String, String)> {
 /// The demo workspace from the README's manifests, each member with the empty `src/lib.rs` and the
 /// `README.md` the README says it has, committed in a fresh repository.
 fn demo_repo(dir: &Path, manifests: &[(String, String)]) {
-    demo_repo_with(dir, manifests, true);
+    demo_repo_with(dir, manifests, true, &[]);
 }
 
-/// [`demo_repo`], optionally without the members' `README.md` files.
-fn demo_repo_with(dir: &Path, manifests: &[(String, String)], readmes: bool) {
+/// [`demo_repo`], optionally without the members' `README.md` files, and with `files` (path, text)
+/// committed too, for example a `releaseant.toml`.
+fn demo_repo_with(
+    dir: &Path,
+    manifests: &[(String, String)],
+    readmes: bool,
+    files: &[(&str, &str)],
+) {
+    for (path, text) in files {
+        write(&dir.join(path), text);
+    }
     for (path, text) in manifests {
         write(&dir.join(path), text);
         if let Some(member) = path.strip_suffix("/Cargo.toml") {
@@ -195,12 +204,21 @@ fn the_readme_hello_world_does_what_the_readme_says() {
 /// `releaseant plan --sha HEAD's sha <extra>` in a demo repo built from the README, without the
 /// members' README files when `readmes` is false: (exit code, stdout, stderr).
 fn plan_demo(readmes: bool, extra: &[&str]) -> (Option<i32>, String, String) {
+    plan_demo_files(readmes, &[], extra)
+}
+
+/// [`plan_demo`] with `files` (path, text) committed too, for example a `releaseant.toml`.
+fn plan_demo_files(
+    readmes: bool,
+    files: &[(&str, &str)],
+    extra: &[&str],
+) -> (Option<i32>, String, String) {
     let readme =
         fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("README.md")).unwrap();
     let tmp = tempfile::tempdir().unwrap();
     let repo = tmp.path().join("work");
     fs::create_dir_all(&repo).unwrap();
-    demo_repo_with(&repo, &readme_manifests(&readme), readmes);
+    demo_repo_with(&repo, &readme_manifests(&readme), readmes, files);
     let sha = git(&repo, &["rev-parse", "HEAD"]);
     let out = Command::new(env!("CARGO_BIN_EXE_releaseant"))
         .current_dir(&repo)
@@ -249,6 +267,55 @@ fn require_metadata_turns_the_chosen_warning_into_an_error() {
         stdout,
         "releaseant-demo-core 0.1.0\nreleaseant-demo-app 0.1.0\n"
     );
+}
+
+// A `releaseant.toml` committed at the root does what the flag does, for everyone who publishes that
+// commit. The controls: the same demo without the file only warns (above), and with its README files
+// the file's requirement is met.
+#[test]
+fn a_releaseant_toml_in_the_commit_requires_what_it_names() {
+    let config = [("releaseant.toml", "[metadata]\nrequire = [\"readme\"]\n")];
+    let (code, stdout, stderr) = plan_demo_files(false, &config, &[]);
+    assert_eq!(code, Some(2), "{stderr}");
+    assert!(stdout.is_empty(), "no plan for a set that cannot publish");
+    assert!(stderr.contains("releaseant-demo-core: readme:"), "{stderr}");
+    assert!(
+        stderr.contains("releaseant.toml"),
+        "says where it came from: {stderr}"
+    );
+    let (code, stdout, stderr) = plan_demo_files(true, &config, &[]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert_eq!(
+        stdout,
+        "releaseant-demo-core 0.1.0\nreleaseant-demo-app 0.1.0\n"
+    );
+}
+
+// The file and the flag add up: neither can relax the other.
+#[test]
+fn the_flag_adds_to_the_releaseant_toml_it_does_not_replace_it() {
+    let config = [("releaseant.toml", "[metadata]\nrequire = [\"readme\"]\n")];
+    // The demo has keywords; the file requires readme (missing); the flag requires keywords (present).
+    let (code, _, stderr) = plan_demo_files(false, &config, &["--require-metadata", "keywords"]);
+    assert_eq!(code, Some(2), "{stderr}");
+    assert!(
+        stderr.contains("readme"),
+        "the file's requirement still applies: {stderr}"
+    );
+}
+
+#[test]
+fn a_malformed_releaseant_toml_is_refused_naming_the_file() {
+    for bad in [
+        "[metadata]\nrequired = [\"readme\"]\n",
+        "[metadata]\nrequire = [\"licence\"]\n",
+        "[metadata\n",
+    ] {
+        let (code, stdout, stderr) = plan_demo_files(true, &[("releaseant.toml", bad)], &[]);
+        assert_eq!(code, Some(2), "{bad:?}: {stderr}");
+        assert!(stdout.is_empty());
+        assert!(stderr.contains("releaseant.toml:"), "{bad:?}: {stderr}");
+    }
 }
 
 #[test]

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.18
+
+- A project setting for the required metadata fields (ROADMAP R6): `releaseant.toml` at the root of the repository, read from the commit being published, never the working tree, so the requirement is versioned with the release it governs: `[metadata]` with `require = ["keywords", "rust-version", "readme"]` makes those warnings errors on every `plan`, `verify` and `publish` of that commit. The command line's `--require-metadata` adds to it; neither relaxes the other, and neither relaxes what is an error anyway. An unknown key, a wrong type, bad TOML or an unknown field name is an error naming `releaseant.toml` and stopping before anything is written (a misspelt requirement that enforced nothing would be worse than none). New module `config`, `Prepared::config`, `PipelineError::Config`; new dependency `toml` 1.1.8 (newest on crates.io). The error text for a required field now says `required by --require-metadata or releaseant.toml`.
+
 ## 0.0.17
 
 - `docs/FIRST-REAL-USE.md`: the runbook for the first real publish (the next ConfigurAnt batch, 5 crates, run by the PM with the lane on call): preconditions with the expected output of each, the exact commands, what each output line means, what to read back afterwards, and the recovery for every failure including `PUBLISHED but not tagged`. Built from a full dry run of the same set (753 s on a loaded machine, ledger of 7 events, shared checkout untouched). Writing it found that against the real registry any cargo refusal the tool has no sample for (a missing token, name taken, validation) prints `INTERRUPTED: unrecognised upload result for X: ...` and stops the run, not `FAILED:`.

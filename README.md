@@ -24,8 +24,10 @@ metadata. What crates.io refuses is an **error** and stops the plan: no `descrip
 `license-file`, more than five `keywords` or one it does not accept, a category that is not one of its slugs, a
 `readme` or `license-file` that is not there. What it accepts without is a **warning**, listed and not stopping
 anything: no `repository`, README, `keywords`, `categories` or `rust-version`; name the ones you want enforced with
-`--require-metadata readme,keywords,rust-version`. Every problem of every crate is listed at once, so a set never
-dies half-published at the crate that lacked one. ReleaseAnt also needs a dependency on a crate of the workspace
+`--require-metadata readme,keywords,rust-version`, or commit them once in a `releaseant.toml` at the repository
+root (`[metadata]`, `require = ["readme", "keywords", "rust-version"]`), which is read from the commit being
+published and adds to the flag. Every problem of every crate is listed at once, so a set never dies
+half-published at the crate that lacked one. ReleaseAnt also needs a dependency on a crate of the workspace
 to name a `version` as well as a `path`:
 
 <!-- hello:begin -->
