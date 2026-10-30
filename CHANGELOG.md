@@ -2,7 +2,7 @@
 
 ## 0.0.30
 
-- `docs/DESIGN.md` section 15: design for tagging a partial publish (R6 row 3): per-crate `<crate>-v<version>` tags for `--only --tag`, full runs unchanged. Needs the PM's answer on the tag shape before code; notes that a patent re-sweep is owed for the new capability family. Design only.
+- `docs/DESIGN.md` section 15: design for tagging a partial publish (R6 row 3): per-crate `<crate>-v<version>` tags for `--only --tag`, full runs unchanged. Records the PM's ruling (per-crate tags for a partial publish; `v<version>` only when the whole plan is published) and that a patent re-sweep is owed, now a ROADMAP row. Design only.
 
 ## 0.0.29
 
