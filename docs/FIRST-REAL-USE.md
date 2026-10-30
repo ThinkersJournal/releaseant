@@ -206,3 +206,10 @@ checks. The lane will read the ledger's events against the registry and say what
   sample in R4 (`tests/fixtures/rate_limited.txt`), not from this batch.
 - A kill between an upload and its read-back, and a lagging index: covered by fake-registry tests only.
 - Windows only: every real run so far was on this machine.
+
+## Notes from the PM's two real publishes (2026-10-30)
+
+Unpopped 0.34.11 (4 crates) and ConfigurAnt 0.5.33 (5 crates) were published by the PM with `publish --execute` and `tools/tag-release.sh`, each ending with a read-back of every crate on crates.io and the tag. **This lane did not run either and has no first-hand observation of the run.** The unpopped and configurant lanes were asked (2026-10-30) and both answered "did not run it, nothing rough from use". What follows is what they could evidence from outside, plus the shape of the tool; the PM's own account of the friction is the thing still missing, and these are candidates, not findings.
+1. **The target version is not checked against crates.io before the run starts.** Before the unpopped publish the ruling named a version (0.34.3) that was already published, caught only by another lane's crates.io read (unpopped lane, 2026-10-30). `plan` could refuse a set whose version the registry already holds for a crate this ledger did not publish, with the existing resume path left alone (a version this ledger published is the resume case).
+2. **Merges are held by a message, not a lock.** Between configurant #72 and the publish the PM held merges so the commit stayed the published one (configurant lane, 2026-10-30). `publish` could re-read `origin/main` at the start and refuse, or warn, when the commit it is told to publish is no longer its tip.
+3. **Tag step is a separate script.** `tools/tag-release.sh` is a second manual step after the tool exits; a run that ends 'published' with no tag is a state the tool already names ("PUBLISHED but not tagged"). A `--tag` option that runs it, or a printed next-command line, is a candidate; whether the PM found the separate step rough is not known.
