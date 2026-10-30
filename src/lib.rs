@@ -8,6 +8,7 @@
 //! `docs/DESIGN.md`.
 
 pub mod cargo;
+pub mod categories;
 pub mod classify;
 pub mod clock;
 pub mod crates_io;
@@ -16,6 +17,7 @@ pub mod ledger;
 pub mod metadata;
 pub mod pipeline;
 pub mod plan;
+pub mod preflight;
 pub mod registry;
 pub mod run;
 pub mod source;

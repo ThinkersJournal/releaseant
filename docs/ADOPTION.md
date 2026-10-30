@@ -31,7 +31,7 @@ claim names the file and ref it was read at. Nothing was published, yanked or ta
 | Tag the release | separate script | none | `releaseant tag`, `publish --tag` (0.0.14) |
 | Licence files identical per crate | no | **yes** | **no** (a baracuda rule) |
 | `MAJOR.MINOR` of the emit/parse crates equals `unpopped` | no | **yes** | **no** (a baracuda rule) |
-| `description` and `license` present in each crate | no | no | **no** (see open item 1) |
+| Publish metadata checked before upload | no | no | **yes** (0.0.16): errors for what crates.io refuses (`description`, `license`, bad keywords or categories), warnings for README, keywords, categories, `rust-version`, `repository`; `--require-metadata` makes chosen warnings errors; see open item 1 |
 | Dry run | no | `-DryRun` | default |
 
 ## Dry-run evidence: Unpopped and PersistAnt
@@ -79,7 +79,9 @@ cheap form of the missing step.
 untested path (the tag after a real upload). Suggested sequence, all but the last step dry:
 1. `releaseant plan --sha $SHA` (one line) and `releaseant publish --sha $SHA --tag`: a dry run that builds the
    crate, asks the index, and checks the tag could be made ("would tag v...").
-2. Check by eye that the crate has `description` and `license` (open item 1).
+2. For an Ant we ship now, make the quality fields errors:
+   `releaseant plan --sha $SHA --require-metadata keywords,rust-version,readme` (and the same flag on `publish`).
+   Without the flag those are warnings; `description` and `license` are errors either way (0.0.16).
 3. `releaseant publish --sha $SHA --execute --tag --tag-name <project>`.
 4. After: `releaseant readback --sha $SHA`; `git ls-remote --tags origin v<ver>^{}` equals `$SHA`; the ledger
    (`.releaseant/ledger.jsonl`) ends with a `tagged` event. If the publish succeeded but the tag did not, the
@@ -109,11 +111,20 @@ limit itself was not reached in the R4 rehearsal and is still unmeasured here.
 
 ## Open items and risks
 
-1. **Missing `description` or `license` is not caught before upload.** Found 2026-10-29 by mutating the README's
-   sample: deleting `description` from a crate leaves `plan` and the dry-run `publish` green. The Cargo
-   reference lists both as required to publish; I did not test what crates.io answers, so whether the first
-   crate of a run would be refused (and the run stop resumable) or accepted is unverified. A pre-flight check
-   (before anything is written) belongs on the roadmap; until then step 2 above is by eye.
+1. **Publish metadata is checked before upload (0.0.16, ROADMAP R6), split by who refuses (PM, 2026-10-29).**
+   Found 2026-10-29 by mutating the README's sample: deleting `description` from a crate had left `plan` and the
+   dry-run `publish` green (cargo package only warns). Now every planned crate is checked and all problems are
+   listed at once. **Errors** (stop before anything is written): no `description`, neither `license` nor
+   `license-file`, more than five keywords or one crates.io refuses, a category that is not a crates.io slug, a
+   named README or licence file that is missing. **Warnings** (listed on stderr, exit 0): no `repository`,
+   README, `keywords`, `categories` or `rust-version`; `--require-metadata FIELD,...` turns chosen ones into
+   errors. The rules are the Cargo reference's; I did not test what crates.io answers to a missing `description`.
+   **Run at `origin/main` on 2026-10-29: every real set plans with zero errors.** Warnings: fuel 43 crates
+   (84: 43 `rust-version`, 35 README, 3 keywords, 3 categories), baracuda 73 crates (80: 67, 5, 4, 4),
+   PersistAnt 9 crates (8, README), Unpopped 4 crates (2, README). The new single-crate Ants (AlarmAnt,
+   WebHostAnt, secretant, mcpant, fireline, webservant, lightbulb) warn on `keywords`, `categories` and
+   `rust-version` (httpant also README); `capant` and `configurant` have none. With the flag, AlarmAnt fails
+   naming `keywords` and `rust-version` and says what to add.
 2. **Token handling.** ReleaseAnt does not read or store a token; cargo finds `CARGO_REGISTRY_TOKEN` or
    `credentials.toml`. R4 ran from `credentials.toml` (the vault has no crates.io token, disclosed). Trusted
    Publishing (`PORTFOLIO-ROADMAP.md` C3) would run it in CI and need the ledger somewhere durable. Not designed.
