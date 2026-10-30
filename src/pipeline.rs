@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use semver::Version;
 
 use crate::cargo::{Cargo, CargoError};
+use crate::config::{self, Config, ConfigError};
 use crate::externals::{ExternalsError, MissingExternal, missing_externals};
 use crate::ledger::{Event, EventKind, Ledger, LedgerError};
 use crate::metadata::Metadata;
@@ -59,6 +60,8 @@ pub enum PipelineError {
     MissingExternals(Vec<MissingExternal>),
     /// Crates in the plan whose publish metadata is incomplete; nothing was uploaded.
     Metadata(Vec<Problem>),
+    /// The commit's `releaseant.toml` cannot be used; nothing was uploaded.
+    Config(ConfigError),
 }
 
 impl fmt::Display for PipelineError {
@@ -90,6 +93,7 @@ impl fmt::Display for PipelineError {
                 write!(f, "exclusion names {c}, which is not in the publish plan")
             }
             Self::Externals(e) => write!(f, "{e}"),
+            Self::Config(e) => write!(f, "{e}"),
             Self::Metadata(v) => {
                 write!(
                     f,
@@ -128,7 +132,8 @@ macro_rules! from_err {
     )*};
 }
 from_err!(SourceError => Source, CargoError => Cargo, PlanError => Plan, RunError => Run,
-          LedgerError => Ledger, io::Error => Io, ExternalsError => Externals);
+          LedgerError => Ledger, io::Error => Io, ExternalsError => Externals,
+          ConfigError => Config);
 
 /// A commit archived and planned.
 #[derive(Debug)]
@@ -139,6 +144,8 @@ pub struct Prepared {
     pub plan: Plan,
     /// The workspace metadata the plan came from.
     pub meta: Metadata,
+    /// The commit's `releaseant.toml` (the default when it has none).
+    pub config: Config,
 }
 
 /// Archive `sha` from `repo` into `work/src` and plan it.
@@ -155,13 +162,20 @@ pub fn prepare(
     source::archive(repo, sha, &dir)?;
     let meta = cargo.metadata(&dir)?;
     let plan = plan(&meta)?;
-    Ok(Prepared { dir, plan, meta })
+    let config = config::load(&dir)?;
+    Ok(Prepared {
+        dir,
+        plan,
+        meta,
+        config,
+    })
 }
 
 /// Refuse a plan whose crates are missing metadata the registry refuses to publish without, naming
 /// every error of every crate; the quality fields it accepts without come back as warnings, and
-/// `require` turns the named ones into errors (see [`preflight`]). Run it while the archive
-/// directory exists: it also checks that each readme and licence file is there.
+/// `require` (the command line's) together with the commit's `releaseant.toml` turn the named ones
+/// into errors (see [`preflight`]). Run it while the archive directory exists: it also checks that
+/// each readme and licence file is there.
 ///
 /// # Errors
 /// [`PipelineError::Metadata`] with all the errors.
@@ -169,7 +183,9 @@ pub fn check_metadata(
     prepared: &Prepared,
     require: &BTreeSet<String>,
 ) -> Result<Vec<Problem>, PipelineError> {
-    let report = preflight::problems(&prepared.meta, &prepared.plan, require);
+    let mut require = require.clone();
+    require.extend(prepared.config.required());
+    let report = preflight::problems(&prepared.meta, &prepared.plan, &require);
     if report.errors.is_empty() {
         Ok(report.warnings)
     } else {
@@ -514,6 +530,16 @@ mod tests {
         bad_b: bool,
         tweak: impl Fn(&str, String) -> String,
     ) -> (tempfile::TempDir, String) {
+        repo_full(p, bad_b, tweak, &[])
+    }
+
+    /// [`repo_with`], also committing `extra` files at `(path, text)` (for example `releaseant.toml`).
+    fn repo_full(
+        p: &str,
+        bad_b: bool,
+        tweak: impl Fn(&str, String) -> String,
+        extra: &[(&str, &str)],
+    ) -> (tempfile::TempDir, String) {
         let d = tempfile::tempdir().unwrap();
         let r = d.path();
         let (a, b) = (format!("{p}-a"), format!("{p}-b"));
@@ -536,6 +562,9 @@ mod tests {
         );
         write(&r.join(&b).join("README.md"), "probe");
         write(&r.join("outside.txt"), "outside the crate");
+        for (path, text) in extra {
+            write(&r.join(path), text);
+        }
         write(
             &r.join(&b).join("src/lib.rs"),
             if bad_b {
@@ -801,6 +830,106 @@ zzrl-not-yet-published = \"0.23.0\"",
             other => panic!("expected Metadata, got {other:?}"),
         }
         assert!(!ledger2.exists(), "nothing was written");
+    }
+
+    /// A dry-run publish of `repo` at `sha` with `require` as the command line's `--require-metadata`.
+    fn publish_dry(
+        repo: &Path,
+        sha: &str,
+        ledger: &Path,
+        work: &Path,
+        require: &[&str],
+    ) -> Result<Summary, PipelineError> {
+        let mut a = args(repo, sha, ledger, work, Mode::DryRun, vec![]);
+        a.require_metadata = require.iter().map(|s| (*s).to_owned()).collect();
+        publish(
+            &Cargo::from_env(),
+            &a,
+            |_, _| Box::new(FakeRegistry::new()),
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+    }
+
+    fn problem_fields(err: PipelineError) -> (Vec<(String, &'static str)>, String) {
+        let text = err.to_string();
+        match err {
+            PipelineError::Metadata(ps) => (
+                ps.iter().map(|p| (p.krate.clone(), p.field)).collect(),
+                text,
+            ),
+            other => panic!("expected Metadata, got {other}"),
+        }
+    }
+
+    // A `releaseant.toml` at the root of the commit makes chosen warnings errors, and the command line's
+    // flag adds to it. The control is `missing_quality_fields_are_warnings_unless_required`: the same
+    // crates without the file only warn.
+    #[test]
+    fn a_releaseant_toml_in_the_commit_makes_chosen_warnings_errors_and_the_flag_adds_to_it() {
+        let p = pid();
+        let (a, b) = (format!("{p}-a"), format!("{p}-b"));
+        let (repo, sha) = repo_full(
+            &p,
+            false,
+            |_, manifest| {
+                manifest
+                    .replace("keywords = [\"probe\"]\n", "")
+                    .replace("rust-version = \"1.70\"\n", "")
+            },
+            &[("releaseant.toml", "[metadata]\nrequire = [\"keywords\"]\n")],
+        );
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+
+        let err = publish_dry(repo.path(), &sha, &ledger, &work, &[]).unwrap_err();
+        let (fields, text) = problem_fields(err);
+        assert_eq!(
+            fields,
+            [(a.clone(), "keywords"), (b.clone(), "keywords")],
+            "keywords is required by the file; rust-version is still only a warning"
+        );
+        assert!(
+            text.contains("releaseant.toml"),
+            "says where it came from: {text}"
+        );
+        assert!(!ledger.exists(), "nothing was written");
+
+        // The flag adds to the file, never replaces it.
+        let (ledger2, work2) = (tmp.path().join("l2.jsonl"), tmp.path().join("w2"));
+        let err = publish_dry(repo.path(), &sha, &ledger2, &work2, &["rust-version"]).unwrap_err();
+        let (fields, _) = problem_fields(err);
+        assert_eq!(
+            fields,
+            [
+                (a.clone(), "keywords"),
+                (a, "rust-version"),
+                (b.clone(), "keywords"),
+                (b, "rust-version")
+            ]
+        );
+    }
+
+    #[test]
+    fn a_malformed_releaseant_toml_stops_the_run_before_anything_is_written() {
+        let p = pid();
+        let (repo, sha) = repo_full(
+            &p,
+            false,
+            |_, manifest| manifest,
+            &[("releaseant.toml", "[metadata]\nrequired = [\"readme\"]\n")],
+        );
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        match publish_dry(repo.path(), &sha, &ledger, &work, &[]) {
+            Err(PipelineError::Config(e)) => {
+                assert!(e.to_string().starts_with("releaseant.toml:"), "{e}");
+                assert!(e.to_string().contains("required"), "{e}");
+            }
+            other => panic!("expected Config, got {other:?}"),
+        }
+        assert!(!ledger.exists(), "no ledger was created");
+        assert!(!work.join("target").exists(), "nothing was packaged");
     }
 
     // T10: an exception needs a reason, is recorded, and the consumer check decides the outcome.

@@ -65,7 +65,8 @@ pub struct Report {
     pub warnings: Vec<Problem>,
 }
 
-/// The set of warnings to treat as errors, from the names given on the command line.
+/// The set of warnings to treat as errors, from the names given on the command line or in
+/// `releaseant.toml`.
 ///
 /// # Errors
 /// A message naming the unknown field and the ones that exist.
@@ -75,7 +76,7 @@ pub fn parse_require(names: &[String]) -> Result<BTreeSet<String>, String> {
         let name = name.trim();
         if !REQUIRABLE.contains(&name) {
             return Err(format!(
-                "unknown metadata field {name:?} for --require-metadata; the fields are {}",
+                "unknown metadata field {name:?}; the fields that can be required are {}",
                 REQUIRABLE.join(", ")
             ));
         }
@@ -177,7 +178,7 @@ fn check_fields(pkg: &Package, require: &BTreeSet<String>, report: &mut Report) 
             report.errors.push(Problem {
                 krate: pkg.name.clone(),
                 field,
-                detail: format!("{detail} (required by --require-metadata)"),
+                detail: format!("{detail} (required by --require-metadata or releaseant.toml)"),
             });
         } else {
             report.warnings.push(Problem {

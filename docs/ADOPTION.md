@@ -79,9 +79,11 @@ cheap form of the missing step.
 untested path (the tag after a real upload). Suggested sequence, all but the last step dry:
 1. `releaseant plan --sha $SHA` (one line) and `releaseant publish --sha $SHA --tag`: a dry run that builds the
    crate, asks the index, and checks the tag could be made ("would tag v...").
-2. For an Ant we ship now, make the quality fields errors:
-   `releaseant plan --sha $SHA --require-metadata keywords,rust-version,readme` (and the same flag on `publish`).
-   Without the flag those are warnings; `description` and `license` are errors either way (0.0.16).
+2. For an Ant we ship now, make the quality fields errors: commit a `releaseant.toml` at the repository root
+   (`[metadata]`, `require = ["keywords", "rust-version", "readme"]`; read from the commit, 0.0.18) so every
+   publish of that line enforces it, or pass `--require-metadata keywords,rust-version,readme` on `plan` and
+   `publish` (the flag adds to the file). Without either those are warnings; `description` and `license` are
+   errors always (0.0.16).
 3. `releaseant publish --sha $SHA --execute --tag --tag-name <project>`.
 4. After: `releaseant readback --sha $SHA`; `git ls-remote --tags origin v<ver>^{}` equals `$SHA`; the ledger
    (`.releaseant/ledger.jsonl`) ends with a `tagged` event. If the publish succeeded but the tag did not, the
