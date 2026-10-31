@@ -96,10 +96,10 @@ then not needed for them. Same rate-limit wait budget as before (`--max-wait`).
 **3. baracuda** (73 crates at the last look, two version streams, an exception).
 - Keep as a separate preflight run before ReleaseAnt: the licence guard and the emit/parse `MAJOR.MINOR` check
   from `publish.ps1` (baracuda rules, not publishing mechanics). Proposed `scripts/preflight.ps1` in baracuda.
-- `baracuda-cuda-seam` stays out until fuel 0.24 is consumed (PM, 2026-10-24):
-  `--exclude baracuda-cuda-seam --exclude-reason "waits for the fuel release"`. Checked 2026-10-29 at baracuda
-  `4600be3`: `plan` = 73 crates; `plan --exclude baracuda-cuda-seam --check-externals` = the same list minus that
-  line, exit 0.
+- `baracuda-cuda-seam` is in the set (PM, 2026-10-31, replacing the 2026-10-24 rule that kept it out until fuel 0.24 was consumed):
+  no `--exclude`. At baracuda `ed1699af`: `plan --check-externals` = 73 crates, exit 0, the seam crate at line 58 right after
+  `baracuda-cuda-emit`, requiring `fuel-kernel-seam{,-types}` `0.32.0` (docs/R5-ADOPTION-DRYRUN.md, update (2)). An `--exclude` run
+  is never tagged.
 - Two streams (`0.32.0` and `0.1.0-alpha.44` then): one run plans both. **Which one the tag names is the PM's
   rule**; the tool asks for `--tag-version` and never guesses (the PM's practice so far: the alpha stream).
 - CUDA crates: `DOCS_RS=1` in the shell, as `bk2-pub.py` does, or `--no-verify-crate NAME --reason "..."`.
