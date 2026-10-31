@@ -148,6 +148,9 @@ enum Command {
         /// The project name in the tag message (default: the repository directory's name).
         #[arg(long)]
         tag_name: Option<String>,
+        /// Publish a commit that is not the tip of origin's default branch (a real upload refuses it).
+        #[arg(long)]
+        allow_not_tip: bool,
     },
     /// Tag a published release: an annotated `v<version>` on the commit, pushed to origin and read
     /// back (dry-run unless `--execute`).
@@ -323,8 +326,12 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             tag,
             tag_version,
             tag_name,
+            allow_not_tip,
         } => {
             let require_metadata = policy.set()?;
+            if execute && !allow_not_tip {
+                releaseant::source::check_tip(&source.repo, &source.sha)?;
+            }
             if no_verify_crate.len() != reason.len() {
                 return Err("every --no-verify-crate needs its own --reason".into());
             }
