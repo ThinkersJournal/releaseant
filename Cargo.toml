@@ -1,6 +1,6 @@
 [package]
 name = "releaseant"
-version = "0.0.41"
+version = "0.0.42"
 edition = "2024"
 rust-version = "1.88"
 description = "Ordered, verified, resumable publishing of Rust crates and workspaces to crates.io, with read-back."
@@ -9,6 +9,7 @@ repository = "https://github.com/ThinkersJournal/releaseant"
 readme = "README.md"
 keywords = ["ant", "releaseant"]
 categories = ["development-tools"]
+include = ["src/**", "tests/**", "README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE-APACHE", "LICENSE-MIT"]
 
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
