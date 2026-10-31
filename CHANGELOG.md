@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased (version at gate)
+
+- README: the hello-world is the first section (SHA, `plan`, dry-run `publish`), run by `tests/readme.rs` on every CI OS and now a named CI step; the metadata paragraph moved below it; wording fixed after three fresh-eyes trials of the packaged form (demo directories, any README text, git identity, "the release owner" for "the PM").
+- Package: an `include` list (the package no longer ships `HANDOFF.md`, `CLAUDE.md`, `.github/`, `docs/` or the ROADMAP); CI job `package` runs `cargo package --locked`.
+
 ## 0.0.41
 
 - Docs only: the owed patent re-sweep is done (eighth pass in `docs/PATENT-SWEEP.md`: 12 queries, 16 new patents read at every independent claim and 3 re-read, all outside as read; the plan's Q14 control was not met as written, recorded), ROADMAP R6 updated, and `docs/PUBLISH-PLAN.md` (the plan to publish releaseant itself; not run).
