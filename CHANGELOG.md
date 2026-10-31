@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.43
+
+- CI only: the portfolio workflow is pinned to coderipper `b45eb41` (0.10.0, with the default-branch exclusion) instead of `c665210` (0.8.19), which turned the portfolio job red on `main`.
+
 ## 0.0.42
 
 - README: the hello-world is the first section (SHA, `plan`, dry-run `publish`), run by `tests/readme.rs` on every CI OS and now a named CI step; the metadata paragraph moved below it; wording fixed after three fresh-eyes trials of the packaged form (demo directories, any README text, git identity, "the release owner" for "the PM").
