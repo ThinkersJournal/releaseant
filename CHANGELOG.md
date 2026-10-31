@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.37
+
+- Docs only: R5 item 6 in `docs/R5-ADOPTION-DRYRUN.md`: baracuda `ed1699af` plans 73 crates with `baracuda-cuda-seam` in the set (line 58, after `baracuda-cuda-emit`), the exclusion dropped by the PM's decision; an earlier reading at `8f9b3013` is replaced.
+
 ## 0.0.36
 
 - Docs only: R5 update in `docs/R5-ADOPTION-DRYRUN.md`: fuel `59bcbd3d` and baracuda `8f9b3013` dry runs; the hand-published seam trio is `Held`, the PM ledger line that clears it, and the run clearing it on a copy of the ledger. Registry checksums equal a `cargo package` of that commit on one machine; cross-machine reproducibility is not measured.
