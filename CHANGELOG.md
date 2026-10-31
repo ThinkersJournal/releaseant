@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.40
+
+- Docs only: `docs/PATENT-RESWEEP-PLAN.md` (the exact queries, reads, wording rule, estimated cost and recording place for the owed re-sweep; nothing in it has been run) and `docs/HAND-PUBLISH.md` (checklist for a crate published by hand and the ledger line that clears the Held stop).
+
 ## 0.0.39
 
 - Docs only: ROADMAP R6 marks the two second-hand rows (commit is origin's tip, 0.0.33; refuse a version the registry holds without our upload, 0.0.35) as done.
