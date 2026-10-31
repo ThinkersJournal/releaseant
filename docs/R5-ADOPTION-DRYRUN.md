@@ -109,3 +109,99 @@ Outputs (disposable): `%TEMP%\r5\{b,f}-plan.{out,err}`, `{b,f}-verify.{out,err,r
 1. Decide the emit/parse rule at `ee1e7ce` (disagreement 1) before baracuda adopts.
 2. Adopting fuel needs no preflight script; its two CI guards stay. Run the dry-run `publish` at the SHA the PM picks.
 3. For both, commit a `releaseant.toml` with the required fields the project wants before the first real run.
+
+## Update 2026-10-31: the seam trio, held, and the ledger line that clears it
+
+`[TASK]` of 2026-10-31 (PM). **Dry runs only; nothing was uploaded, tagged or yanked.** Tool: `releaseant 0.0.35` built
+from `3f28e82` (release profile), run with `--repo C:/Projects/<name> --sha <SHA>` and `--ledger` in a scratch
+directory (no file in either project was written). Refs: fuel `origin/main` `59bcbd3d4c99cbc8c8ccdab4db3f5d881c65baee`
+(fetched first; equals the SHA in the task), baracuda `origin/main` `8f9b30139bc942ed47bcadc8ac892d64249ac55a`.
+
+| | fuel `59bcbd3d` | baracuda `8f9b3013` |
+|---|---|---|
+| `plan` | exit 0, **43** crates, all `0.32.0` | exit 0, **73** crates: 71 at `0.1.0-alpha.66`, `baracuda-cuda-emit` and `-cuda-parse` at `0.34.11` |
+| `plan --check-externals` | exit 0, same 43 plus the line "every dependency outside the set is on the registry" | exit 0, same 73 plus that line |
+| `readback` | 3 present (the seam trio), 40 absent | 0 present |
+| errors | none (84 and 67 quality-warning lines on stderr, same kinds as above) | none |
+
+The task text says baracuda has 10 crates; at this ref the plan has 73 (as before).
+
+### 1. `publish --only` the trio: Held, as #34 predicts
+
+`publish --only fuel-kernel-seam-types --only fuel-kernel-seam-announce --only fuel-kernel-seam` (dry run, empty
+ledger): exit 1, and the report says
+
+```
+fuel-kernel-seam-announce: HELD: on the registry, but not uploaded by this tool from this commit
+fuel-kernel-seam-types: not attempted
+fuel-kernel-seam: not attempted
+run stopped (resumable): fuel-kernel-seam-announce@0.32.0 is already on the registry and the ledger has no upload of it
+from commit 59bcbd3d...; ask the PM before going on
+```
+
+The stop is at the first crate of the plan order; the other two are only "not attempted", so each of the three needs its own
+ledger line. The 40 crates not selected are recorded as `not selected by --only`. All three were verified (packaged and built
+from the extracted `.crate`) before the stop.
+
+### 2. Is the registry's copy ours? Checked, all three equal
+
+The registry's index checksums (`readback`) against `sha256sum` of `cargo package --no-verify` run on a `git archive` of
+`59bcbd3d` (same machine as the hand publish; cross-machine reproducibility is not measured):
+
+| crate (0.32.0) | registry (index) | local `.crate` of `59bcbd3d` |
+|---|---|---|
+| fuel-kernel-seam-types | `49546dde16b81004d8347e724f326e5426c9036f81aa09c20398c62dac3c291c` | same |
+| fuel-kernel-seam-announce | `98217ff5bbe53752e4355ecd3df2076538a38234458e5d78f744559119794265` | same |
+| fuel-kernel-seam | `c3d437a5a35c1358d40fbf0dca03483acea021ee65de2c71db21391d88b76c79` | same |
+
+An equal checksum means the registry holds the bytes `cargo package` makes of this commit; it does not say who uploaded
+them. (The PM said he hand-published them; that is the PM's statement, not read from the registry here.)
+
+### 3. The exact PM ledger line
+
+One line per crate, appended to the ledger the real run will use (`.releaseant/ledger.jsonl` of the repository, or the
+`--ledger` file), by the PM only, after the comparison above is repeated by whoever adds it. `<UTC>` is the time of adding,
+`<who>` the person:
+
+```
+{"ts":"<UTC>","run":"manual","sha":"59bcbd3d4c99cbc8c8ccdab4db3f5d881c65baee","crate":"fuel-kernel-seam-types","version":"0.32.0","event":"visible","detail":"published by hand; checked by <who>: registry index checksum 49546dde16b8... equals sha256 of cargo package of this commit"}
+{"ts":"<UTC>","run":"manual","sha":"59bcbd3d4c99cbc8c8ccdab4db3f5d881c65baee","crate":"fuel-kernel-seam-announce","version":"0.32.0","event":"visible","detail":"published by hand; checked by <who>: registry index checksum 98217ff5bbe5... equals sha256 of cargo package of this commit"}
+{"ts":"<UTC>","run":"manual","sha":"59bcbd3d4c99cbc8c8ccdab4db3f5d881c65baee","crate":"fuel-kernel-seam","version":"0.32.0","event":"visible","detail":"published by hand; checked by <who>: registry index checksum c3d437a5a35c... equals sha256 of cargo package of this commit"}
+```
+
+The `sha` is the commit being published: a line naming another commit does not clear a run at this one (unit test
+`a_ledger_from_another_commit_does_not_vouch_for_a_held_version`, `src/run.rs`).
+
+### 4. The run clearing it, on a COPY of the ledger
+
+The copy was the ledger of run 1 plus the three lines above (with `checked by releaseant lane (rehearsal copy)`); the real
+ledger was never touched. Same command, dry run: **exit 0**, `run finished: complete`, and
+
+```
+fuel-kernel-seam-announce: already published
+fuel-kernel-seam-types: already published
+fuel-kernel-seam: already published
+dry run: nothing was uploaded (use --execute)
+```
+
+Each was `classified: already-published`. With the lines absent (run 1) the same command stopped at HELD, so the lines are
+what changed the outcome.
+
+### 5. Plan order against the `cargo publish` order that worked today
+
+| | order |
+|---|---|
+| plan (full plan, and the `planned` event of the `--only` run) | announce, types, seam |
+| PM's `cargo publish` today | types, announce, seam |
+
+`fuel-kernel-seam` depends on `fuel-kernel-seam-types` (`workspace = true`, `Cargo.toml` line 19); neither `-types` nor
+`-announce` lists the other or `fuel-kernel-seam` among its dependencies (read from the archive). So the only edge is
+types before seam, both orders satisfy it, and the difference between them is tie-breaking between two independent
+crates, as with `fu-pub.py` above. No disagreement about a dependency.
+
+### Not done in this update
+
+- `publish` dry run over all 43 or all 73 crates (builds every crate: hours for fuel last time); only `plan`, `readback`
+  and the three-crate `--only` runs were done.
+- A cross-machine comparison of packaged bytes, and any check of who uploaded the trio.
+- The baracuda rules from "Disagreements, baracuda" (preflight, licence guard) were not rerun.
