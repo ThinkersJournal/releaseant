@@ -138,6 +138,31 @@ Run by: releaseant lane, Sonnet 5.5, at 19c14798 (0.0.24). Tool: the lane's web 
 
 **NOT searched or read in this pass:** Patentscope's own query interface (boolean, CPC `G06F8/60`, `G06F8/71`, assignee and date fields), the national collections inside Patentscope, any family member of any hit, the nine other P3 records beyond their titles, dependent claims. Routes A, C, D and E below are still not run.
 
+## Seventh pass: partial publish and per-crate tags, 2026-10-30
+Run by: releaseant lane, Sonnet 5.5, at fdf7dd49 (0.0.31). The capability family added since the sixth pass, two new ideas:
+10. A run can be limited to named crates (`--only`); `plan --registry` marks each crate's registry state (published or not) beside the computed order.
+11. A partial run tags each published crate `<crate>-v<version>`; the project tag `v<version>` is made only when the run published the entire plan.
+
+Three queries, restricted to `patents.google.com` (and `patents.justia.com` for Q19), all dated 2026-10-30:
+| # | Idea | Query | Returned |
+|---|---|---|---|
+| Q17 | 10 | `publish selected subset of software packages with dependencies already in registry, mark each package registry state in release plan` | 10 patent pages on package installation, dependency trimming and repository maintenance (US10409567B2, US6117187A, US20110246982A1, US20010029605A1, US9323519B2, US7222341B2, US7461374B1, US6847970B2, US20090144727A1, US7478385B2) |
+| Q18 | 11 | `create version control tag per published package name and version for partial release of multi-package repository` | 10 patent pages on tags and versioning (US9489188B1, EP2503450A2, US5805889A, US8255363B2, US9251336B1, EP1356377A2, US5675802A, US20150254073A1, US8868701B1, US9110756B1) |
+| Q19 | 11 | `release tag only when all packages of release plan published, otherwise per-component tags` | 10 patent pages, mostly physical or product tags (US7341197B2, US8739152B2, US8595103B1, US7246134B1, US9639350B2, US20110099543A1, US7450013B2, US9043767B2, AU2003260831B2, US9235402B2) |
+
+Positive control: each query returned ten `patents.google.com` pages, so the filter reaches the site; US6847970B2 was already returned by Q14 and Q15 in the second pass, so the same patents surface from independent queries. That proves the queries reach patents, not that they ask the only possible question.
+
+**Read (claim 1 only, `tools/patent-claims.py`, output of the first 3,500 characters per patent, so later independent claims were NOT read):**
+| # | patent | title | assignee | status | overlap | our difference | verdict |
+|---|---|---|---|---|---|---|---|
+| 44 | US9235402B2 | Dynamic release control of software application version changes | CA Inc | Active | a rule that subcomponents move together | claim 1 is mainframe application instances conformed to a common execution level, with a compatibility-level switch across the instances. No compatibility levels, no instances, no execution level | outside as read |
+| 45 | US8739152B2 | Version independent software release management | Trend Micro | Active, est. 2028-10-16 | a release assembled from versions with statuses | claim 1 needs classes of components, time stamps and issued/un-issued indicators per version, and rules selecting a single version per instance. We keep none of these | outside as read |
+| 46 | US9043767B2 | Release management system for a multi-node application | Pivotal / VMware | Active, est. 2033-02-09 | a release carrying a version number | claim 1 generates one archive of specifications and contents of software components for functional components on several nodes. We build no such archive and have no nodes | outside as read |
+
+**What this pass is worth.** Little. Ten results per query, thirty in all; three read at claim 1. Q17 to Q19 returned patents on installation, tagging of objects and physical product tags; none was about publishing a chosen subset to a package registry or about per-package tags. **Treat ideas 10 and 11 as having found nothing, with low confidence that anything could have been found.** Open-source tools (Lerna, Changesets, nx, release-please) use `name@version` style per-package tags; that is practice, not patents, and no invalidity analysis. NOT read: the other twenty-seven results, dependent claims, later independent claims of hits 44 to 46, any family member. The sweep stays INCOMPLETE; the wording stays "outside as read", never "clear". Not legal advice.
+
+New design constraints: no per-version status indicators with time stamps and rule-selected single versions (hit 45); no compatibility-level switch across a set (hit 44).
+
 ## Routes not run (PM ruling 2026-10-30)
 The PM accepted the 43 reads as sufficient for the first publish. The wording stays "outside as read", never "clear", and this is not legal advice. Costs are the lane's estimates in tokens, unmeasured.
 | route | what | estimate | ruling |

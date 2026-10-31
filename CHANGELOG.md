@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.32
+
+- Docs only: the patent re-sweep for the partial-publish and per-crate-tag family (seventh pass, `docs/PATENT-SWEEP.md`): three queries, three claim-1 reads, nothing found, low confidence. The sweep stays INCOMPLETE ("outside as read"). The owed re-sweep is NOT done (ROADMAP row kept).
+
 ## 0.0.31
 
 - `publish --only NAME --tag` tags each selected crate that is on the registry as an annotated `<crate>-v<version>` on the run's commit, pushed and read back; there is no project tag for a partial run, and a selected crate that did not land is named and left untagged while the others are tagged (PM ruling, DESIGN section 15). `--tag-version` cannot be combined with `--only`. `releaseant tag --crate NAME` tags one crate on its own. The whole-project `v<version>` is unchanged and still comes only from a run that publishes the entire plan. Ledger: one `tagged` event per tag, with the crate and the tag name. Library: `TagRequest::tag`, `tag::{release_tag, crate_tag, landed_crates}`.
