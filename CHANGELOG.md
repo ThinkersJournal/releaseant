@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.34
+
+- Docs only: the design for a version the registry already holds (DESIGN section 17): no code. A held version with no ledger entry for this SHA becomes a report line and a resumable stop, no `--accept-held` override until asked; content comparison options, with same-machine packaging reproducibility measured and cross-machine not.
+
 ## 0.0.33
 
 - `publish --execute` refuses a commit that is not the tip of origin's default branch (asked of origin with `git ls-remote --symref`; an unreadable origin is a refusal too). `--allow-not-tip` overrides; dry runs are not checked (DESIGN section 16).
