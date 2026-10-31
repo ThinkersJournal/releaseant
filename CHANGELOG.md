@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.44
+
+- Docs only: `docs/PATENT-SWEEP.md` ninth pass reads the four patents the earlier passes had seen and not read (hits 63 to 66, every independent claim): all outside as read, none needs review. The sweep stays INCOMPLETE; not legal advice.
+
 ## 0.0.43
 
 - CI only: the portfolio workflow is pinned to coderipper `b45eb41` (0.10.0, with the default-branch exclusion) instead of `c665210` (0.8.19), which turned the portfolio job red on `main`.
