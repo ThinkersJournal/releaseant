@@ -44,7 +44,8 @@ error: not a full 40-hex commit SHA: "main" (get one with `git rev-parse main`)
 
 ### The workspace those commands ran on
 
-Two crates, each with an empty `src/lib.rs` and a `README.md`, committed in git (`git init`, `git add -A`, `git commit`):
+Two crates, each with an empty `src/lib.rs` and a `README.md` (any text), committed in git (`git init`, `git add -A`,
+`git commit`; if git asks who you are, set `user.name` and `user.email` first):
 
 ```toml
 # Cargo.toml
