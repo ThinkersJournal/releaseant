@@ -5,32 +5,47 @@ Ordered, verified, resumable publishing of Rust crates and workspaces to crates.
 **Status: not ready for developer use** until its first release: not yet published (the crates.io name
 holds an empty 0.0.0 placeholder).
 
-## Install
-
-Not on crates.io yet. From a clone (Rust 1.88 or newer; the build takes a few minutes; `cargo install` puts the
-binary in `~/.cargo/bin`, which rustup already put on your `PATH`):
-
-```console
-git clone https://github.com/ThinkersJournal/releaseant
-cd releaseant
-cargo install --path .
-```
-
 ## Hello
 
-Say you have this workspace of two crates, each with an empty `src/lib.rs` and a `README.md`, committed in git
-(`git init`, `git add -A`, `git commit`). Before anything is uploaded, `plan` checks every crate's publish
-metadata. What crates.io refuses is an **error** and stops the plan: no `description`, neither `license` nor
-`license-file`, more than five `keywords` or one it does not accept, a category that is not one of its slugs, a
-`readme` or `license-file` that is not there. What it accepts without is a **warning**, listed and not stopping
-anything: no `repository`, README, `keywords`, `categories` or `rust-version`; name the ones you want enforced with
-`--require-metadata readme,keywords,rust-version`, or commit them once in a `releaseant.toml` at the repository
-root (`[metadata]`, `require = ["readme", "keywords", "rust-version"]`), which is read from the commit being
-published and adds to the flag. Every problem of every crate is listed at once, so a set never dies
-half-published at the crate that lacked one. ReleaseAnt also needs a dependency on a crate of the workspace
-to name a `version` as well as a `path`:
+You have a git repository of crates and want them published in dependency order. After installing (below), from inside the repository: three commands, the last one a dry run that uploads nothing.
+
+ReleaseAnt works from a commit, never from your working tree, so it needs the commit's full SHA. Run it from
+inside the repository (or add `--repo PATH`):
 
 <!-- hello:begin -->
+```console
+$ SHA=$(git rev-parse HEAD)
+$ releaseant plan --sha $SHA
+releaseant-demo-core 0.1.0
+releaseant-demo-app 0.1.0
+$ releaseant publish --sha $SHA        # a dry run: nothing is uploaded
+[00:00] packaging 2 crates
+[00:01] verifying releaseant-demo-core (1 of 2)
+[00:02] verifying releaseant-demo-app (2 of 2)
+[00:03] verified releaseant-demo-core 0.1.0
+[00:03] verified releaseant-demo-app 0.1.0
+[00:03] run planned
+[00:03] run finished: complete
+releaseant-demo-core: would upload
+releaseant-demo-app: would upload
+dry run: nothing was uploaded (use --execute)
+ledger: ./.releaseant/ledger.jsonl
+```
+
+`plan` is the order dependencies must go up in. `publish` packages the commit, builds every packaged
+`.crate` the way a consumer would, and asks crates.io what is already there, but uploads nothing until you
+add `--execute`. It needs network (the crates.io index) and builds every crate, so expect about the time
+`cargo build` takes. A branch name is refused, and says how to get the SHA:
+
+```console
+$ releaseant plan --sha main
+error: not a full 40-hex commit SHA: "main" (get one with `git rev-parse main`)
+```
+
+### The workspace those commands ran on
+
+Two crates, each with an empty `src/lib.rs` and a `README.md`, committed in git (`git init`, `git add -A`, `git commit`):
+
 ```toml
 # Cargo.toml
 [workspace]
@@ -77,43 +92,41 @@ categories.workspace = true
 [dependencies]
 releaseant-demo-core = { path = "../releaseant-demo-core", version = "0.1.0" }
 ```
-
-ReleaseAnt works from a commit, never from your working tree, so it needs the commit's full SHA. Run it from
-inside the repository (or add `--repo PATH`):
-
-```console
-$ SHA=$(git rev-parse HEAD)
-$ releaseant plan --sha $SHA
-releaseant-demo-core 0.1.0
-releaseant-demo-app 0.1.0
-$ releaseant publish --sha $SHA        # a dry run: nothing is uploaded
-[00:00] packaging 2 crates
-[00:01] verifying releaseant-demo-core (1 of 2)
-[00:02] verifying releaseant-demo-app (2 of 2)
-[00:03] verified releaseant-demo-core 0.1.0
-[00:03] verified releaseant-demo-app 0.1.0
-[00:03] run planned
-[00:03] run finished: complete
-releaseant-demo-core: would upload
-releaseant-demo-app: would upload
-dry run: nothing was uploaded (use --execute)
-ledger: ./.releaseant/ledger.jsonl
-```
-
-`plan` is the order dependencies must go up in. `publish` packages the commit, builds every packaged
-`.crate` the way a consumer would, and asks crates.io what is already there, but uploads nothing until you
-add `--execute`. It needs network (the crates.io index) and builds every crate, so expect about the time
-`cargo build` takes. A branch name is refused, and says how to get the SHA:
-
-```console
-$ releaseant plan --sha main
-error: not a full 40-hex commit SHA: "main" (get one with `git rev-parse main`)
-```
 <!-- hello:end -->
 
 The ledger is a plain file, one JSON event per line, appended before each action. A dry run writes it too, so
 `.releaseant/` shows up as untracked in `git status`. Commit it if you want the record in git, or add it to
 `.gitignore`; ReleaseAnt does not mind either way.
+
+## Before it uploads anything: the metadata check
+
+Before anything is uploaded, `plan` checks every crate's publish
+metadata. What crates.io refuses is an **error** and stops the plan: no `description`, neither `license` nor
+`license-file`, more than five `keywords` or one it does not accept, a category that is not one of its slugs, a
+`readme` or `license-file` that is not there. What it accepts without is a **warning**, listed and not stopping
+anything: no `repository`, README, `keywords`, `categories` or `rust-version`; name the ones you want enforced with
+`--require-metadata readme,keywords,rust-version`, or commit them once in a `releaseant.toml` at the repository
+root (`[metadata]`, `require = ["readme", "keywords", "rust-version"]`), which is read from the commit being
+published and adds to the flag. Every problem of every crate is listed at once, so a set never dies
+half-published at the crate that lacked one. ReleaseAnt also needs a dependency on a crate of the workspace
+to name a `version` as well as a `path` (the demo's `releaseant-demo-app` does).
+
+## Install
+
+From crates.io, once it is published (the name holds an empty 0.0.0 placeholder today; Rust 1.88 or newer):
+
+```console
+cargo install releaseant
+```
+
+Until then, from a clone or an unpacked package (the build takes a few minutes; `cargo install` puts the binary in
+`~/.cargo/bin`, which rustup already put on your `PATH`):
+
+```console
+git clone https://github.com/ThinkersJournal/releaseant
+cd releaseant
+cargo install --path .
+```
 
 ## Publishing for real
 

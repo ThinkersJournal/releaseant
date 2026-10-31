@@ -48,6 +48,21 @@ jobs:
         with:
           toolchain: stable
       - run: cargo test --all-features --no-fail-fast
+      # The README's hello-world, built and run with the real binary on every OS above (also part of the line above;
+      # named here so a red README is visible as such). Needs the crates.io index, like the line above.
+      - name: README hello-world (compiled and run)
+        run: cargo test --all-features --test readme the_readme_hello_world_does_what_the_readme_says -- --exact
+
+  # The package people will install: it must build from its own tarball (ROADMAP R7).
+  package:
+    name: package (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          toolchain: stable
+      - run: cargo package --locked
 
   doc:
     name: doc
