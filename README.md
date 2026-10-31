@@ -44,7 +44,8 @@ error: not a full 40-hex commit SHA: "main" (get one with `git rev-parse main`)
 
 ### The workspace those commands ran on
 
-Two crates, each with an empty `src/lib.rs` and a `README.md` (any text), committed in git (`git init`, `git add -A`,
+Two crates, in directories of those names (`mkdir -p releaseant-demo-core/src releaseant-demo-app/src`), each with an empty
+`src/lib.rs` and a `README.md` (any text), committed in git (`git init`, `git add -A`,
 `git commit`; if git asks who you are, set `user.name` and `user.email` first):
 
 ```toml
@@ -125,7 +126,7 @@ Until then, from a clone or an unpacked package (the build takes a few minutes; 
 
 ```console
 git clone https://github.com/ThinkersJournal/releaseant
-cd releaseant
+cd releaseant            # or the unpacked package's directory
 cargo install --path .
 ```
 
