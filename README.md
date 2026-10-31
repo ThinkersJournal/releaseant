@@ -123,8 +123,16 @@ releaseant publish --sha $SHA --execute
 
 - cargo finds your crates.io token (`cargo login`, or `CARGO_REGISTRY_TOKEN`); ReleaseAnt never reads or stores it.
 - If crates.io rate-limits you, it waits the time the server asks for (up to `--max-wait` seconds, default 3600)
-  and then stops with the run resumable. **Run the same command again to resume**: it skips what is already on the
-  index and continues.
+  and then stops with the run resumable. **Run the same command again to resume**: it skips what this tool already
+  uploaded from this commit and continues. A version that is on the index but that the ledger does not show this
+  tool uploading from this commit is reported as `HELD` and the run stops (someone else's publish, or a lost
+  ledger); `--accept-held` does not exist yet.
+  A crate published by hand (for example with `cargo publish -p`) will hold a later run for that crate and
+  version. To go on, the PM adds one line to the ledger (`.releaseant/ledger.jsonl`) after checking that the
+  registry's copy is ours (compare its index checksum with a `cargo package` of that commit), naming the commit
+  being published:
+  `{"ts":"<UTC>","run":"manual","sha":"<40-hex>","crate":"NAME","version":"X.Y.Z","event":"visible","detail":"published by hand; checked by <who>: <proof>"}`.
+  Nobody else adds that line.
 - After each upload it reads the index back and compares the checksum with what it uploaded.
   `releaseant readback --sha $SHA` asks the same question later.
 - `releaseant yank NAME VERSION --reason kind:text --ledger FILE` yanks a version it published, with the reason

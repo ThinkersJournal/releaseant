@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.35
+
+- Behaviour change: a crate already on the registry that this tool did not upload now stops the run (`Held`), dry runs included (DESIGN section 17). Only an `UploadStarted` or `Visible` ledger event for that crate, version and commit lets a run treat it as already published. No override flag; the content comparison is not built.
+
 ## 0.0.34
 
 - Docs only: the design for a version the registry already holds (DESIGN section 17): no code. A held version with no ledger entry for this SHA becomes a report line and a resumable stop, no `--accept-held` override until asked; content comparison options, with same-machine packaging reproducibility measured and cross-machine not.

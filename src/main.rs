@@ -514,6 +514,9 @@ fn describe(o: &Outcome) -> String {
         Outcome::WouldUpload => "would upload".into(),
         Outcome::AlreadyPublished => "already published".into(),
         Outcome::Visible => "published and read back".into(),
+        Outcome::Held => {
+            "HELD: on the registry, but not uploaded by this tool from this commit".into()
+        }
         Outcome::ChecksumMismatch { uploaded, index } => {
             format!("CHECKSUM MISMATCH (uploaded {uploaded}, index {index})")
         }
