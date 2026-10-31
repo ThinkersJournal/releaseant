@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.39
+
+- Docs only: ROADMAP R6 marks the two second-hand rows (commit is origin's tip, 0.0.33; refuse a version the registry holds without our upload, 0.0.35) as done.
+
 ## 0.0.38
 
 - Docs only: `docs/ADOPTION.md` section 3 no longer tells baracuda to `--exclude baracuda-cuda-seam`; it is in the set (PM, 2026-10-31), with the check at `ed1699af`.
