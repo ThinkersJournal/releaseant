@@ -205,3 +205,48 @@ crates, as with `fu-pub.py` above. No disagreement about a dependency.
   and the three-crate `--only` runs were done.
 - A cross-machine comparison of packaged bytes, and any check of who uploaded the trio.
 - The baracuda rules from "Disagreements, baracuda" (preflight, licence guard) were not rerun.
+
+## Update 2026-10-31 (2): `baracuda-cuda-seam` and the exclusion rule (R5 item 6)
+
+`[TASK]` of 2026-10-31 (PM): options with the 73-crate plan, no release. `releaseant 0.0.35`, `plan` only; nothing was
+uploaded, tagged or edited. Registry read 2026-10-31 ~03:00 UTC. **Superseded reading:** a first version of this section
+was written at baracuda `8f9b30139bc9` and recommended bumping `baracuda-cuda-seam`'s fuel requirement from `^0.31.0` to
+`^0.32.0` first. The PM then pointed out that baracuda#300 (merged as `ed1699af`) had already done it; the section below
+is the re-run at that ref and replaces the earlier one.
+
+### Result at baracuda `ed1699af9243f774071ad356e97f95dbdbbd1112`
+
+That commit is baracuda `origin/main` (fetched; `merge-base --is-ancestor` of it in `origin/main` true, and the two
+SHAs are equal).
+
+| | |
+|---|---|
+| `plan` | exit 0, **73** crates: 71 at `0.1.0-alpha.67`, `baracuda-cuda-emit` and `-cuda-parse` at `0.35.3` |
+| `plan --check-externals` | exit 0, same 73, "every dependency outside the set is on the registry" |
+| `baracuda-cuda-seam` | in the set, **line 58 of 73**, right after `baracuda-cuda-emit` (line 57) |
+| `plan --exclude baracuda-cuda-seam --check-externals` | exit 0, 72 crates (the same list minus line 58); **not wanted any more** |
+| `readback` | 0 present, 73 absent at these versions |
+| errors | none (quality warnings on stderr, same kinds as above) |
+
+`crates/baracuda-cuda-seam/Cargo.toml` at that ref: `fuel-kernel-seam-types = "0.32.0"` and `fuel-kernel-seam = "0.32.0"`
+(it was `0.31.0` at `8f9b3013`), both on the registry. So the seam crate now matches the fuel `main` `0.32.0` trio and the
+two-copies mismatch that the earlier reading raised does not arise from its requirement. I did not build a graph to
+confirm it; the single `unpopped-vocab` copy is the PM's statement about #300, not checked here.
+
+### Decision recorded
+
+The PM's choice is **A at this ref: `baracuda-cuda-seam` is in the set and the exclusion is dropped.** The command for the
+baracuda release therefore has no `--exclude baracuda-cuda-seam` (ADOPTION.md section 3 still shows it; it is stale and
+is not edited in this PR). A few facts that still hold from the earlier look, each at `8f9b3013` and not re-read at
+`ed1699af` unless stated:
+
+- No other member's `Cargo.toml` names `baracuda-cuda-seam`; its only dependency in the set is `baracuda-cuda-emit`
+  (the rest are registry crates), so it must go up after emit, which the plan does.
+- Fuel `59bcbd3d` takes `baracuda-cuda-seam = "=0.1.0-alpha.15"` (exact pin, optional `jit-synth` feature of
+  `fuel-dispatch`), so publishing the new alpha does not change fuel's build.
+- A run with `--exclude` is never tagged; a run without it can be, with `--tag-version` (two streams: `0.35.3` and
+  `0.1.0-alpha.67`; which one the tag names is still the PM's rule).
+
+### Not done
+
+- No `publish` dry run (it builds all 73 crates); no build of a graph holding fuel `0.32.0` and the new seam crate.
