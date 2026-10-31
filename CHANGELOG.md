@@ -2,7 +2,7 @@
 
 ## 0.0.32
 
-- Docs only: the patent re-sweep for the partial-publish and per-crate-tag family (seventh pass, `docs/PATENT-SWEEP.md`): three queries, three claim-1 reads, nothing found, low confidence. The sweep stays INCOMPLETE ("outside as read"). Clears the owed ROADMAP row.
+- Docs only: the patent re-sweep for the partial-publish and per-crate-tag family (seventh pass, `docs/PATENT-SWEEP.md`): three queries, three claim-1 reads, nothing found, low confidence. The sweep stays INCOMPLETE ("outside as read"). The owed re-sweep is NOT done (ROADMAP row kept).
 
 ## 0.0.31
 
