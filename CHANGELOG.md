@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.36
+
+- Docs only: R5 update in `docs/R5-ADOPTION-DRYRUN.md`: fuel `59bcbd3d` and baracuda `8f9b3013` dry runs; the hand-published seam trio is `Held`, the PM ledger line that clears it, and the run clearing it on a copy of the ledger. Registry checksums equal a `cargo package` of that commit on one machine; cross-machine reproducibility is not measured.
+
 ## 0.0.35
 
 - Behaviour change: a crate already on the registry that this tool did not upload now stops the run (`Held`), dry runs included (DESIGN section 17). Only an `UploadStarted` or `Visible` ledger event for that crate, version and commit lets a run treat it as already published. No override flag; the content comparison is not built.
