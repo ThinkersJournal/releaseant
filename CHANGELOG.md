@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased (version at gate)
+
+- Docs only: the owed patent re-sweep is done (eighth pass in `docs/PATENT-SWEEP.md`: 12 queries, 16 new patents read at every independent claim and 3 re-read, all outside as read; the plan's Q14 control was not met as written, recorded), ROADMAP R6 updated, and `docs/PUBLISH-PLAN.md` (the plan to publish releaseant itself; not run).
+
 ## 0.0.40
 
 - Docs only: `docs/PATENT-RESWEEP-PLAN.md` (the exact queries, reads, wording rule, estimated cost and recording place for the owed re-sweep; nothing in it has been run) and `docs/HAND-PUBLISH.md` (checklist for a crate published by hand and the ledger line that clears the Held stop).

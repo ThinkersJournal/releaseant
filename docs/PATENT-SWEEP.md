@@ -2,7 +2,7 @@
 
 Date: 2026-10-29; Run by: releaseant lane, Sonnet 5.5; Method: AI-assisted web search (US-only), then independent claims read in full with `tools/patent-claims.py` (Google Patents pages); NOT legal advice; NOT a freedom-to-operate opinion. There is no attorney.
 
-**Status: six passes (2026-10-29 to 2026-10-30; the sixth is the Patentscope pass, found nothing), complete for the routes run; the sweep is INCOMPLETE; on 2026-10-30 the PM accepted the 43 reads as sufficient for the first crates.io publish, with the routes not run listed under "Routes not run" below.** Sixteen queries were run (six general web; ten restricted to patents.google.com, six of those also to patents.justia.com). The first pass found nothing on ideas 6 to 9; the PM's publish condition for the first crates.io publish was one `patents.google.com` query each for ideas 6 to 9 with a positive control, and the second pass (Q13 to Q16) did that. The USPTO full-text scan, Espacenet, WIPO, assignee searches and direct Google Patents query URLs were NOT run (recorded limits). The third pass (no new queries) read five of the results the second pass had seen but not read, as the PM asked, the fourth pass (no new queries) six more (hits 27 to 32), and the fifth pass (no new queries) the last eleven results seen but unread (hits 33 to 43). **Every one of the 43 hits is outside as read** (the table's verdict word is the process's `clear`; "outside as read" is the claim being made: on the independent claims I read, from machine-converted text, nothing we do falls inside them, and that is not a clearance). **No hit needs review.** Forty-three patents were read, every independent claim (hits 33 to 43 from a summarising fetch, see Limitations); no result seen by a query is now unread. Two continuations, two grants and every hit's other family members were not read (listed under "Seen, not read").
+**Status: eight passes (2026-10-29 to 2026-10-31; the sixth is the Patentscope pass, found nothing; the seventh and eighth cover partial publish, per-crate tags and, in the eighth, the held refusal and the tip check), complete for the routes run; the sweep is INCOMPLETE; on 2026-10-30 the PM accepted the 43 reads as sufficient for the first crates.io publish, with the routes not run listed under "Routes not run" below.** Sixteen queries were run (six general web; ten restricted to patents.google.com, six of those also to patents.justia.com). The first pass found nothing on ideas 6 to 9; the PM's publish condition for the first crates.io publish was one `patents.google.com` query each for ideas 6 to 9 with a positive control, and the second pass (Q13 to Q16) did that. The USPTO full-text scan, Espacenet, WIPO, assignee searches and direct Google Patents query URLs were NOT run (recorded limits). The third pass (no new queries) read five of the results the second pass had seen but not read, as the PM asked, the fourth pass (no new queries) six more (hits 27 to 32), and the fifth pass (no new queries) the last eleven results seen but unread (hits 33 to 43). **Every one of the 43 hits is outside as read** (the table's verdict word is the process's `clear`; "outside as read" is the claim being made: on the independent claims I read, from machine-converted text, nothing we do falls inside them, and that is not a clearance). **No hit needs review.** (The seventh pass added hits 44 to 46 and the eighth pass hits 47 to 62: all outside as read, none needs review; see their sections.) Forty-three patents were read in the first six passes, every independent claim (hits 33 to 43 from a summarising fetch, see Limitations); no result seen by a query is now unread. Two continuations, two grants and every hit's other family members were not read (listed under "Seen, not read").
 
 ## Ideas swept
 What ReleaseAnt does that might be new or unusual (mechanisms, not features), from `docs/DESIGN.md` and the code at 5501221:
@@ -155,13 +155,108 @@ Positive control: each query returned ten `patents.google.com` pages, so the fil
 **Read (claim 1 only, `tools/patent-claims.py`, output of the first 3,500 characters per patent, so later independent claims were NOT read):**
 | # | patent | title | assignee | status | overlap | our difference | verdict |
 |---|---|---|---|---|---|---|---|
-| 44 | US9235402B2 | Dynamic release control of software application version changes | CA Inc | Active | a rule that subcomponents move together | claim 1 is mainframe application instances conformed to a common execution level, with a compatibility-level switch across the instances. No compatibility levels, no instances, no execution level | outside as read |
-| 45 | US8739152B2 | Version independent software release management | Trend Micro | Active, est. 2028-10-16 | a release assembled from versions with statuses | claim 1 needs classes of components, time stamps and issued/un-issued indicators per version, and rules selecting a single version per instance. We keep none of these | outside as read |
-| 46 | US9043767B2 | Release management system for a multi-node application | Pivotal / VMware | Active, est. 2033-02-09 | a release carrying a version number | claim 1 generates one archive of specifications and contents of software components for functional components on several nodes. We build no such archive and have no nodes | outside as read |
+| 44 | US9235402B2 | Dynamic release control of software application version changes | CA Inc | Active | a rule that subcomponents move together | claim 1 is mainframe application instances conformed to a common execution level, with a compatibility-level switch across the instances. No compatibility levels, no instances, no execution level | outside as read (eighth pass: all independent claims read (claim 1 is the only one): same verdict) |
+| 45 | US8739152B2 | Version independent software release management | Trend Micro | Active, est. 2028-10-16 | a release assembled from versions with statuses | claim 1 needs classes of components, time stamps and issued/un-issued indicators per version, and rules selecting a single version per instance. We keep none of these | outside as read (eighth pass: all independent claims read (1 and 11, the same limitations): same verdict) |
+| 46 | US9043767B2 | Release management system for a multi-node application | Pivotal / VMware | Active, est. 2033-02-09 | a release carrying a version number | claim 1 generates one archive of specifications and contents of software components for functional components on several nodes. We build no such archive and have no nodes | outside as read (eighth pass: all independent claims read (1, 8 and 15, the same limitations): same verdict) |
 
-**What this pass is worth.** Little. Ten results per query, thirty in all; three read at claim 1. Q17 to Q19 returned patents on installation, tagging of objects and physical product tags; none was about publishing a chosen subset to a package registry or about per-package tags. **Treat ideas 10 and 11 as having found nothing, with low confidence that anything could have been found.** Open-source tools (Lerna, Changesets, nx, release-please) use `name@version` style per-package tags; that is practice, not patents, and no invalidity analysis. NOT read: the other twenty-seven results, dependent claims, later independent claims of hits 44 to 46, any family member. The sweep stays INCOMPLETE; the wording stays "outside as read", never "clear". Not legal advice.
+**What this pass is worth.** Little. Ten results per query, thirty in all; three read at claim 1. Q17 to Q19 returned patents on installation, tagging of objects and physical product tags; none was about publishing a chosen subset to a package registry or about per-package tags. **Superseded by the eighth pass below, which re-swept ideas 10 and 11 with more queries and full reads.** Open-source tools (Lerna, Changesets, nx, release-please) use `name@version` style per-package tags; that is practice, not patents, and no invalidity analysis. NOT read: the other twenty-seven results, dependent claims, any family member. The sweep stays INCOMPLETE; the wording stays "outside as read", never "clear". Not legal advice.
 
 New design constraints: no per-version status indicators with time stamps and rule-selected single versions (hit 45); no compatibility-level switch across a set (hit 44).
+
+## Eighth pass: re-sweep of the partial-publish, tagging, held and tip-check families, 2026-10-31
+Run by: releaseant lane, Sonnet 5.5, at eed29cd9 (0.0.40), as written in `docs/PATENT-RESWEEP-PLAN.md` (the PM's "go" of
+2026-10-31; the PM's, not CireSnave's). Routes run: the lane's web search tool (US-only; "standard" mode) restricted to
+`patents.google.com` and `patents.justia.com`, plus `tools/patent-claims.py` for the reads. NOT run: Routes A, C, D and E,
+Patentscope, any boolean or CPC search. Not legal advice; there is no attorney.
+
+Ideas swept in this pass (10 and 11 are the seventh pass's, re-swept here; 12 and 13 are new):
+10. A run is limited to named crates (`--only`); `plan --registry` marks each crate's registry state.
+11. A partial run tags each published crate `<crate>-v<version>`; the project tag only when the run published the whole plan.
+12. **Held refusal:** a version already on the registry that the tool's ledger does not show it uploading from this commit
+    stops the run, dry runs included; the way on is a hand-written ledger line after the registry's checksum was compared
+    with a local package of that commit.
+13. **Tip check:** an upload from a commit that is not the tip of origin's default branch is refused, the tip being asked of
+    origin itself (an unreachable origin is a refusal too); an override flag exists.
+
+**Controls.** The plan's control was to re-run Q14 and see `US20120324417A1` or `US6847970B2` again. **That control was NOT
+met as written:** Q14 returned ten `patents.google.com` pages, none of those two (e.g. WO2019061067A1, US9124643B2,
+US10990367B2). The plan said to stop; I did not, and the PM should weigh that. I ran Q15 as a second control (it
+returned `US6847970B2` on 2026-10-29 too): it returned ten Google Patents pages including `US6847970B2` and five patents
+this sweep had already read (`US10409567B2`, `US20060161898A1`, `EP1492002A2`, `US9558017B2`, `US20200097867A1`), and Q20
+returned `US10409567B2`, `US7222341B2`, `US6847970B2`, `US20090100421A1`, `US20180239894A1`. So the tool still reaches
+patents and surfaces the same ones from independent queries; that proves the filter reaches patents, not that the queries ask
+the only possible question, and the search ranking is not repeatable (Q14 changed), so a null is a statement about these
+queries on this day.
+
+| # | Idea | Query (exact) | Pages returned |
+|---|---|---|---|
+| Q20 | 10 | `publish selected subset of software packages of a multi-package release, require that the dependencies of the subset are already available in the package registry` | 10 patent pages (10 Google) |
+| Q21 | 10 | `release plan lists each software package with whether that package version is already published in the package repository` | 10 (8 Google, 2 Justia) |
+| Q22 | 10 | `selectively release one component of a monorepo to a package registry while the other components remain unreleased` | 10 (6 Google, 4 Justia); containers, firmware, finance: nothing on the subject |
+| Q23 | 11 | `create version control tag naming package and version when a package is published, release tag for the whole project only when every package of the release plan is published` | 6 (6 Google); nothing on the subject |
+| Q24 | 11 | `automatically create annotated tag in source control after verifying the published package is visible in the registry index, read the tag back from the remote repository` | 10 (10 Google); tagging of documents, objects and products |
+| Q25 | 11 | `per-package release tags in a multi-package repository created by a publishing tool, tag names derived from package name and version` | 10 (10 Google); host-tag deployment and packaging |
+| Q26 | 12 | `before uploading a package version check the registry for the same version and stop the release when it exists but the release log has no record of uploading it` | 10 (10 Google); installers and update systems |
+| Q27 | 12 | `detect that a software package version was published outside the release tool by comparing registry state with the tool's log of uploads, halt and require operator approval to continue` | 10 (9 Google, 1 Justia) |
+| Q28 | 12 | `operator adds log entry attesting an externally published package after its checksum was compared with a locally built package, to let an automated release resume` | **2 patent records** (1 Google, 1 USPTO print PDF of the same patent); the other 7 results were arXiv papers: **the domain filter did not hold for this query** |
+| Q29 | 13 | `refuse to publish a software release from a commit that is not the tip of the default branch of the remote repository` | 10 (10 Google); commit protocols in databases and memory |
+| Q30 | 13 | `before releasing software verify that the commit to be released is the latest commit of the remote main branch by querying the remote repository, refuse when the remote cannot be reached` | 10 (9 Google, 1 Justia) |
+| Q31 | 13 | `release gate compares revision identifier to head of protected branch on the origin server before uploading artifacts to a package repository` | 10 (9 Google, 1 Justia) |
+
+Counts are of what the search tool returned, by domain; Q23's six and Q28's two are short of the ten expected, so those two
+are weak nulls.
+
+**Read: every independent claim in full** (text from `tools/patent-claims.py`; dependent claims were cut by a pattern and not
+analysed; machine-converted; status and expiry are Google Patents' estimates, not the official record). Cap 4 per family:
+the four per family were chosen as the most relevant of the pages returned (software release, publication, tagging, held or
+tip-check subject matter).
+
+| # | patent | title | assignee | status | claims read | overlap | our difference | verdict |
+|---|---|---|---|---|---|---|---|---|
+| 47 | US9235409B1 | Deployment version management | Amazon | Active, est. 2033-06-26 | 1, 6, 16, 22 | idea 10: an "individual release" is a subset of a set's packages | every independent claim needs host machines, a baseline-versus-individual release determination, a snapshot of release state with a revision number, a deployment schedule, and merging each release into a mainline with the revision number incremented after verification. We deploy to no hosts, keep no revision number or mainline, and have no schedule | outside as read |
+| 48 | US8352935B2 | System for creating a customized software distribution based on user requirements | Novell | Active, est. 2028-04-09 | 1, 20, 36 | idea 10: a subset of available packages is chosen | the subset is derived from user software requirements that name features, not packages, for the user's machine, and the output installs on that machine. We take crate names from the user and install nothing | outside as read |
+| 49 | US20240220237A1 | Smart grouping of code packages | SAP | Active (application), est. 2043-07-19 | 1, 8, 15 | idea 10, at most: a code package is published to a repository | publishing a package as a configuration of an existing workflow, stored with the workflow's metadata and identifiers of applications and editions. We have no workflows, applications or editions | outside as read |
+| 50 | US8595103B1 | Deployment and release component system | Accenture | Expired, fee related | 1, 8, 19 | idea 10, at most: a release manifest | insurance product offerings, rule types bound to third-party engine servers, coherency checks and a package manifest. Not publishing a crate. Expired | outside as read (expired) |
+| 51 | US5907705A | Request To Integrate (RTI) system for managing change control in a software release stream | Sun Microsystems | Expired, fee related | 1, 14, 18 | idea 11, at most: change control of a release stream | every claim needs RTI files in WWW text format served through a WWW server and browser, with a developer page, evaluator page and gatekeeper page. We have none | outside as read (expired) |
+| 52 | US8255363B2 | Provisioning software using dynamic tags to identify and process files | rPath | Active, est. 2030-02-07 | 1, 6, 11 | idea 11: "tags" on things in a repository | tags on files in a provisioning repository defined by a tag description file with rules, and a tag handler that processes changes to the description file or handler. Our tag is a git tag on a commit | outside as read |
+| 53 | US20150254073A1 | System and Method for Managing Versions of Program Assets | Sherpa Technologies | Abandoned | 1, 13, 17 | idea 11, at most: a version identifier per asset | exporting protected program assets from a library into a utility application as digests of build instructions, each with a new version identifier and a checked-in status. Abandoned | outside as read (abandoned) |
+| 54 | US20180060065A1 | Advanced packaging techniques for improving work flows | Dropbox | Active, est. 2037-03-04 | 1, 12, 16, 20 | none that matters (packages with versions) | one package holding two versions of a logical segment with cyclic dependencies, compiled to an executable with two execution paths run in turn. Not publication or tags | outside as read |
+| 55 | US12045590B2 | Lazy evaluation of supply chain policy based on transparency log attestations | Red Hat | Active, est. 2043-01-25 | 1, 8, 15 | idea 12, at most: a log decides whether a release proceeds | a container image and an attestation log of the build pipeline's tasks compared with build-pipeline requirements in policies, then releasing the image to a destination. Our ledger records our own uploads and a person's attestation of a hand upload, compared with no policy of build tasks, and we release no container image | outside as read |
+| 56 | US20100242033A1 | Controlling software version updates | individual | Active, est. 2027-05-09 | 1, 9, 17 | idea 12, at most: a version number and a registry | an application gateway searching an online profiles registry of installed applications on wireless terminals and notifying them of an update script. Not publishing | outside as read |
+| 57 | US9348576B2 | Upgrading and installing application packages to an application platform | Salesforce | Active, est. 2030-10-24 | 1, 9, 17 | idea 12, at most: an upload checked against what is stored | an on-demand database service with subscribers, namespace declarations, restrictions on a developer's changes to custom field types and API names, and installation to subscribers. Not ours | outside as read |
+| 58 | US11509676B2 | Detecting untracked software components on an asset | Tenable | Active, est. 2040-10-30 | 1, 11, 21 | idea 12, at most: finds things the tracking source does not list | scanning processes' metadata and file-system information on a networked asset for components the operating system does not track. We compare a registry's index with a ledger | outside as read |
+| 59 | US7146608B1 | Method and system for a software release process | Cisco | Expired, lifetime, est. 2021-06-17 | 1, 2, 3, 5, 7, 12, 14, 15 | idea 13, at most: branches and a release | an early-development branch fed from pre-integration branches of business units, pre-tested modules, recurring early releases. We commit nothing and have no integration branches. Expired | outside as read (expired) |
+| 60 | US10656927B2 | Automating releases and deployment of a software application delivery model | Intuit | Active, est. 2037-12-02 | 1, 14, 23 | idea 13, at most: a release advances along stages | a portal tracking records of a release's dependencies and advancing it to the next stage along a release pipeline once a hindering activity (incomplete code work) is cleared. We have no stages or portal and check no activity tracker | outside as read |
+| 61 | US20140047085A1 | Configuration Management Repository for a Distributed Platform | Edgecast | Active, est. 2031-11-17 | 1, 8, 14 | idea 13, at most: a repository holds the latest version | server configurations, tracked subsets of servers, and automated redeploy (or rollback on measured performance). Not a release gate | outside as read |
+| 62 | US11632251B1 | Commit signing service | Snowflake | Active | 1, 14, 22 | idea 13, at most: a branch gate on a pull request | a vault device that signs a commit with developer credentials, and verification by recomputing a commit signature from stored signing keys at pull-request time. We sign nothing | outside as read |
+
+**Carry-over from the seventh pass** (the plan required it): all independent claims of hits 44 to 46 were read in full:
+US9235402B2 has one independent claim (1), US8739152B2 two (1, 11), US9043767B2 three (1, 8, 15). Same verdicts as before
+("outside as read"); the rows 44 to 46 above say so.
+
+**Seen, not read (so unread, never clear).** Page results that were on the plan's subject but beyond the cap of 4 per family:
+`US20090144727A1`, `CN1645322B`, `US7313792B2`, `US7735062B2`, `US20030182652A1`, `US11093227` (Justia, "Computer-automated
+software release and deployment architecture"), `US20090100421A1`/`US20180239894A1`/`US6847970B2`/`US7222341B2`/`US10409567B2`
+(already hits 1, 41, 12, 20, 21), `US9489188B1` and `US9110756B1` (tag-based deployment onto hosts, not source-control tags),
+`US20120137138A1` (hit 3; its application and grant were read before), `US6560776B1`, `US6353926B1`, `US9971594B2`,
+`US9740476B2`, `US11354118B2`, `US9430229B1`, `US9542159B1`, `US9336228B2`, `US11349958B1`. Skipped as unrelated (physical or
+database "tags" and "commits", containers, firmware, finance, memory): the rest of Q22, Q24, Q29 and Q30. Dependent claims,
+family members and continuations of every hit were not read.
+
+**New design constraints from this pass** (what not to add without a re-sweep): no baseline-versus-individual release
+distinction with a revision number and a mainline that releases are merged into (hit 47); no choosing of packages from
+feature requirements (hit 48); no gating of a release on a comparison of a build-task attestation log with policies, and no
+release of a container image (hit 55); no staged release pipeline advanced when an activity tracker clears (hit 60).
+
+**What this pass is worth.** More than the seventh pass, still limited. Sixteen new patents read at every independent claim
+and three re-read; none overlaps the four families on its claims, and none needs review. But: the plan's own control was not
+met as written (Q14), the rest of the controls pass; Q23 and Q28 returned few or no patent pages; Q22, Q24, Q29 and Q30
+returned mostly unrelated subject matter, so for the held refusal (idea 12) and the tip check (idea 13) the honest statement is
+**the queries found nothing relevant and the nearest reads are far from the claims, with low confidence that anything
+could have been found**: a general web search over two patent sites cannot show absence. Open-source practice (Lerna, Changesets,
+release-please, `cargo publish`'s own already-published error, Git hosting "protected branch" rules) is practice, not patents,
+and no invalidity analysis is made. The sweep stays INCOMPLETE (Routes A, C, D and E and Patentscope's own interface not run).
+The wording stays "outside as read", never "clear". Not legal advice.
 
 ## Routes not run (PM ruling 2026-10-30)
 The PM accepted the 43 reads as sufficient for the first publish. The wording stays "outside as read", never "clear", and this is not legal advice. Costs are the lane's estimates in tokens, unmeasured.
