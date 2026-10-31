@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (version at gate)
+## 0.0.42
 
 - README: the hello-world is the first section (SHA, `plan`, dry-run `publish`), run by `tests/readme.rs` on every CI OS and now a named CI step; the metadata paragraph moved below it; wording fixed after three fresh-eyes trials of the packaged form (demo directories, any README text, git identity, "the release owner" for "the PM").
 - Package: an `include` list (the package no longer ships `HANDOFF.md`, `CLAUDE.md`, `.github/`, `docs/` or the ROADMAP); CI job `package` runs `cargo package --locked`.
