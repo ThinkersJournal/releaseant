@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.38
+
+- Docs only: `docs/ADOPTION.md` section 3 no longer tells baracuda to `--exclude baracuda-cuda-seam`; it is in the set (PM, 2026-10-31), with the check at `ed1699af`.
+
 ## 0.0.37
 
 - Docs only: R5 item 6 in `docs/R5-ADOPTION-DRYRUN.md`: baracuda `ed1699af` plans 73 crates with `baracuda-cuda-seam` in the set (line 58, after `baracuda-cuda-emit`), the exclusion dropped by the PM's decision; an earlier reading at `8f9b3013` is replaced.
