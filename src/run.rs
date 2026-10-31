@@ -73,8 +73,12 @@ pub struct RunContext {
 pub enum Outcome {
     /// Dry-run: the registry does not have it; an execute run would upload it.
     WouldUpload,
-    /// The registry already had this version.
+    /// The registry already had this version, and the ledger shows this tool put it there from
+    /// this commit (a resume).
     AlreadyPublished,
+    /// The registry has this version but the ledger has no upload of it from this commit: someone
+    /// else's publish, or a run whose ledger is gone. Never read as success (DESIGN section 17).
+    Held,
     /// Uploaded and read back, checksum agreed where one was known.
     Visible,
     /// Uploaded, but the index checksum differs from what was uploaded.
@@ -196,6 +200,17 @@ impl Recorder<'_> {
     }
 }
 
+/// Whether the ledger shows this tool uploading `name@version` from this commit.
+fn ours(earlier: &[Event], ctx: &RunContext, name: &str, version: &Version) -> bool {
+    let version = version.to_string();
+    earlier.iter().any(|e| {
+        e.sha == ctx.sha
+            && e.crate_name.as_deref() == Some(name)
+            && e.version.as_deref() == Some(version.as_str())
+            && matches!(e.event, EventKind::UploadStarted | EventKind::Visible)
+    })
+}
+
 fn valid_sha(s: &str) -> bool {
     s.len() == 40
         && s.bytes()
@@ -270,6 +285,20 @@ pub fn run(
                 let reason = format!("registry lookup failed for {}: {why}", c.name);
                 stopped = Some(reason.clone());
                 Outcome::Interrupted(reason)
+            }
+            Lookup::Present { .. } if !ours(&earlier, ctx, &c.name, &c.version) => {
+                let reason = format!(
+                    "{}@{} is already on the registry and the ledger has no upload of it from commit {};                      ask the PM before going on",
+                    c.name, c.version, ctx.sha
+                );
+                rec.log(
+                    clock,
+                    EventKind::Classified,
+                    Some((&c.name, &c.version)),
+                    "held: on the registry, not uploaded by this tool from this commit",
+                )?;
+                stopped = Some(reason);
+                Outcome::Held
             }
             Lookup::Present { .. } => {
                 rec.log(
@@ -693,8 +722,9 @@ mod tests {
         )
         .unwrap();
         assert!(reg.upload_calls.is_empty());
-        assert_eq!(outcome(&r, "a"), &Outcome::AlreadyPublished);
-        assert_eq!(outcome(&r, "b"), &Outcome::WouldUpload);
+        // The registry holds a@1.0.0 and this ledger never saw it uploaded: held, not success.
+        assert_eq!(outcome(&r, "a"), &Outcome::Held);
+        assert_eq!(outcome(&r, "b"), &Outcome::NotAttempted);
         assert!(!r.is_success(), "a dry run is never a success");
         let kinds: BTreeSet<_> = e
             .ledger
@@ -704,6 +734,42 @@ mod tests {
             .map(|x| format!("{:?}", x.event))
             .collect();
         assert!(!kinds.contains("UploadStarted"), "{kinds:?}");
+    }
+
+    // DESIGN section 17: a version on the registry that this tool did not upload from this commit
+    // is a report line and a stop, never AlreadyPublished.
+    #[test]
+    fn a_held_version_stops_the_run_and_uploads_nothing() {
+        let e = env();
+        let mut reg = FakeRegistry::new().with_published("a", "1.0.0");
+        let mut clock = FakeClock::default();
+        let r = run(&chain(), &mut reg, &mut clock, &e.ledger, &ctx(), &exec()).unwrap();
+        assert_eq!(outcome(&r, "a"), &Outcome::Held);
+        assert_eq!(outcome(&r, "b"), &Outcome::NotAttempted);
+        assert!(r.stopped.as_deref().unwrap().contains("a@1.0.0"));
+        assert!(!r.is_success());
+        assert!(reg.upload_calls.is_empty());
+    }
+
+    #[test]
+    fn a_ledger_from_another_commit_does_not_vouch_for_a_held_version() {
+        let e = env();
+        let other = RunContext {
+            run_id: "r0".into(),
+            sha: "fedcba9876543210fedcba9876543210fedcba98".into(),
+        };
+        // Control: at the other commit this tool uploads everything.
+        let mut reg = FakeRegistry::new();
+        let mut clock = FakeClock::default();
+        let first = run(&chain(), &mut reg, &mut clock, &e.ledger, &other, &exec()).unwrap();
+        assert!(first.is_success(), "{first:?}");
+        // The same versions, now asked from a different commit: held.
+        let r = run(&chain(), &mut reg, &mut clock, &e.ledger, &ctx(), &exec()).unwrap();
+        assert_eq!(outcome(&r, "a"), &Outcome::Held);
+        assert!(!r.is_success());
+        // And at the commit that did upload them it resumes to success.
+        let again = run(&chain(), &mut reg, &mut clock, &e.ledger, &other, &exec()).unwrap();
+        assert!(again.is_success(), "{again:?}");
     }
 
     // T16: the upload_started event is on disk before the upload runs.
