@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.33
+
+- `publish --execute` refuses a commit that is not the tip of origin's default branch (asked of origin with `git ls-remote --symref`; an unreadable origin is a refusal too). `--allow-not-tip` overrides; dry runs are not checked (DESIGN section 16).
+
 ## 0.0.32
 
 - Docs only: the patent re-sweep for the partial-publish and per-crate-tag family (seventh pass, `docs/PATENT-SWEEP.md`): three queries, three claim-1 reads, nothing found, low confidence. The sweep stays INCOMPLETE ("outside as read"). The owed re-sweep is NOT done (ROADMAP row kept).
