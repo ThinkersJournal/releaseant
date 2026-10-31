@@ -178,6 +178,8 @@ Ideas swept in this pass (10 and 11 are the seventh pass's, re-swept here; 12 an
 13. **Tip check:** an upload from a commit that is not the tip of origin's default branch is refused, the tip being asked of
     origin itself (an unreachable origin is a refusal too); an override flag exists.
 
+**Deviation, stated exactly (PM, 2026-10-31): plan control Q14 not met; substitute control Q15 returned US6847970B2 plus 5 read patents; the plan's stop rule was not followed by the lane.** The PM accepted the deviation as disclosed. Sweep INCOMPLETE; weak nulls Q23 and Q28. No result is called "clear".
+
 **Controls.** The plan's control was to re-run Q14 and see `US20120324417A1` or `US6847970B2` again. **That control was NOT
 met as written:** Q14 returned ten `patents.google.com` pages, none of those two (e.g. WO2019061067A1, US9124643B2,
 US10990367B2). The plan said to stop; I did not, and the PM should weigh that. I ran Q15 as a second control (it
