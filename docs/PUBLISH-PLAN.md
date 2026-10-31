@@ -50,24 +50,22 @@ named in the `[READY]`; the numbers below are of the package built from that tre
 | The example is compiled and **run** in CI on Windows and Linux | **done.** `tests/readme.rs` builds the demo workspace from the README's own `toml` blocks, commits it, and runs every `$ ` line with the real binary against the output the README prints. It already ran in the `test` matrix (ubuntu, windows, macos). It now also has a named CI step, `README hello-world (compiled and run)`, so a red README is visible as such. Not seen green on GitHub until the PR's checks finish: this lane ran it only on Windows (9 of 9 in `tests/readme.rs`) |
 | What the package contains is right | **done.** `Cargo.toml` had no `include`, so the package shipped `HANDOFF.md`, `CLAUDE.md`, `.github/`, `docs/` and the ROADMAP; it now ships `src/`, `tests/`, `README.md`, `CHANGELOG.md`, `SECURITY.md` and both licences, 9 files plus source and tests |
 | The package builds from its tarball, kept by CI | **done.** `cargo package --locked` verifies the tarball builds (run locally on Windows: ok), and a new CI job `package (ubuntu-latest)` runs it |
-| Fresh-eyes trial of the **packaged** form, 3 of 3 | **3 of 3 PASS, by the trial agents' own reports** (Sonnet subagents, one at a time, each given only the unpacked `.crate` and its `README.md`, told not to read `src/` or `tests/`; each ran `cargo install --path .` from the unpacked package, built the demo workspace from the README, and ran the README's commands). See below |
-| Placeholder's owner | `cargo owner --list releaseant` (read 2026-10-31) printed one name: `ciresnave (CireSnave)`. A user owner, no team. **That command does not show whether the token a publisher uses may publish**; no token was read or tested. |
+| Fresh-eyes trial of the **packaged** form, 3 of 3, **on the final text** | **3 of 3 PASS on the README as shipped (0.0.42, README identical to the one in the head named in the `[READY]`), by the trial agents' own reports** (fresh Sonnet subagents, one at a time, each given only the unpacked `.crate` and its `README.md`, told not to read `src/` or `tests/`; each ran `cargo install --path .` from the unpacked package, built the demo workspace from the README, and ran the README's commands). Three earlier runs on draft READMEs are listed below as history, not as the gate |
+| Placeholder's owner | `cargo owner --list releaseant` (read 2026-10-31) printed one name: `ciresnave (CireSnave)`. A user owner, no team. **The token's right to publish is UNTESTED.** That command lists owners; it does not show whether the token a publisher will use may publish, and no token was read or tried here. The first `--execute` is the first proof. |
 
-### The three trials (each in a fresh directory with its own install root and target dir)
+### The trials (each in a fresh directory with its own install root and target dir)
 
-| run | package | result | what the agent said (their words, condensed) |
+**On the final text (the gate).** Package `releaseant-0.0.42.crate`, sha256 `a7e1bc5d5fc9cca957c159533751b63593e5857cae4e21ad2ad4afdfa09d4da6`, built from commit `662f5c5` with `cargo package --locked`.
+
+| run | result | install | what the agent said (condensed) |
 |---|---|---|---|
-| 1 | README before the two small fixes below | PASS, output matched, exit codes 0, 0, 2 | install 1m18s; hit nothing in the README; remarked that the per-crate `README.md` content is not described and a fresh machine would need a git identity. (A `command not found` on its first try came from the sandbox's Windows-style `PATH`, not from the README.) |
-| 2 | README with "any text" and the git-identity note | PASS, output matched | install 1m29s; its one stumble was `mkdir` failing because the member directories did not exist: the README did not say to create them |
-| 3 | README with the `mkdir -p` line and "or the unpacked package's directory" | PASS, output matched | install 1m14s; nothing blocked; said the "not ready for developer use" banner makes a reader hesitate, "Rust 1.88 or newer" has no how-to-check, and "the PM adds one line" in the Publishing section is an internal term |
+| F1 | PASS: output matched line for line, `plan --sha main` refused, exit 0, 0, 2 | 3m44s | nothing blocked; the README does not say how to make the empty files (it used `: >` and `echo`); the Hello section does not mention the network (it does, further down); the status banner above a working Hello is "mildly confusing" |
+| F2 | PASS, output matched | 1m12s | nothing blocked; could not test the `~/.cargo/bin` claim (it overrode the install root); the README does not say what the network is needed for in Hello; Windows `LF will be replaced by CRLF` git warnings may make a reader hesitate |
+| F3 | PASS, output matched | 1m39s | nothing blocked; "Rust 1.88 or newer" appears only under the crates.io install heading; the CRLF warnings are not mentioned |
 
-Changes made from the trials: the README now says the demo directories are made with `mkdir -p ...`, that each crate's
-`README.md` holds any text, to set `user.name`/`user.email` if git asks, to `cd` into the unpacked package's directory, and
-"the PM" became "the release owner (whoever decides what goes up)" (that last wording came after trial 3, so trial 3 ran on
-a README that still said "the PM"; `tests/readme.rs` passes on the final text). The "not ready for developer use" status line
-is **kept** and is true until the first release; flipping it is part of the publish. Trials 1 and 2 ran on READMEs a few
-lines different from the final one; no trial ran on the final README's exact text. The trials were on Windows with git
-configured; a machine without a git identity was not tried. Transcripts are the agents' reports, not stored here.
+Not fixed on purpose, so that the text the trials passed is the text that ships: a line saying the dry run needs the network in the Hello section, how to create the empty files, the Windows CRLF note, and the banner. Each is a minor remark by an agent that reached the result; changing the README would mean running the three again.
+Git identity was configured on the box in F1 and F2 (F3 set one itself), so the README's "if git asks" line is not tested by the final runs.
 
-What a fresh stranger could still hit and this does not cover: `cargo install releaseant` (not possible until published),
-Linux and macOS installs (CI builds and tests them; no stranger trial was run there), and the first real publish.
+**Earlier drafts (history, not the gate).** Three runs on READMEs a few lines different from the final one, all PASS; they produced the fixes now in the README: the `mkdir -p` line, "any text" for each crate's `README.md`, the git-identity note, `cd` into "the unpacked package's directory", and "the release owner" for "the PM" (trial 3 of those called "the PM" jargon).
+
+The trials were on Windows. Not run: a Linux or macOS stranger trial (CI builds and tests the README example on both), a machine without a git identity, and `cargo install releaseant` (impossible until published). The status line "not ready for developer use" is kept until the first release; flipping it is part of the publish. Transcripts are the agents' reports, not stored here.
