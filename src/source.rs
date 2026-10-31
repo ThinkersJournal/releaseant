@@ -114,6 +114,77 @@ pub fn archive(repo: &Path, sha: &str, dest: &Path) -> Result<(), SourceError> {
     Ok(())
 }
 
+/// Why the commit is not safe to publish as the project's tip.
+#[derive(Debug, PartialEq, Eq)]
+pub enum TipError {
+    /// origin's default branch is at another commit.
+    NotTip {
+        /// The branch origin's `HEAD` names.
+        branch: String,
+        /// The commit that branch is at on origin.
+        tip: String,
+    },
+    /// origin could not be asked, or answered in a shape we do not read. Never read as "is the tip".
+    Unknown(String),
+}
+
+impl fmt::Display for TipError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotTip { branch, tip } => write!(
+                f,
+                "this commit is not the tip of origin's {branch} ({tip}); publish the tip, or pass --allow-not-tip"
+            ),
+            Self::Unknown(why) => write!(
+                f,
+                "could not read origin's tip ({why}); fix that, or pass --allow-not-tip"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for TipError {}
+
+/// Check that `sha` is the commit origin's default branch is at *now*: asked of origin itself with
+/// `git ls-remote --symref origin HEAD`, not of a local remote-tracking ref that may be stale.
+///
+/// # Errors
+/// [`TipError::NotTip`] when origin is elsewhere; [`TipError::Unknown`] when origin cannot be asked.
+pub fn check_tip(repo: &Path, sha: &str) -> Result<(), TipError> {
+    let out = Command::new("git")
+        .arg("-C")
+        .arg(repo)
+        .args(["ls-remote", "--symref", "origin", "HEAD"])
+        .output()
+        .map_err(|e| TipError::Unknown(e.to_string()))?;
+    if !out.status.success() {
+        return Err(TipError::Unknown(
+            String::from_utf8_lossy(&out.stderr).trim().to_owned(),
+        ));
+    }
+    let text = String::from_utf8_lossy(&out.stdout);
+    let branch = text
+        .lines()
+        .find_map(|l| {
+            l.strip_prefix("ref: ")?
+                .split_once('\t')
+                .map(|(r, _)| r.to_owned())
+        })
+        .ok_or_else(|| TipError::Unknown(format!("no symbolic HEAD in {text:?}")))?;
+    let tip = text
+        .lines()
+        .find_map(|l| {
+            let (oid, r) = l.split_once('\t')?;
+            (r == "HEAD" && !oid.starts_with("ref: ")).then(|| oid.to_owned())
+        })
+        .ok_or_else(|| TipError::Unknown(format!("no HEAD commit in {text:?}")))?;
+    if tip == sha {
+        Ok(())
+    } else {
+        Err(TipError::NotTip { branch, tip })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,6 +274,55 @@ mod tests {
             Err(SourceError::NotARepository { .. })
         ));
         assert_eq!(fs::read_dir(out.path()).unwrap().count(), 0);
+    }
+
+    // The tip check asks origin itself; the control is the same repository with the tip as input.
+    #[test]
+    fn check_tip_accepts_the_tip_and_refuses_an_older_commit_and_an_unreachable_origin() {
+        let tmp = tempfile::tempdir().unwrap();
+        let origin = tmp.path().join("origin.git");
+        let work = tmp.path().join("work");
+        fs::create_dir_all(&work).unwrap();
+        git(
+            tmp.path(),
+            &["init", "-q", "--bare", "-b", "main", "origin.git"],
+        );
+        git(&work, &["init", "-q", "-b", "main"]);
+        git(
+            &work,
+            &["remote", "add", "origin", origin.to_str().unwrap()],
+        );
+        fs::write(work.join("a"), "1").unwrap();
+        git(&work, &["add", "-A"]);
+        git(&work, &["commit", "-q", "-m", "one"]);
+        let first = git(&work, &["rev-parse", "HEAD"]);
+        fs::write(work.join("a"), "2").unwrap();
+        git(&work, &["commit", "-q", "-am", "two"]);
+        let second = git(&work, &["rev-parse", "HEAD"]);
+        git(&work, &["push", "-q", "origin", "main"]);
+
+        assert_eq!(check_tip(&work, &second), Ok(()));
+        match check_tip(&work, &first) {
+            Err(TipError::NotTip { branch, tip }) => {
+                assert_eq!(branch, "refs/heads/main");
+                assert_eq!(tip, second);
+            }
+            other => panic!("expected NotTip, got {other:?}"),
+        }
+        // A local commit that origin has not seen is not the tip either.
+        fs::write(work.join("a"), "3").unwrap();
+        git(&work, &["commit", "-q", "-am", "three"]);
+        let third = git(&work, &["rev-parse", "HEAD"]);
+        assert!(matches!(
+            check_tip(&work, &third),
+            Err(TipError::NotTip { .. })
+        ));
+        // origin gone: unknown, never "is the tip".
+        fs::remove_dir_all(&origin).unwrap();
+        assert!(matches!(
+            check_tip(&work, &second),
+            Err(TipError::Unknown(_))
+        ));
     }
 
     #[test]

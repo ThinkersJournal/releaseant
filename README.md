@@ -130,6 +130,9 @@ releaseant publish --sha $SHA --execute
 - `releaseant yank NAME VERSION --reason kind:text --ledger FILE` yanks a version it published, with the reason
   recorded (dry run unless `--execute`).
 
+`publish --execute` refuses a commit that is not the tip of origin's default branch (asked of origin itself, so an
+unreachable origin is a refusal too); `--allow-not-tip` overrides it. A dry run is not checked.
+
 Tag the release in git in the same action: add `--tag` (`releaseant publish --sha $SHA --execute --tag`). Once every
 crate is on the registry it creates an annotated `v<version>` on exactly that commit, pushes only that tag to
 `origin` and reads it back. It refuses a commit that is on no origin branch and never moves an existing tag; a

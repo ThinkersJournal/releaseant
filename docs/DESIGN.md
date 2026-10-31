@@ -189,3 +189,10 @@ Not done: `plan --exact` and the name-ownership check. (The external-prerequisit
 - **Answered**: the PM chose `<crate>-v<version>` (ruling above); the code is the next PR.
 - **Patent sweep**: owed before any releaseant release, now a ROADMAP row (PM, 2026-10-30); row 2 shipped without one. The sweep stays INCOMPLETE until it is done.
 - **Tests (for the code PR)**: `--only` plus `--tag` creates one tag per selected crate with the right names on the right commit and reads each back from a local bare origin; a selected crate that did not land is named and not tagged while the others are; `--only` with `--tag-version` is refused; a full run still gets `v<version>` (control); re-running finds every tag already present.
+
+## 16. Only the tip of origin is published (PM ruling 2026-10-31; PM first-hand: a check that the commit is still `origin/main`'s tip)
+
+- **Rule**: `publish --execute` (and `resume`) refuses a `--sha` that is not the commit origin's default branch is at, before anything is written. A dry run is not checked (it uploads nothing and is how an older commit is rehearsed). `--allow-not-tip` is the explicit override.
+- **How**: `source::check_tip` runs `git ls-remote --symref origin HEAD` and compares the commit it prints with `--sha`. It asks origin, not a local `origin/main` ref, which can be stale. A failing or unreadable answer (no `origin`, no network, no symbolic `HEAD`) is a refusal naming the cause, never "is the tip". The message names the branch and origin's commit.
+- **Cost of being wrong**: the flag is per run, so a rehearsal repository without an origin passes `--allow-not-tip` knowingly.
+- **Tests**: unit: the tip passes, an older commit and a local-only commit are refused, a removed origin is `Unknown`; CLI (`tests/tip_cli.rs`): an older commit exits 2 naming the tip, and the tip, the override and a dry run of the old commit all get past the check.
