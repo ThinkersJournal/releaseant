@@ -772,6 +772,28 @@ mod tests {
         assert!(again.is_success(), "{again:?}");
     }
 
+    // The README tells the PM to add this exact line for a crate published by hand.
+    #[test]
+    fn the_documented_manual_ledger_line_clears_a_held_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("ledger.jsonl");
+        let line = r#"{"ts":"2026-10-31T00:00:00Z","run":"manual","sha":"0123456789abcdef0123456789abcdef01234567","crate":"a","version":"1.0.0","event":"visible","detail":"published by hand; checked"}"#;
+        std::fs::write(
+            &path,
+            format!(
+                "{line}
+"
+            ),
+        )
+        .unwrap();
+        let ledger = Ledger::open(&path).unwrap();
+        let mut reg = FakeRegistry::new().with_published("a", "1.0.0");
+        let mut clock = FakeClock::default();
+        let r = run(&chain(), &mut reg, &mut clock, &ledger, &ctx(), &exec()).unwrap();
+        assert_eq!(outcome(&r, "a"), &Outcome::AlreadyPublished);
+        assert_eq!(outcome(&r, "b"), &Outcome::Visible);
+    }
+
     // T16: the upload_started event is on disk before the upload runs.
     #[test]
     fn upload_started_is_in_the_ledger_before_the_upload_happens() {
