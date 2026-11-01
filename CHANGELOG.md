@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.45
+
+- Docs only: the README Status line says the crate is published (0.0.44) and early, pre-1.0, instead of "not ready for developer use"; the Install section no longer says "once it is published". ROADMAP R7 is closed with the evidence in `docs/PUBLISH-PLAN.md`.
+
 ## 0.0.44
 
 - Docs only: `docs/PATENT-SWEEP.md` ninth pass reads the four patents the earlier passes had seen and not read (hits 63 to 66, every independent claim): all outside as read, none needs review. The sweep stays INCOMPLETE; not legal advice.

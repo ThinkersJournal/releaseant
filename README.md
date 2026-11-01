@@ -2,8 +2,9 @@
 
 Ordered, verified, resumable publishing of Rust crates and workspaces to crates.io, with read-back.
 
-**Status: not ready for developer use** until its first release: not yet published (the crates.io name
-holds an empty 0.0.0 placeholder).
+**Status: early, pre-1.0.** Published on crates.io since 0.0.44; a breaking change bumps the second number. The hello-world
+below is run in CI on Linux, Windows and macOS, and strangers' trials of it (4 of 4) passed, all on Windows; expect rough edges
+elsewhere and report them.
 
 ## Hello
 
@@ -115,13 +116,13 @@ to name a `version` as well as a `path` (the demo's `releaseant-demo-app` does).
 
 ## Install
 
-From crates.io, once it is published (the name holds an empty 0.0.0 placeholder today; Rust 1.88 or newer):
+From crates.io (Rust 1.88 or newer):
 
 ```console
 cargo install releaseant
 ```
 
-Until then, from a clone or an unpacked package (the build takes a few minutes; `cargo install` puts the binary in
+Or from a clone or an unpacked package (the build takes a few minutes; `cargo install` puts the binary in
 `~/.cargo/bin`, which rustup already put on your `PATH`):
 
 ```console

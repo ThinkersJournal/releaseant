@@ -1,4 +1,6 @@
-# Publish plan for releaseant itself (not run)
+# Publish plan for releaseant itself (not run by this lane)
+
+**Update 2026-10-31: the PM published 0.0.44 and tagged `v0.0.44` (`d3f9e0e6`); see "Outcome" at the end. The text below is the plan as written before that, kept as history.**
 
 Prepared 2026-10-31 for the PM. **Nothing in this file has been executed**: no `--execute`, no upload, no tag. crates.io
 holds only the `0.0.0` placeholder of `releaseant` (index read 2026-10-31: one line, `vers 0.0.0`, not yanked, published
@@ -69,3 +71,20 @@ Git identity was configured on the box in F1 and F2 (F3 set one itself), so the 
 **Earlier drafts (history, not the gate).** Three runs on READMEs a few lines different from the final one, all PASS; they produced the fixes now in the README: the `mkdir -p` line, "any text" for each crate's `README.md`, the git-identity note, `cd` into "the unpacked package's directory", and "the release owner" for "the PM" (trial 3 of those called "the PM" jargon).
 
 The trials were on Windows. Not run: a Linux or macOS stranger trial (CI builds and tests the README example on both), a machine without a git identity, and `cargo install releaseant` (impossible until published). The status line "not ready for developer use" is kept until the first release; flipping it is part of the publish. Transcripts are the agents' reports, not stored here.
+
+## Outcome (2026-10-31, after the PM's publish of 0.0.44)
+
+The PM ran the publish; this lane did not. Per the PM: 0.0.44 is visible on crates.io (read back), the `0.0.0` placeholder is no
+longer the newest, and tag `v0.0.44` reads back from origin as `d3f9e0e68eec1991bb30c0556f0e6127bd3c6be9`. I checked the tag
+locally: `git rev-parse 'v0.0.44^{commit}'` printed that SHA, and `gh pr view 43` says #43 merged as the same commit.
+**The token's right to publish, UNTESTED above, is answered:** the PM's publish right worked on this crate. (The lane never
+read a token; this is the PM's report.)
+
+**Fourth fresh-eyes trial, of the form a stranger uses (`cargo install` from crates.io).** One Sonnet subagent, told nothing
+but the crate name, working in a fresh directory, own install root and target dir, and reading only the README the registry
+cache holds for 0.0.44. By its own report: `cargo install releaseant --version 0.0.44 --locked` succeeded (89 s); the demo
+workspace built from the README; `plan`, the dry-run `publish` and `plan --sha main` matched the README's output (only the
+timestamps differ) with exit codes 0, 0, 2; nothing blocked. It noted the README's stale Status and "once it is published"
+Install text, which 0.0.45 fixes. A git identity was already set on the box ("if git asks" not exercised); the CRLF warnings on
+Windows are git's. Windows only. Not run: a Linux or macOS stranger and a machine with no git identity. The agent's report is not
+stored here.
