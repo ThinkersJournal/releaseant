@@ -275,7 +275,8 @@ const PHASE_WORDS: [&str; 7] = [
     "Waiting",
 ];
 
-/// The line when it starts with one of [`PHASE_WORDS`] (or `Published`), else `None`.
+/// The line when it starts with one of cargo's phase status words (`Packaging`, `Packaged`,
+/// `Verifying`, `Finished`, `Uploading`, `Uploaded`, `Waiting`, `Published`), else `None`.
 #[must_use]
 pub fn phase_line(line: &str) -> Option<&str> {
     let t = line.trim();
