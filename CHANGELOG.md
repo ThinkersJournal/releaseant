@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.48
+
+- Fix: a run id (and so its scratch directory) is unique within a process. It was the first 8 characters of the SHA, the second and the process id, so two runs on one commit in one second inside one process (the in-process tests, or a binary wrapping `releaseant::cli::run`) shared a scratch directory and the first to finish deleted the other's archive. A per-process counter is now part of it. The run id in the ledger gains a fourth field.
+
 ## 0.0.47
 
 - New public API: `releaseant::cli::run(args)` (and `run_code`, the same returning the exit status as a number) is the whole command line; `src/main.rs` is a one-line call to it, so the library's CLI can be tested in process and wrapped by other binaries. Additive: behaviour, output and exit statuses are unchanged (clap errors, help and version included). New `tests/cli_inproc.rs`.
