@@ -10,6 +10,7 @@
 pub mod cargo;
 pub mod categories;
 pub mod classify;
+pub mod cli;
 pub mod clock;
 pub mod config;
 pub mod crates_io;

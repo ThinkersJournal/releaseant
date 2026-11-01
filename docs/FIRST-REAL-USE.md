@@ -120,7 +120,7 @@ reach them).
 
 ## 4. Reading the output
 
-Per crate, one line `name: <outcome>` *(design: `describe` in `src/main.rs`; of the rows below only
+Per crate, one line `name: <outcome>` *(design: `describe` in `src/cli.rs`; of the rows below only
 `published and read back` has been seen in a real run, five times, *observed*; every other row is still design or
 fake-registry tests)*:
 

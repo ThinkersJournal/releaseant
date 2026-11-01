@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.47
+
+- New public API: `releaseant::cli::run(args)` (and `run_code`, the same returning the exit status as a number) is the whole command line; `src/main.rs` is a one-line call to it, so the library's CLI can be tested in process and wrapped by other binaries. Additive: behaviour, output and exit statuses are unchanged (clap errors, help and version included). New `tests/cli_inproc.rs`.
+
 ## 0.0.46
 
 - Ledger: new event kind `phase` with timing notes, so a run says where its wall time went: package time, `cargo check` time per crate, and for each upload the offsets of cargo publish's status lines (first `Compiling`, `Verifying`, `Finished`, `Uploading`, `Uploaded`, `Waiting`, `Published`). Ledger-only: progress output is unchanged, and no check is skipped or reordered. Not yet seen on a real upload.
