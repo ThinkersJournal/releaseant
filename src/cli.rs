@@ -6,6 +6,7 @@ use std::collections::BTreeSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
@@ -199,13 +200,16 @@ fn work_dir(run_id: &str) -> PathBuf {
 
 /// Names a run and its scratch directory. The process id is part of it: two runs on the same commit in
 /// the same second (a CI matrix, parallel tests) would otherwise share one scratch directory, and the
-/// first to finish would delete the other's archive.
+/// first to finish would delete the other's archive. A counter is part of it too, for runs in one
+/// process (tests, a binary that wraps [`run`]): the process id cannot tell those apart.
 fn run_id(sha: &str) -> String {
+    static RUNS: AtomicU64 = AtomicU64::new(0);
     format!(
-        "{}-{}-{}",
+        "{}-{}-{}-{}",
         &sha[..8.min(sha.len())],
         now_unix(),
-        std::process::id()
+        std::process::id(),
+        RUNS.fetch_add(1, Ordering::Relaxed)
     )
 }
 
@@ -732,5 +736,34 @@ impl Registry for IndexRegistry {
 
     fn upload(&mut self, _: &str, _: &semver::Version) -> crate::registry::Upload {
         unreachable!("readback never uploads")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // In one process (a test binary, a wrapper calling `run` from several threads) every run on the
+    // same commit must get its own scratch directory, whatever the clock says.
+    #[test]
+    fn concurrent_runs_on_one_sha_get_distinct_scratch_directories() {
+        const SHA: &str = "0123456789abcdef0123456789abcdef01234567";
+        let (threads, each) = (8, 50);
+        let handles: Vec<_> = (0..threads)
+            .map(|_| {
+                std::thread::spawn(move || {
+                    (0..each)
+                        .map(|_| work_dir(&run_id(SHA)))
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        let all: Vec<PathBuf> = handles
+            .into_iter()
+            .flat_map(|h| h.join().unwrap())
+            .collect();
+        let distinct: BTreeSet<&PathBuf> = all.iter().collect();
+        assert_eq!(all.len(), threads * each);
+        assert_eq!(distinct.len(), all.len(), "scratch directories repeat");
     }
 }
