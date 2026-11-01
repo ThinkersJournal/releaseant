@@ -9,6 +9,7 @@
 
 pub mod cargo;
 pub mod categories;
+pub mod ci;
 pub mod classify;
 pub mod cli;
 pub mod clock;
@@ -22,6 +23,7 @@ pub mod plan;
 pub mod preflight;
 pub mod progress;
 pub mod registry;
+pub mod retry;
 pub mod run;
 pub mod source;
 pub mod tag;

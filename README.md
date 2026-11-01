@@ -157,6 +157,14 @@ releaseant publish --sha $SHA --execute
 `publish --execute` refuses a commit that is not the tip of origin's default branch (asked of origin itself, so an
 unreachable origin is a refusal too); `--allow-not-tip` overrides it. A dry run is not checked.
 
+Two guards for an unattended release, both off by default. `--require-green` waits for the CI runs on the commit to
+finish (`gh run list`; `--github OWNER/NAME` if origin is not a GitHub URL, `--ci-wait` seconds, default 2700) and
+refuses unless every one succeeded: exit status 3 if a run failed or was cancelled, 4 if CI gave no answer in time. No
+runs at all is not green. `--retries N` (with `--execute`; `--retry-pause` seconds, default 120) runs again after any
+failure, up to N more times, and stops only when the index, asked afresh, lists every crate of the plan at its version
+and not yanked; the run's own word is not enough. A version someone else put on the registry (held) or a checksum
+that differs stops it at once, because running again cannot fix those.
+
 Tag the release in git in the same action: add `--tag` (`releaseant publish --sha $SHA --execute --tag`). Once every
 crate is on the registry it creates an annotated `v<version>` on exactly that commit, pushes only that tag to
 `origin` and reads it back. It refuses a commit that is on no origin branch and never moves an existing tag; a
