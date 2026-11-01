@@ -221,6 +221,7 @@ pub struct CratesIo {
     cargo: Cargo,
     dir: PathBuf,
     target_dir: PathBuf,
+    marks: Vec<(f64, String)>,
 }
 
 impl CratesIo {
@@ -232,6 +233,7 @@ impl CratesIo {
             cargo,
             dir,
             target_dir,
+            marks: Vec::new(),
         }
     }
 }
@@ -245,6 +247,10 @@ impl Registry for CratesIo {
         self.index.versions(name)
     }
 
+    fn take_phase_marks(&mut self) -> Vec<(f64, String)> {
+        std::mem::take(&mut self.marks)
+    }
+
     fn upload(&mut self, name: &str, version: &Version) -> Upload {
         let spec = format!("{name}@{version}");
         let target = self.target_dir.to_string_lossy().into_owned();
@@ -252,8 +258,12 @@ impl Registry for CratesIo {
         if self.dir.join("Cargo.lock").is_file() {
             args.push("--locked");
         }
-        let out = match self.cargo.run(&self.dir, &args) {
-            Ok(o) => o,
+        self.marks.clear();
+        let out = match self.cargo.run_marked(&self.dir, &args) {
+            Ok((o, marks)) => {
+                self.marks = marks;
+                o
+            }
             Err(e) => return Upload::Transient(format!("could not start cargo: {e}")),
         };
         let class = classify(out.success, &out.text);

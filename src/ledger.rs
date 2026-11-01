@@ -41,6 +41,10 @@ pub enum EventKind {
     Yanked,
     /// The release was tagged in git (the tag is in `detail`, the version in `version`).
     Tagged,
+    /// A timing note (what took how long is in `detail`), written to attribute wall time. It
+    /// records no state change and nothing reads it back; `ts` is when the note was written,
+    /// the offsets in `detail` say when the phase happened.
+    Phase,
 }
 
 /// One ledger line.

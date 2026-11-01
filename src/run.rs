@@ -373,6 +373,14 @@ fn publish_one(
         rec.log(clock, EventKind::UploadStarted, who, "")?;
         let result = registry.upload(name, version);
         rec.log(clock, EventKind::UploadFinished, who, format!("{result:?}"))?;
+        for (secs, line) in registry.take_phase_marks() {
+            rec.log(
+                clock,
+                EventKind::Phase,
+                who,
+                format!("upload +{secs:.1}s {line}"),
+            )?;
+        }
         let pause = match result {
             Upload::Accepted { checksum } => break Some(checksum),
             Upload::AlreadyPublished => break None,

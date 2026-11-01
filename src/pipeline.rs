@@ -1,10 +1,12 @@
 //! prepare -> package -> verify -> run -> consumer checks (DESIGN section 3).
 
+use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::fmt;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 use semver::Version;
 
@@ -481,14 +483,59 @@ pub fn publish(
     }
 
     say(format!("packaging {} crates", prepared.plan.order.len()));
+    let package_began = Instant::now();
     let packaged = package_all(cargo, &prepared, &target_dir)?;
+    let package_took = package_began.elapsed().as_secs_f64();
     let skip: Vec<String> = args.exceptions.iter().map(|e| e.krate.clone()).collect();
+    let starts: RefCell<Vec<(String, Instant)>> = RefCell::new(Vec::new());
+    let verify_began = Instant::now();
     let verified = verify_set_with(
         cargo,
         &packaged,
         &args.work.join("verify"),
         &skip,
-        &|name, i, total| say(format!("verifying {name} ({i} of {total})")),
+        &|name, i, total| {
+            starts.borrow_mut().push((name.to_owned(), Instant::now()));
+            say(format!("verifying {name} ({i} of {total})"));
+        },
+    )?;
+    let verify_ended = Instant::now();
+    // Timing notes first, so a run whose verification failed still says where its time went.
+    record(
+        &ledger,
+        clock,
+        args,
+        EventKind::Phase,
+        None,
+        &format!("package took {package_took:.1}s"),
+    )?;
+    let starts = starts.into_inner();
+    let at = |t: Instant| t.duration_since(verify_began).as_secs_f64();
+    for (i, (name, began)) in starts.iter().enumerate() {
+        let ended = starts.get(i + 1).map_or(verify_ended, |(_, t)| *t);
+        let v = version_of(name);
+        let note = format!(
+            "verify (cargo check) took {:.1}s (start +{:.1}s, end +{:.1}s from the start of verification)",
+            ended.duration_since(*began).as_secs_f64(),
+            at(*began),
+            at(ended)
+        );
+        record(
+            &ledger,
+            clock,
+            args,
+            EventKind::Phase,
+            Some((name, &v)),
+            &note,
+        )?;
+    }
+    record(
+        &ledger,
+        clock,
+        args,
+        EventKind::Phase,
+        None,
+        &format!("verify all took {:.1}s", at(verify_ended)),
     )?;
     let failed: Vec<(String, String)> = verified
         .iter()
@@ -742,6 +789,7 @@ mod tests {
         let events = Ledger::open(&ledger).unwrap().read().unwrap();
         let from_ledger: Vec<String> = events
             .iter()
+            .filter(|e| e.event != EventKind::Phase)
             .map(|e| crate::progress::describe(e, None))
             .collect();
         let tail: Vec<String> = got[3..]
@@ -801,6 +849,10 @@ mod tests {
             .map(|e| e.event)
             .collect();
         assert!(kinds.contains(&EventKind::Finished) && kinds.contains(&EventKind::Visible));
+        assert!(
+            kinds.contains(&EventKind::Phase),
+            "timing notes are written"
+        );
     }
 
     #[test]
