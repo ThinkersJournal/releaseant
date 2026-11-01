@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.50
+
+- Measured live (`docs/R5-LIVE.md`): `--require-green` against the real forge exits 3 on a commit whose CI failed, 4 on a commit with no runs, and a green commit passes the guard. `--retries` against crates.io on the three rehearsal crates: confirmed after 1 run (0.0.2, no lag seen), and after 2 runs when the first `cargo publish` was made to fail (0.0.3, failure injected at the cargo boundary; a real transient failure and a lagging index remain unmeasured). First real `phase` ledger events recorded.
+- Fix: with `--retries`, a run that stopped is reported as `the run did not complete: <reason>` (it said `not yet on the registry` and showed the line ending as `\r\n`).
+- Docs: `docs/ADOPTION.md` maps `publish-loop.sh` and `publish-when-green.sh` to the flags; `docs/REHEARSAL.md` corrected (the vault has no crates.io token entry).
+
 ## 0.0.49
 
 - New `publish` flags, both off by default (ROADMAP R5, retiring the hand-written publish loops). `--retries N` (with `--execute`; `--retry-pause` seconds) runs again after any failure until the index, asked afresh, lists every crate of the plan at its version and not yanked; a held version or a checksum mismatch stops it at once. `--require-green` (`--github OWNER/NAME`, `--ci-wait` seconds) waits for the commit's CI runs and refuses unless all succeeded: exit status 3 on a failed run, 4 on no answer (no runs at all is not green). Additive: without them nothing changes. New `ci` and `retry` modules; `tests/ci_cli.rs`.

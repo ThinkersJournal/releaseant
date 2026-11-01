@@ -111,6 +111,28 @@ publish of a wave is paced by crates.io's new-crate limit, which `docs/release-0
 hours for about 45 new crates; ReleaseAnt stops resumable when its wait budget is spent, so run it again. The
 limit itself was not reached in the R4 rehearsal and is still unmeasured here.
 
+## Replacing `publish-loop.sh` and `publish-when-green.sh` (0.0.49, slice 2 of R5)
+
+Both PM scripts (`C:\Projects\tools\publish-loop.sh`, `C:\Projects\.lane-state\publish-when-green.sh`) are one tool
+call now. Measured live against the rehearsal crates: `docs/R5-LIVE.md`. Proposal only: those scripts belong to the PM
+and this repository does not edit them.
+
+| the script did | releaseant does | differences to know |
+|---|---|---|
+| `publish-loop.sh <repo> <sha> <ver> <crate>...`: run `publish --execute` until the registry shows every listed crate at `<ver>` (`ATTEMPTS`, default 20; `PAUSE`, default 120 s) | `releaseant publish --repo <repo> --sha <sha> --execute --retries 19 --retry-pause 120` | The crate list and version come from the plan at `<sha>`; to publish a subset use `--only a --only b`. Confirmation reads the sparse index (not the crates.io web API), asks every crate of the run's plan, and a yanked version or a failed lookup is "not there". A version someone else put on the registry (`HELD`) or a checksum mismatch stops the loop at once instead of looping to the attempt limit. Exit 0 only when confirmed |
+| then tag with `tools/tag-release.sh` | add `--tag` (and `--tag-name <project>`) | The tag is made only after the run is complete, the same ordering the script's header insists on |
+| `publish-when-green.sh <slug> <repo> <sha> <ver> <crate>...`: wait for main CI on `<sha>` (90 looks, 30 s apart), refuse on red (exit 3), 4 if CI never finishes | add `--require-green --github <slug> --ci-wait 2700` | CI runs are matched by commit (`gh run list --commit`), not by `--branch main` plus sha. A red run is refused as soon as it is seen, without waiting for the other runs. No runs at all is exit 4, never green. Exit 2 and 1 keep their usual meanings |
+
+The whole of the old pair, as one command:
+
+```bash
+releaseant publish --repo C:/Projects/<name> --sha <full sha> --execute --tag --tag-name <name> \
+  --require-green --github ThinkersJournal/<name> --retries 19 --retry-pause 120
+```
+
+`--require-green` is checked first (before anything is built); `--retries` needs `--execute`. Not done here, and not
+in the repository's scope: Fuel and baracuda (held, board 307), and rewriting the PM's scripts into one-line wrappers.
+
 ## Open items and risks
 
 1. **Publish metadata is checked before upload (0.0.16, ROADMAP R6), split by who refuses (PM, 2026-10-29).**
