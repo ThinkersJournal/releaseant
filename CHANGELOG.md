@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.46
+
+- Ledger: new event kind `phase` with timing notes, so a run says where its wall time went: package time, `cargo check` time per crate, and for each upload the offsets of cargo publish's status lines (first `Compiling`, `Verifying`, `Finished`, `Uploading`, `Uploaded`, `Waiting`, `Published`). Ledger-only: progress output is unchanged, and no check is skipped or reordered. Not yet seen on a real upload.
+
 ## 0.0.45
 
 - Docs only: the README Status line says the crate is published (0.0.44) and early, pre-1.0, instead of "not ready for developer use"; the Install section no longer says "once it is published". ROADMAP R7 is closed with the evidence in `docs/PUBLISH-PLAN.md`.
