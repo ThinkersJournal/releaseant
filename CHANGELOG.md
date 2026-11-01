@@ -3,8 +3,7 @@
 ## 0.0.50
 
 - Measured live (`docs/R5-LIVE.md`): `--require-green` against the real forge exits 3 on a commit whose CI failed, 4 on a commit with no runs, and a green commit passes the guard. `--retries` against crates.io on the three rehearsal crates: confirmed after 1 run (0.0.2, no lag seen), and after 2 runs when the first `cargo publish` was made to fail (0.0.3, failure injected at the cargo boundary; a real transient failure and a lagging index remain unmeasured). First real `phase` ledger events recorded.
-- Fix: with `--retries`, a run that stopped is reported as `the run did not complete: <reason>` (it said `not yet on the registry` and showed the line ending as `
-`).
+- Fix: with `--retries`, a run that stopped is reported as `the run did not complete: <reason>` (it said `not yet on the registry` and showed the line ending as `\r\n`).
 - Docs: `docs/ADOPTION.md` maps `publish-loop.sh` and `publish-when-green.sh` to the flags; `docs/REHEARSAL.md` corrected (the vault has no crates.io token entry).
 
 ## 0.0.49
