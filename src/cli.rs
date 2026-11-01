@@ -12,6 +12,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand};
 
 use crate::cargo::Cargo;
+use crate::ci::{CiVerdict, GhProbe, slug_of, wait_green};
 use crate::clock::{SystemClock, now_unix};
 use crate::crates_io::{CratesIo, INDEX_URL, Index};
 use crate::externals::missing_externals;
@@ -22,6 +23,7 @@ use crate::pipeline::{
 };
 use crate::preflight::{Problem, parse_require};
 use crate::registry::{Clock, Lookup, Registry};
+use crate::retry::{Ended, RetryPolicy, until_visible};
 use crate::run::{Mode, Options, Outcome};
 use crate::tag::{
     TagOutcome, TagRequest, crate_tag, landed_crates, release_tag, release_version, tag_release,
@@ -76,6 +78,8 @@ fn print_warnings(warnings: &[Problem]) {
     }
 }
 
+// Parsed once per process; boxing `Publish`'s fields would only complicate the match below.
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 enum Command {
     /// Print the publish order for a commit.
@@ -155,6 +159,24 @@ enum Command {
         /// Publish a commit that is not the tip of origin's default branch (a real upload refuses it).
         #[arg(long)]
         allow_not_tip: bool,
+        /// Refuse unless every CI run on the commit has finished and succeeded; waits for CI to
+        /// finish. Exit status 3 if a run failed, 4 if CI gave no answer in time. Needs `gh`.
+        #[arg(long)]
+        require_green: bool,
+        /// The GitHub `owner/name` whose CI to read (default: taken from origin's URL).
+        #[arg(long, requires = "require_green")]
+        github: Option<String>,
+        /// Longest wait for CI to finish, in seconds (default 2700).
+        #[arg(long, default_value_t = 2700, requires = "require_green")]
+        ci_wait: u64,
+        /// After a run that did not end with every crate on the registry, run again, up to this many
+        /// more times. Stops when the index, asked afresh, shows every crate at its version and not
+        /// yanked (not on the tool's word); stops early for a held version or a checksum mismatch.
+        #[arg(long, default_value_t = 0, requires = "execute")]
+        retries: u32,
+        /// Seconds to wait between runs with `--retries` (default 120).
+        #[arg(long, default_value_t = 120)]
+        retry_pause: u64,
     },
     /// Tag a published release: an annotated `v<version>` on the commit, pushed to origin and read
     /// back (dry-run unless `--execute`).
@@ -192,6 +214,62 @@ enum Command {
         #[arg(long)]
         execute: bool,
     },
+}
+
+/// An error that ends the command with this exit status.
+#[derive(Debug)]
+struct ExitWith(u8, String);
+
+impl std::fmt::Display for ExitWith {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.1)
+    }
+}
+
+impl std::error::Error for ExitWith {}
+
+/// The `--require-green` guard: wait for the commit's CI and refuse unless it is green.
+fn require_green(source: &Source, github: Option<String>, wait: u64) -> Result<(), ExitWith> {
+    let slug = github.or_else(|| {
+        let out = std::process::Command::new("git")
+            .arg("-C")
+            .arg(&source.repo)
+            .args(["remote", "get-url", "origin"])
+            .output()
+            .ok()?;
+        slug_of(&String::from_utf8_lossy(&out.stdout))
+    });
+    let slug = slug.ok_or_else(|| {
+        ExitWith(
+            2,
+            "--require-green: origin is not a GitHub URL; name the repository with --github"
+                .to_owned(),
+        )
+    })?;
+    let short = &source.sha[..8.min(source.sha.len())];
+    eprintln!("waiting for CI on {slug} {short}");
+    let verdict = wait_green(
+        &mut GhProbe,
+        &mut SystemClock,
+        &slug,
+        &source.sha,
+        Duration::from_secs(wait),
+        Duration::from_secs(30),
+    );
+    match verdict {
+        CiVerdict::Green => {
+            eprintln!("CI is green on {short}");
+            Ok(())
+        }
+        CiVerdict::Red(why) => Err(ExitWith(
+            3,
+            format!("CI is RED on {short} ({why}): not publishing"),
+        )),
+        CiVerdict::TimedOut(why) => Err(ExitWith(
+            4,
+            format!("CI gave no answer on {short} ({why}): not publishing"),
+        )),
+    }
 }
 
 fn work_dir(run_id: &str) -> PathBuf {
@@ -237,7 +315,7 @@ pub fn run_code(args: Vec<OsString>) -> u8 {
         Ok(false) => 1,
         Err(e) => {
             eprintln!("error: {e}");
-            2
+            e.downcast_ref::<ExitWith>().map_or(2, |x| x.0)
         }
     }
 }
@@ -352,8 +430,16 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             tag_version,
             tag_name,
             allow_not_tip,
+            require_green: guard_ci,
+            github,
+            ci_wait,
+            retries,
+            retry_pause,
         } => {
             let require_metadata = policy.set()?;
+            if guard_ci {
+                require_green(&source, github, ci_wait)?;
+            }
             if execute && !allow_not_tip {
                 crate::source::check_tip(&source.repo, &source.sha)?;
             }
@@ -375,8 +461,6 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                 .zip(reason)
                 .map(|(krate, reason)| Exception { krate, reason })
                 .collect();
-            let id = run_id(&source.sha);
-            let work = work_dir(&id);
             let ledger_path =
                 ledger.unwrap_or_else(|| source.repo.join(".releaseant/ledger.jsonl"));
             let mut opts = Options {
@@ -386,39 +470,79 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             if let Some(s) = max_wait {
                 opts.max_wait = Duration::from_secs(s);
             }
-            let summary = publish(
-                &cargo,
-                &PublishArgs {
-                    repo: &source.repo,
-                    sha: &source.sha,
-                    ledger: &ledger_path,
-                    work: &work,
-                    run_id: &id,
-                    opts,
-                    exceptions,
-                    excluded,
-                    only,
-                    require_metadata,
-                    on_warnings: Some(&|w| print_warnings(w)),
-                    on_progress: Some(stderr_progress()),
-                },
-                |dir, target| {
-                    Box::new(CratesIo::new(
-                        Cargo::from_env(),
-                        dir.to_path_buf(),
-                        target.to_path_buf(),
-                    ))
-                },
-                &mut SystemClock,
-                &mut CargoAddCheck {
-                    cargo: Cargo::from_env(),
-                    scratch: work.join("consumer"),
-                },
-            );
-            if !keep {
-                let _ = std::fs::remove_dir_all(&work);
-            }
-            let summary = summary?;
+            // The run id of the latest run: the tag record names it.
+            let last_id = std::cell::RefCell::new(String::new());
+            let mut attempt = || {
+                let id = run_id(&source.sha);
+                let work = work_dir(&id);
+                *last_id.borrow_mut() = id.clone();
+                let summary = publish(
+                    &cargo,
+                    &PublishArgs {
+                        repo: &source.repo,
+                        sha: &source.sha,
+                        ledger: &ledger_path,
+                        work: &work,
+                        run_id: &id,
+                        opts: opts.clone(),
+                        exceptions: exceptions.clone(),
+                        excluded: excluded.clone(),
+                        only: only.clone(),
+                        require_metadata: require_metadata.clone(),
+                        on_warnings: Some(&|w| print_warnings(w)),
+                        on_progress: Some(stderr_progress()),
+                    },
+                    |dir, target| {
+                        Box::new(CratesIo::new(
+                            Cargo::from_env(),
+                            dir.to_path_buf(),
+                            target.to_path_buf(),
+                        ))
+                    },
+                    &mut SystemClock,
+                    &mut CargoAddCheck {
+                        cargo: Cargo::from_env(),
+                        scratch: work.join("consumer"),
+                    },
+                );
+                if !keep {
+                    let _ = std::fs::remove_dir_all(&work);
+                }
+                summary
+            };
+            let mut confirmed = true;
+            let summary = if retries == 0 {
+                attempt()?
+            } else {
+                let mut idx = IndexRegistry(Index::new(INDEX_URL));
+                let done = until_visible(
+                    RetryPolicy {
+                        attempts: retries.saturating_add(1),
+                        pause: Duration::from_secs(retry_pause),
+                    },
+                    &mut SystemClock,
+                    &mut idx,
+                    &mut attempt,
+                    &|line| eprintln!("{line}"),
+                );
+                match &done.ended {
+                    Ended::Confirmed => eprintln!(
+                        "the registry shows every crate after {} run(s)",
+                        done.attempts
+                    ),
+                    Ended::Stuck(why) => {
+                        confirmed = false;
+                        eprintln!("stopped, running again cannot fix this: {why}");
+                    }
+                    Ended::GaveUp(why) => {
+                        confirmed = false;
+                        eprintln!("gave up after {} run(s): {why}", done.attempts);
+                    }
+                }
+                done.summary
+                    .ok_or("no run got far enough to report; see the lines above")?
+            };
+            let id = last_id.into_inner();
             for (n, o) in &summary.report.outcomes {
                 println!("{n}: {}", describe(o));
             }
@@ -440,7 +564,8 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                 "ledger: {}",
                 ledger_path.display().to_string().replace('\\', "/")
             );
-            let published = summary.is_success() || (!execute && summary.report.stopped.is_none());
+            let published = confirmed
+                && (summary.is_success() || (!execute && summary.report.stopped.is_none()));
             let tagged = !tag
                 || tag_after_publish(
                     &TagAfter {
