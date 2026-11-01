@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.49
+
+- New `publish` flags, both off by default (ROADMAP R5, retiring the hand-written publish loops). `--retries N` (with `--execute`; `--retry-pause` seconds) runs again after any failure until the index, asked afresh, lists every crate of the plan at its version and not yanked; a held version or a checksum mismatch stops it at once. `--require-green` (`--github OWNER/NAME`, `--ci-wait` seconds) waits for the commit's CI runs and refuses unless all succeeded: exit status 3 on a failed run, 4 on no answer (no runs at all is not green). Additive: without them nothing changes. New `ci` and `retry` modules; `tests/ci_cli.rs`.
+
 ## 0.0.48
 
 - Fix: a run id (and so its scratch directory) is unique within a process. It was the first 8 characters of the SHA, the second and the process id, so two runs on one commit in one second inside one process (the in-process tests, or a binary wrapping `releaseant::cli::run`) shared a scratch directory and the first to finish deleted the other's archive. A per-process counter is now part of it. The run id in the ledger gains a fourth field.

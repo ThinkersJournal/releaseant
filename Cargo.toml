@@ -1,6 +1,6 @@
 [package]
 name = "releaseant"
-version = "0.0.48"
+version = "0.0.49"
 edition = "2024"
 rust-version = "1.88"
 description = "Ordered, verified, resumable publishing of Rust crates and workspaces to crates.io, with read-back."
