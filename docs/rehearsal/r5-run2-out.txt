@@ -1,0 +1,62 @@
+warning: releaseant-rehearsal-core: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: releaseant-rehearsal-core: keywords: missing: add 1 to 5 `keywords = ["..."]` under [package]
+warning: releaseant-rehearsal-core: categories: missing: add `categories = ["..."]` (slugs at https://crates.io/category_slugs)
+warning: releaseant-rehearsal-core: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: releaseant-rehearsal-mid: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: releaseant-rehearsal-mid: keywords: missing: add 1 to 5 `keywords = ["..."]` under [package]
+warning: releaseant-rehearsal-mid: categories: missing: add `categories = ["..."]` (slugs at https://crates.io/category_slugs)
+warning: releaseant-rehearsal-mid: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: releaseant-rehearsal-top: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: releaseant-rehearsal-top: keywords: missing: add 1 to 5 `keywords = ["..."]` under [package]
+warning: releaseant-rehearsal-top: categories: missing: add `categories = ["..."]` (slugs at https://crates.io/category_slugs)
+warning: releaseant-rehearsal-top: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+[00:00] packaging 3 crates
+[00:03] verifying releaseant-rehearsal-core (1 of 3)
+[00:05] verifying releaseant-rehearsal-mid (2 of 3)
+[00:07] verifying releaseant-rehearsal-top (3 of 3)
+[00:13] verified releaseant-rehearsal-core 0.0.3
+[00:13] verified releaseant-rehearsal-mid 0.0.3
+[00:13] verified releaseant-rehearsal-top 0.0.3
+[00:13] run planned
+[00:13] uploading releaseant-rehearsal-core 0.0.3
+[00:13] upload returned releaseant-rehearsal-core 0.0.3 (0 s)
+[00:13] releaseant-rehearsal-core 0.0.3: classified: unknown: error: simulated failure injected by fail-first-publish.cmd, nothing was sent 
+
+[00:13] run finished: unrecognised upload result for releaseant-rehearsal-core: error: simulated failure injected by fail-first-publish.cmd, nothing was sent 
+
+attempt 1 of 4: not yet on the registry: ["unrecognised upload result for releaseant-rehearsal-core: error: simulated failure injected by fail-first-publish.cmd, nothing was sent \r\n"]
+warning: releaseant-rehearsal-core: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: releaseant-rehearsal-core: keywords: missing: add 1 to 5 `keywords = ["..."]` under [package]
+warning: releaseant-rehearsal-core: categories: missing: add `categories = ["..."]` (slugs at https://crates.io/category_slugs)
+warning: releaseant-rehearsal-core: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: releaseant-rehearsal-mid: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: releaseant-rehearsal-mid: keywords: missing: add 1 to 5 `keywords = ["..."]` under [package]
+warning: releaseant-rehearsal-mid: categories: missing: add `categories = ["..."]` (slugs at https://crates.io/category_slugs)
+warning: releaseant-rehearsal-mid: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: releaseant-rehearsal-top: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: releaseant-rehearsal-top: keywords: missing: add 1 to 5 `keywords = ["..."]` under [package]
+warning: releaseant-rehearsal-top: categories: missing: add `categories = ["..."]` (slugs at https://crates.io/category_slugs)
+warning: releaseant-rehearsal-top: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+[00:00] packaging 3 crates
+[00:02] verifying releaseant-rehearsal-core (1 of 3)
+[00:05] verifying releaseant-rehearsal-mid (2 of 3)
+[00:10] verifying releaseant-rehearsal-top (3 of 3)
+[00:13] verified releaseant-rehearsal-core 0.0.3
+[00:13] verified releaseant-rehearsal-mid 0.0.3
+[00:13] verified releaseant-rehearsal-top 0.0.3
+[00:13] run planned
+[00:13] uploading releaseant-rehearsal-core 0.0.3
+[00:20] upload returned releaseant-rehearsal-core 0.0.3 (7 s)
+[00:21] releaseant-rehearsal-core 0.0.3: read back, visible
+[00:21] uploading releaseant-rehearsal-mid 0.0.3
+[00:31] upload returned releaseant-rehearsal-mid 0.0.3 (10 s)
+[00:31] releaseant-rehearsal-mid 0.0.3: read back, visible
+[00:31] uploading releaseant-rehearsal-top 0.0.3
+[00:38] upload returned releaseant-rehearsal-top 0.0.3 (6 s)
+[00:38] releaseant-rehearsal-top 0.0.3: read back, visible
+[00:38] run finished: complete
+the registry shows every crate after 2 run(s)
+releaseant-rehearsal-core: published and read back
+releaseant-rehearsal-mid: published and read back
+releaseant-rehearsal-top: published and read back
+ledger: C:/Projects/.lane-state/r5-slice2/ledger2.jsonl

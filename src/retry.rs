@@ -104,7 +104,14 @@ pub fn until_visible(
                         summary: Some(s),
                     };
                 }
-                last = format!("attempt {n} of {attempts}: not yet on the registry: {gone:?}");
+                last = if s.is_success() {
+                    format!("attempt {n} of {attempts}: not yet on the registry: {gone:?}")
+                } else {
+                    format!(
+                        "attempt {n} of {attempts}: the run did not complete: {}",
+                        gone.join("; ").trim()
+                    )
+                };
                 summary = Some(s);
             }
         }
@@ -212,6 +219,31 @@ mod tests {
             f.ended
         );
         assert_eq!((f.attempts, calls, sleeps.len()), (3, 3, 2));
+    }
+
+    // The line for a run that stopped says so; it is not "not yet on the registry".
+    #[test]
+    fn a_stopped_run_is_reported_as_not_complete() {
+        let mut reg = FakeRegistry::new();
+        let mut s = summary(Outcome::Interrupted("boom".into()));
+        s.report.stopped = Some("unrecognised upload result: boom".into());
+        let lines = std::cell::RefCell::new(Vec::new());
+        let mut clock = FakeClock::default();
+        let mut once = Some(s);
+        let f = until_visible(
+            policy(1),
+            &mut clock,
+            &mut reg,
+            &mut || Ok(once.take().unwrap()),
+            &|l| lines.borrow_mut().push(l),
+        );
+        assert!(matches!(f.ended, Ended::GaveUp(_)));
+        let lines = lines.into_inner();
+        assert!(
+            lines[0].contains("did not complete: unrecognised upload result: boom"),
+            "{lines:?}"
+        );
+        assert!(!lines[0].contains("not yet on the registry"), "{lines:?}");
     }
 
     #[test]

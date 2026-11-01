@@ -4,7 +4,7 @@ Ruling (PM, 2026-10-24): **go, with limits.** Three placeholder crates only, nam
 `releaseant-rehearsal-core`, `-mid`, `-top` (chain `core <- mid <- top`), version `0.0.0` then `0.0.1`
 for the resume case, licence `MIT OR Apache-2.0`, description "rehearsal crate for releaseant, no
 functionality". The lane never sees a token: it wrote the workspace and the script, the PM runs the
-script with `CARGO_REGISTRY_TOKEN` set from the vault and returns the full output.
+script with `CARGO_REGISTRY_TOKEN` set and returns the full output. (Correction, PM 2026-11-02: the vault has no crates.io token entry; the PM's runs authenticate with this box's cargo credentials file. The lane still never reads or uses a token itself.)
 
 ## Preconditions checked (2026-10-24, by the lane)
 
