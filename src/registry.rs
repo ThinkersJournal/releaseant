@@ -58,6 +58,12 @@ pub trait Registry {
     /// # Errors
     /// The failure text when the registry could not be asked (never read as "no versions").
     fn versions(&mut self, name: &str) -> Result<Vec<(Version, bool)>, String>;
+
+    /// The status lines of the last [`Self::upload`] with their offsets in seconds from its start,
+    /// for the ledger's timing notes; taken once. A registry that cannot say returns none.
+    fn take_phase_marks(&mut self) -> Vec<(f64, String)> {
+        Vec::new()
+    }
 }
 
 /// Time, injectable so waiting is testable.

@@ -53,6 +53,8 @@ pub fn describe(e: &Event, took: Option<u64>) -> String {
         EventKind::Finished => format!("run finished: {d}"),
         EventKind::Yanked => format!("yanked {who}: {d}"),
         EventKind::Tagged => format!("tagged {who}: {d}"),
+        EventKind::Phase if who.is_empty() => format!("timing: {d}"),
+        EventKind::Phase => format!("timing {who}: {d}"),
     }
 }
 
@@ -70,11 +72,15 @@ pub fn writer_sink(out: impl std::io::Write + 'static) -> ProgressSink {
     })
 }
 
-/// An observer for a ledger that sends [`describe`]'s line for each event to `sink`.
+/// An observer for a ledger that sends [`describe`]'s line for each event to `sink`, except
+/// [`EventKind::Phase`] timing notes: those are for the ledger, and the display stays as it was.
 #[must_use]
 pub fn observer(sink: ProgressSink) -> Observer {
     let started: RefCell<HashMap<String, Instant>> = RefCell::new(HashMap::new());
     Rc::new(move |e: &Event| {
+        if e.event == EventKind::Phase {
+            return;
+        }
         let key = subject(e);
         let took = match e.event {
             EventKind::UploadStarted => {
@@ -95,7 +101,7 @@ pub fn observer(sink: ProgressSink) -> Observer {
 mod tests {
     use super::*;
 
-    const ALL: [EventKind; 13] = [
+    const ALL: [EventKind; 14] = [
         EventKind::Planned,
         EventKind::Verified,
         EventKind::Exception,
@@ -109,6 +115,7 @@ mod tests {
         EventKind::Finished,
         EventKind::Yanked,
         EventKind::Tagged,
+        EventKind::Phase,
     ];
 
     fn ev(kind: EventKind) -> Event {
@@ -133,7 +140,7 @@ mod tests {
             assert!(!line.trim().is_empty(), "{k:?}");
             assert!(seen.insert(line), "{k:?} repeats another kind's line");
         }
-        assert_eq!(seen.len(), 13);
+        assert_eq!(seen.len(), 14);
     }
 
     #[test]
