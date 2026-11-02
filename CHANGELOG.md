@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.59
+
+- Fix: an empty `--require-checks` entry (`--require-checks ""`, or `a,,b`) is refused at once with exit 2 and a message naming the entry, instead of being judged as a check with no name that can never be found and failing only after the whole `--ci-wait` (found in Fuel's second real publish). Docs: `docs/R5-LIVE.md` section 5 reads that publish (0.36.7, 61 min 34 s, loaded box) against the first: zero 429s again, the registry's share unchanged, the extra 910 s is local builds. Ledger and transcripts kept under `docs/rehearsal/`.
+
 ## 0.0.58
 
 - `plan --check-rust-version` and `publish --check-rust-version` (off by default): a crate that declares a `rust-version` is refused (`RUST-VERSION`, exit 4, before the ledger opens or anything builds) when no live version of a dependency that satisfies the requirement fits it, judged from the `rust_version` the index records per version, or when a crate of the same set declares a newer one. The newest match being too new while an older one fits, and target-limited dependencies, are notes. Dev and optional dependencies are skipped. A registry that cannot be asked is an error, never a pass. New `Registry::version_infos`.

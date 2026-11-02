@@ -330,4 +330,86 @@ must stay "no answer".
 - A lagging index: cargo's wait for availability took at most 4.5 s and every crate was `visible` at once.
 - A real transient failure: neither real run had one, so `--retries` has only the forced failure of 2b behind it on
   the real registry.
-- Where crates.io's limit lies. Baracuda reached it at the 47th attempt in 16.75 min; Fuel's 43 uploads did not.
+- Where crates.io's limit lies. Baracuda reached it at the 47th attempt in 16.75 min; Fuel's 43 uploads did not (nor did the second run's, section 5).
+
+## 5. The second real Fuel publish (2026-11-02, 0.36.7), against run 1
+
+Source: `docs/rehearsal/fuel-2026-11-02-run2-ledger.jsonl`, `...-run2-out.txt` and `...-run2-out.empty-names.txt`, copied
+unedited (`cmp` identical) from `C:/Projects/.lane-state/fuel-pub2/` (run by the PM). Run
+`79b2a83c-1793608405-180060-0`, commit `79b2a83c`, 43 crates at `0.36.7`, **one run, finished `complete`, 61 min 34 s**
+(3694 s) by the transcript's clock, built with releaseant 0.0.56 and `DOCS_RS=1`. The PM reports other lanes were loading
+the box heavily (2 GB of 64 free); run 1 (section 4) was on a quiet box. 563 ledger rows, the same count and the same
+kinds as run 1: 389 `phase`, 43 each of `verified`, `upload_started`, `upload_finished`, `visible`, one `planned`, one
+`finished`; **no `waiting` and no `classified` row**. Both runs were analysed with the same script on the same fields,
+so the numbers below are comparable; the scripts are not committed.
+
+### 5a. Was there a 429? No, again
+
+All 43 `upload_finished` rows are `Accepted`, the largest gap between attempts was 1 s, and nothing waited. Run 2 was
+slower, so it asked the registry less often: 43 accepts in 39 min 5 s (1.07 a minute against 1.42 in run 1), the fastest
+30 consecutive in 1436 s (972 s in run 1). Two runs without a 429 at 43 uploads, both slower than baracuda's burst,
+still say nothing about where the limit lies (3b has the only 429s measured).
+
+### 5b. Where the 15 min 10 s went
+
+| part | run 1 (0.36.4, quiet) | run 2 (0.36.7, loaded) | change |
+|---|---|---|---|
+| whole run | 2784 s | 3694 s | **+910 s (+32.7 %)** (the parts are rounded to the second) |
+| before the first upload | 1007 s | 1334 s | +327 s |
+| `cargo package` of the set | 49.0 s | 53.8 s | +4.8 s |
+| releaseant's `cargo check` x43 | 936.2 s | 1260.0 s | +323.8 s (1.35x) |
+| the upload phase | 1778 s | 2359 s | +581 s |
+| cargo's own verification build | 1514.9 s | 2060.8 s | +545.9 s (1.36x) |
+| cargo's packaging | 74.1 s | 81.7 s | +7.6 s |
+| **upload and wait for availability** | **101.6 s** | **100.8 s** | **-0.8 s** |
+
+Builds (package, check, cargo's verify) are 3374.6 s, 91.4 % of run 2, against 89.8 % of run 1. **Of the 910 s, 874.5
+(96 %) is builds. The registry's part did not move**: the median upload plus availability is 2.3 s in both runs and the
+longest 4.5 s against 4.0 s. The slowdown is on this side of the network.
+
+It was not uniform. The median crate took 1.35x as long to `cargo check` and 1.38x as long to publish, but the ratio
+ranges from 0.22x to 3.59x for the check, and `fuel-tensor` (0.9x) and `fuel-mkl-cpu-backend` (1.0x) were no slower. The
+five crates that grew most, in seconds of check plus publish, account for 600 of the 910:
+
+| crate | check, run 1 to 2 | publish wall, run 1 to 2 |
+|---|---|---|
+| `fuel-cuda-backend` | 32.7 to 64.2 s | 63 to **322 s** (5.1x) |
+| `fuel-loaders` | 19.0 to 34.3 s | 35 to 118 s |
+| `fuel-aocl-cpu-backend` | 23.2 to 83.3 s | 47 to 71 s |
+| `fuel-cpu-backend` | 26.7 to 31.5 s | 53 to 114 s |
+| `fuel-datasets` | 238.1 to 239.9 s | 139 to 199 s |
+
+`fuel-cuda-backend` alone is 259 s of the 910 (28 %). Its cargo status lines locate it: `Compiling baracuda-build
+v0.1.0-alpha.80` to `Finished` took 54.9 s in run 1 and **296.6 s** in run 2. The dependency is the same version in both
+runs, so that crate's extra time is not a change in what was compiled. `fuel-datasets`, the slowest check in both runs,
+did not slow down at all (238.1 s to 239.9 s) but its publish build did (135.2 s to 191.5 s).
+
+### 5c. What this does and does not establish
+
+- **Established:** zero 429s again; the registry's share of the time unchanged to within a second; the extra time is
+  entirely local builds, and uneven across crates.
+- **Not established: the cause.** The load on the box is the PM's report, not a figure in either ledger (the ledger
+  records no CPU or memory). The sources also differ (0.36.4 and 0.36.7 are different commits), so a code change is
+  not excluded for any crate, only for `fuel-cuda-backend`'s `baracuda-build` step, whose version did not change. "Load"
+  is the explanation consistent with a same-version dependency taking 5.4x longer and with other crates not slowing at
+  all; it is not measured here.
+- **For planning:** a Fuel publish took 46 to 62 min on this box, so `--max-wait 21600` was far more than needed, and
+  a machine that cannot sleep matters for a run of an hour.
+
+### 5d. The guards, as the PM ran them
+
+- **`--require-green` with the default rule (0.0.56).** The transcript's first lines are `judging the 6 check(s) that
+  branch protection of main requires: Clippy, Rustfmt, trufflehog, Check (ubuntu-latest), Test Suite (ubuntu-latest),
+  Packaged crates` and `CI is green on 79b2a83c`. This is the case section 4e was written for, in a real publish: the
+  two queued self-hosted runs (not required) did not hold it up.
+- **An empty `--require-checks` was judged as one check with no name (fixed in 0.0.59).** `...-run2-out.empty-names.txt` is `judging the 1
+  check(s) named by --require-checks: ` and nothing after it: the flag was given an empty value (an unset shell variable, most
+  likely) and the guard looked for a check called `""`, which never exists, so it could only wait out `--ci-wait` and fail with exit
+  4. That failed closed but late and without a reason. Now an empty entry (`""`, `a,,b`, or only spaces) is refused before anything
+  waits: exit 2, `--require-checks: entry N is empty`. No names at all still means the branch-protection rule.
+
+### 5e. What stays unmeasured
+
+As in 4f: a real 429's wording (none met in 43 + 43 uploads), a kill between upload and read-back, a lagging index (the
+longest availability wait was 4.0 s), a real transient failure. New: nothing in the ledger says how loaded the machine
+was, so a future run that wants this comparison needs the load recorded beside it.

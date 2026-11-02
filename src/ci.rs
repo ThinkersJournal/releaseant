@@ -82,6 +82,21 @@ fn is_ok(conclusion: &str) -> bool {
     matches!(conclusion, "success" | "skipped" | "neutral")
 }
 
+/// Refuse a `--require-checks` entry with no name (`--require-checks ""`, or `a,,b`): such a check can
+/// never be found, so the guard would wait out its whole budget and only then fail.
+///
+/// # Errors
+/// The message naming the position of the first empty entry.
+pub fn validate_check_names(names: &[String]) -> Result<(), String> {
+    match names.iter().position(|n| n.trim().is_empty()) {
+        Some(i) => Err(format!(
+            "--require-checks: entry {} is empty; name a check, or leave the option out to use branch protection",
+            i + 1
+        )),
+        None => Ok(()),
+    }
+}
+
 /// Which checks to judge, and the line to print saying which rule ran. `explicit` (from
 /// `--require-checks`) wins; else the names branch protection of `branch` requires; else `None`,
 /// which means every run on the commit, as before. The line always says which of the three ran and,
@@ -632,6 +647,29 @@ mod tests {
             "main",
             &names(explicit),
         )
+    }
+
+    #[test]
+    fn an_empty_check_name_is_refused_before_anything_waits() {
+        assert!(validate_check_names(&names(&["Clippy", "Rustfmt"])).is_ok());
+        assert!(
+            validate_check_names(&[]).is_ok(),
+            "no names means branch protection"
+        );
+        for bad in [
+            names(&[""]),
+            names(&["Clippy", ""]),
+            names(&["  "]),
+            names(&["a", "\t", "b"]),
+        ] {
+            let err = validate_check_names(&bad).unwrap_err();
+            assert!(
+                err.contains("--require-checks") && err.contains("empty"),
+                "{err}"
+            );
+        }
+        let err = validate_check_names(&names(&["Clippy", "", "Rustfmt"])).unwrap_err();
+        assert!(err.contains("entry 2"), "names the position: {err}");
     }
 
     #[test]

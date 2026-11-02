@@ -181,6 +181,24 @@ fn with_no_names_an_unreadable_branch_protection_falls_back_and_the_line_says_so
 }
 
 #[test]
+fn an_empty_check_name_exits_2_at_once_and_never_asks_the_forge() {
+    let tmp = tempfile::tempdir().unwrap();
+    let work = tmp.path().join("work");
+    fs::create_dir_all(&work).unwrap();
+    // A stand-in that would answer, were it asked: the guard must not get as far as asking.
+    let gh = fake_gh(tmp.path(), CHECKS);
+    for value in ["", "Clippy,,Rustfmt"] {
+        let (code, t) = publish(&work, &gh, &["--execute", "--require-checks", value]);
+        assert_eq!(code, Some(2), "{value:?}: {t}");
+        assert!(t.contains("empty"), "{t}");
+        assert!(!t.contains("waiting for CI"), "failed before waiting: {t}");
+    }
+    // The control: the same command with a real name goes on to the guard.
+    let (_, t) = publish(&work, &gh, &["--execute", "--require-checks", "Clippy"]);
+    assert!(t.contains("waiting for CI"), "{t}");
+}
+
+#[test]
 fn the_ci_options_need_the_guard_and_retries_need_execute() {
     let tmp = tempfile::tempdir().unwrap();
     let out = Command::new(env!("CARGO_BIN_EXE_releaseant"))
