@@ -64,6 +64,12 @@ pub trait Registry {
     fn take_phase_marks(&mut self) -> Vec<(f64, String)> {
         Vec::new()
     }
+
+    /// The registry's own words for the last [`Self::upload`] if it was rate-limited (the 429 line
+    /// cargo printed), for the ledger; taken once. A registry that cannot say returns none.
+    fn take_rate_limit_text(&mut self) -> Option<String> {
+        None
+    }
 }
 
 /// Time, injectable so waiting is testable.
@@ -109,6 +115,8 @@ pub mod fake {
         pub yanked: BTreeSet<String>,
         /// Crates for which `versions` fails with this text.
         pub versions_error: BTreeMap<String, String>,
+        /// What [`Registry::take_rate_limit_text`] returns after each rate-limited upload, oldest first.
+        pub rate_limit_texts: VecDeque<String>,
         lag_left: BTreeMap<(String, String), u32>,
     }
 
@@ -130,6 +138,10 @@ pub mod fake {
     }
 
     impl Registry for FakeRegistry {
+        fn take_rate_limit_text(&mut self) -> Option<String> {
+            self.rate_limit_texts.pop_front()
+        }
+
         fn lookup(&mut self, name: &str, version: &Version) -> Lookup {
             if let Some(forced) = self
                 .lookup_script
