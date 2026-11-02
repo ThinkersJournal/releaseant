@@ -25,6 +25,29 @@ fn civil_from_days(z: i64) -> (i64, i64, i64) {
     (yoe + era * 400 + i64::from(m <= 2), m, d)
 }
 
+/// Unix seconds for `2026-10-24T01:27:14Z` (the form [`format_utc`] writes), or `None`.
+#[must_use]
+pub fn parse_utc(s: &str) -> Option<i64> {
+    let b = s.as_bytes();
+    if b.len() != 20
+        || b[4] != b'-'
+        || b[7] != b'-'
+        || b[10] != b'T'
+        || b[13] != b':'
+        || b[16] != b':'
+        || b[19] != b'Z'
+    {
+        return None;
+    }
+    let n = |r: std::ops::Range<usize>| s.get(r)?.parse::<i64>().ok();
+    let (y, mo, d) = (n(0..4)?, n(5..7)?, n(8..10)?);
+    let (h, mi, sec) = (n(11..13)?, n(14..16)?, n(17..19)?);
+    if !(1..=12).contains(&mo) || !(1..=31).contains(&d) || h > 23 || mi > 59 || sec > 60 {
+        return None;
+    }
+    Some(crate::classify::days_from_civil(y, mo, d) * 86_400 + h * 3600 + mi * 60 + sec)
+}
+
 /// `2026-10-24T01:27:14Z` for Unix seconds.
 #[must_use]
 pub fn format_utc(unix: i64) -> String {
@@ -65,6 +88,22 @@ mod tests {
         assert_eq!(format_utc(1_792_805_234), "2026-10-24T01:27:14Z");
         assert_eq!(format_utc(1_582_977_600), "2020-02-29T12:00:00Z");
         assert_eq!(format_utc(946_684_799), "1999-12-31T23:59:59Z");
+    }
+
+    #[test]
+    fn parse_utc_reads_what_format_utc_writes() {
+        for t in [0, 1_792_805_234, 1_582_977_600, 946_684_799] {
+            assert_eq!(parse_utc(&format_utc(t)), Some(t));
+        }
+        for bad in [
+            "",
+            "2026-10-24 01:27:14Z",
+            "2026-13-24T01:27:14Z",
+            "2026-10-24T25:27:14Z",
+            "soon",
+        ] {
+            assert_eq!(parse_utc(bad), None, "{bad:?}");
+        }
     }
 
     #[test]

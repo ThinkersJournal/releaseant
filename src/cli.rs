@@ -177,6 +177,11 @@ enum Command {
         /// Seconds to wait between runs with `--retries` (default 120).
         #[arg(long, default_value_t = 120)]
         retry_pause: u64,
+        /// A crate the ledger shows as verified at this commit, no more than this many hours ago, is
+        /// not built again (so a resume or a `--retries` run does not repeat the whole verification);
+        /// the ledger records it as carried over. 0 verifies everything every time. Default 12.
+        #[arg(long, default_value_t = 12)]
+        reuse_verified_hours: u64,
     },
     /// Tag a published release: an annotated `v<version>` on the commit, pushed to origin and read
     /// back (dry-run unless `--execute`).
@@ -435,6 +440,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             ci_wait,
             retries,
             retry_pause,
+            reuse_verified_hours,
         } => {
             let require_metadata = policy.set()?;
             if guard_ci {
@@ -491,6 +497,9 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                         require_metadata: require_metadata.clone(),
                         on_warnings: Some(&|w| print_warnings(w)),
                         on_progress: Some(stderr_progress()),
+                        reuse_verified: (reuse_verified_hours > 0).then(|| {
+                            Duration::from_secs(reuse_verified_hours.saturating_mul(3600))
+                        }),
                     },
                     |dir, target| {
                         Box::new(CratesIo::new(
