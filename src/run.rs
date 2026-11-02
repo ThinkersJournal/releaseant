@@ -381,6 +381,17 @@ fn publish_one(
                 format!("upload +{secs:.1}s {line}"),
             )?;
         }
+        if matches!(result, Upload::RateLimited { .. })
+            && let Some(text) = registry.take_rate_limit_text()
+        {
+            // The registry's own words, so a ledger keeps the real wording of each limit it met.
+            rec.log(
+                clock,
+                EventKind::Classified,
+                who,
+                format!("rate-limited: {text}"),
+            )?;
+        }
         let pause = match result {
             Upload::Accepted { checksum } => break Some(checksum),
             Upload::AlreadyPublished => break None,
@@ -566,6 +577,48 @@ mod tests {
             [Duration::from_secs(65), Duration::from_secs(60)],
             "advised 60s + 5s margin, then the unadvised backoff at step 1 (30s base doubled)"
         );
+    }
+
+    // The registry's own 429 words reach the ledger as a `classified` event, once per limited upload;
+    // with none offered there is no such event (the control).
+    #[test]
+    fn the_registrys_rate_limit_words_are_kept_in_the_ledger() {
+        for (texts, expected) in [
+            (
+                vec!["status 429: too many updates, try again after X".to_owned()],
+                1,
+            ),
+            (vec![], 0),
+        ] {
+            let e = env();
+            let mut reg = FakeRegistry::new();
+            reg.upload_script.insert(
+                "b".into(),
+                [Upload::RateLimited {
+                    retry_after: Some(Duration::from_secs(60)),
+                }]
+                .into(),
+            );
+            reg.rate_limit_texts = texts.into();
+            let mut clock = FakeClock::default();
+            let r = run(&chain(), &mut reg, &mut clock, &e.ledger, &ctx(), &exec()).unwrap();
+            assert!(r.is_success(), "{r:?}");
+            let kept: Vec<_> = e
+                .ledger
+                .read()
+                .unwrap()
+                .into_iter()
+                .filter(|ev| ev.event == EventKind::Classified)
+                .collect();
+            assert_eq!(kept.len(), expected, "{kept:?}");
+            if expected == 1 {
+                assert_eq!(kept[0].crate_name.as_deref(), Some("b"));
+                assert_eq!(
+                    kept[0].detail,
+                    "rate-limited: status 429: too many updates, try again after X"
+                );
+            }
+        }
     }
 
     #[test]

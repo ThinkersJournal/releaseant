@@ -222,6 +222,7 @@ pub struct CratesIo {
     dir: PathBuf,
     target_dir: PathBuf,
     marks: Vec<(f64, String)>,
+    limit_text: Option<String>,
 }
 
 impl CratesIo {
@@ -234,8 +235,17 @@ impl CratesIo {
             dir,
             target_dir,
             marks: Vec::new(),
+            limit_text: None,
         }
     }
+}
+
+/// The line of `cargo publish` output that carries the registry's 429 message, trimmed and cut to
+/// 400 characters, or `None` if there is no such line.
+#[must_use]
+pub fn rate_limit_line(text: &str) -> Option<String> {
+    let line = text.lines().find(|l| l.contains("status 429"))?.trim();
+    Some(line.chars().take(400).collect())
 }
 
 impl Registry for CratesIo {
@@ -251,6 +261,10 @@ impl Registry for CratesIo {
         std::mem::take(&mut self.marks)
     }
 
+    fn take_rate_limit_text(&mut self) -> Option<String> {
+        self.limit_text.take()
+    }
+
     fn upload(&mut self, name: &str, version: &Version) -> Upload {
         let spec = format!("{name}@{version}");
         let target = self.target_dir.to_string_lossy().into_owned();
@@ -259,6 +273,7 @@ impl Registry for CratesIo {
             args.push("--locked");
         }
         self.marks.clear();
+        self.limit_text = None;
         let out = match self.cargo.run_marked(&self.dir, &args) {
             Ok((o, marks)) => {
                 self.marks = marks;
@@ -267,6 +282,9 @@ impl Registry for CratesIo {
             Err(e) => return Upload::Transient(format!("could not start cargo: {e}")),
         };
         let class = classify(out.success, &out.text);
+        if matches!(class, Class::RateLimited { .. }) {
+            self.limit_text = rate_limit_line(&out.text);
+        }
         let crate_file = self
             .target_dir
             .join("package")
@@ -283,6 +301,24 @@ mod tests {
     use std::net::TcpListener;
 
     use super::*;
+
+    // The line cargo prints for a 429 (the PM's 2026-10-24 sample) is the one kept; other output has none.
+    #[test]
+    fn the_429_line_is_picked_out_of_cargo_output() {
+        let sample = include_str!("../tests/fixtures/rate_limited.txt");
+        let line = rate_limit_line(sample).expect("the sample has a 429 line");
+        assert!(
+            line.starts_with("the remote server responded with an error (status 429"),
+            "{line}"
+        );
+        assert!(line.contains("Please try again after"), "{line}");
+        assert_eq!(
+            rate_limit_line("error: something else\nCaused by: nope"),
+            None
+        );
+        let long = format!("x status 429 {}", "y".repeat(1000));
+        assert_eq!(rate_limit_line(&long).unwrap().chars().count(), 400);
+    }
 
     #[test]
     fn index_paths_follow_the_registry_layout() {
