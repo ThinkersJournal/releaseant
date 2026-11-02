@@ -17,9 +17,10 @@ use crate::clock::{SystemClock, now_unix};
 use crate::crates_io::{CratesIo, INDEX_URL, Index};
 use crate::externals::missing_externals;
 use crate::ledger::{Event, EventKind, Ledger};
+use crate::names::{CratesIoOwners, check_names, describe as describe_name};
 use crate::pipeline::{
-    CargoAddCheck, Exception, PipelineError, PublishArgs, Summary, check_metadata, describe_state,
-    package_all, prepare, publish, readback,
+    CargoAddCheck, Exception, NameCheck, PipelineError, PublishArgs, Summary, check_metadata,
+    describe_state, package_all, prepare, publish, readback,
 };
 use crate::preflight::{Problem, parse_require};
 use crate::registry::{Clock, Lookup, Registry};
@@ -98,6 +99,15 @@ enum Command {
         /// After each crate, say whether the registry already has that version (needs network).
         #[arg(long)]
         registry: bool,
+        /// For every crate whose planned version is not on the registry, ask who owns the name if it
+        /// exists (needs network). A name owned by none of ours (`--owner`, `[names] owners`) is exit 4,
+        /// and so is a lookup that fails: the collision that crates.io otherwise reports at upload.
+        #[arg(long)]
+        check_names: bool,
+        /// A crates.io login that counts as ours for `--check-names` (repeatable, or comma-separated);
+        /// adds to `[names] owners` in `releaseant.toml`.
+        #[arg(long, value_delimiter = ',', requires = "check_names")]
+        owner: Vec<String>,
         #[command(flatten)]
         policy: MetadataPolicy,
     },
@@ -166,6 +176,14 @@ enum Command {
         /// The GitHub `owner/name` whose CI to read (default: taken from origin's URL).
         #[arg(long, requires = "require_green")]
         github: Option<String>,
+        /// Before any build or upload, refuse (exit 4) a crate name that another owner holds, as `plan
+        /// --check-names` does; a lookup that fails refuses too. Off by default.
+        #[arg(long)]
+        check_names: bool,
+        /// A crates.io login that counts as ours for `--check-names` (repeatable, or comma-separated);
+        /// adds to `[names] owners` in `releaseant.toml`.
+        #[arg(long, value_delimiter = ',', requires = "check_names")]
+        owner: Vec<String>,
         /// Longest wait for CI to finish, in seconds (default 2700).
         #[arg(long, default_value_t = 2700, requires = "require_green")]
         ci_wait: u64,
@@ -242,6 +260,53 @@ impl std::fmt::Display for ExitWith {
 }
 
 impl std::error::Error for ExitWith {}
+
+/// `plan --check-names`: print one line per crate; `Some` (exit 4) if any name is taken or unknown.
+/// Asking who "we" are comes first, because without it every existing name would look taken.
+fn refused_names(
+    prepared: &crate::pipeline::Prepared,
+    owner: &[String],
+) -> Result<Option<ExitWith>, ExitWith> {
+    let ours: BTreeSet<String> = prepared
+        .config
+        .names
+        .owners
+        .iter()
+        .chain(owner)
+        .cloned()
+        .collect();
+    if ours.is_empty() {
+        return Err(ExitWith(
+            2,
+            "--check-names: say whose crates are ours: --owner LOGIN, or [names] owners in releaseant.toml"
+                .to_owned(),
+        ));
+    }
+    let crates: Vec<(String, semver::Version)> = prepared
+        .plan
+        .order
+        .iter()
+        .map(|c| (c.name.clone(), c.version.clone()))
+        .collect();
+    let mut idx = IndexRegistry(Index::new(INDEX_URL));
+    let found = check_names(
+        &mut idx,
+        &mut CratesIoOwners::new(crate::names::BASE),
+        &crates,
+        &ours,
+    );
+    let mut bad = 0;
+    for (name, state) in &found {
+        println!("{}", describe_name(name, state));
+        bad += usize::from(state.refuses());
+    }
+    Ok((bad > 0).then(|| {
+        ExitWith(
+            4,
+            format!("--check-names: {bad} crate name(s) taken or unchecked: not publishing"),
+        )
+    }))
+}
 
 /// The `--require-green` guard: wait for the commit's CI and refuse unless it is green.
 fn require_green(
@@ -350,7 +415,13 @@ pub fn run_code(args: Vec<OsString>) -> u8 {
         Ok(false) => 1,
         Err(e) => {
             eprintln!("error: {e}");
-            e.downcast_ref::<ExitWith>().map_or(2, |x| x.0)
+            e.downcast_ref::<ExitWith>().map_or_else(
+                || match e.downcast_ref::<PipelineError>() {
+                    Some(PipelineError::NamesRefused(_)) => 4,
+                    _ => 2,
+                },
+                |x| x.0,
+            )
         }
     }
 }
@@ -364,6 +435,8 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             exclude,
             only,
             registry,
+            check_names,
+            owner,
             policy,
         } => {
             let require = policy.set()?;
@@ -413,8 +486,13 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                     println!("{} {}", c.name, c.version);
                 }
             }
+            let names_refused = if check_names {
+                refused_names(&prepared, &owner)?
+            } else {
+                None
+            };
             if !check_externals {
-                return Ok(true);
+                return names_refused.map_or(Ok(true), |e| Err(e.into()));
             }
             let mut idx = IndexRegistry(Index::new(INDEX_URL));
             let missing = missing_externals(&prepared.meta, &prepared.plan, &mut idx)?;
@@ -423,6 +501,9 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             }
             if missing.is_empty() {
                 println!("externals: every dependency outside the set is on the registry");
+            }
+            if let Some(e) = names_refused {
+                return Err(e.into());
             }
             Ok(missing.is_empty())
         }
@@ -467,6 +548,8 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             allow_not_tip,
             require_green: guard_ci,
             github,
+            check_names,
+            owner,
             ci_wait,
             require_checks,
             protection_branch,
@@ -516,6 +599,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             }
             // The run id of the latest run: the tag record names it.
             let last_id = std::cell::RefCell::new(String::new());
+            let owners_source = std::cell::RefCell::new(CratesIoOwners::new(crate::names::BASE));
             let mut attempt = || {
                 let id = run_id(&source.sha);
                 let work = work_dir(&id);
@@ -537,6 +621,10 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                         on_progress: Some(stderr_progress()),
                         reuse_verified: (reuse_verified_hours > 0).then(|| {
                             Duration::from_secs(reuse_verified_hours.saturating_mul(3600))
+                        }),
+                        name_check: check_names.then(|| NameCheck {
+                            ours: owner.iter().cloned().collect(),
+                            owners: &owners_source,
                         }),
                     },
                     |dir, target| {

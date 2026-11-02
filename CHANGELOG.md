@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.57
+
+- `plan --check-names` and `publish --check-names` (off by default): for every crate whose planned version is not on the registry, the name is free (no versions in the index), or exists and has an owner of ours (`--owner LOGIN`, or `[names] owners` in `releaseant.toml`), or it is refused: a name held by none of ours is exit 4 (`NAME TAKEN`, with the owners), and so is a lookup that failed (`UNKNOWN`, never read as free). `publish` checks before the ledger is opened or anything is built. No owner named is an error. Read-only; crates.io's owners list is asked at most once a second.
+
 ## 0.0.56
 
 - `--require-checks A,B`: `--require-green` judges only the named checks and fails closed (a named check that is absent or unfinished is exit 4, one that failed is exit 3, every other run is ignored). Without names it judges the checks that branch protection of `--protection-branch` (default `main`) requires, read from the forge; if that requires none or cannot be read, every run on the commit is judged as before, and a line printed first says which rule ran. Names are job names, not workflow names. Why: two queued self-hosted runs that gate nothing held Fuel's release up (`docs/R5-LIVE.md` section 4e).

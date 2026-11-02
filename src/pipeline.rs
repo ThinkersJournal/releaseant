@@ -16,6 +16,7 @@ use crate::config::{self, Config, ConfigError};
 use crate::externals::{ExternalsError, MissingExternal, missing_externals};
 use crate::ledger::{Event, EventKind, Ledger, LedgerError};
 use crate::metadata::Metadata;
+use crate::names::{NameState, OwnerSource, check_names, describe as describe_name};
 use crate::plan::{Plan, PlanError, plan};
 use crate::preflight::{self, Problem};
 use crate::progress::{ProgressSink, observer};
@@ -70,6 +71,10 @@ pub enum PipelineError {
     Metadata(Vec<Problem>),
     /// The commit's `releaseant.toml` cannot be used; nothing was uploaded.
     Config(ConfigError),
+    /// `--check-names` could not tell whose crates are ours; nothing was uploaded.
+    NamesNoOwners,
+    /// Crate names that another owner holds, or that could not be checked; nothing was uploaded.
+    NamesRefused(Vec<(String, NameState)>),
 }
 
 impl fmt::Display for PipelineError {
@@ -108,6 +113,22 @@ impl fmt::Display for PipelineError {
             }
             Self::Externals(e) => write!(f, "{e}"),
             Self::Config(e) => write!(f, "{e}"),
+            Self::NamesNoOwners => write!(
+                f,
+                "--check-names: say whose crates are ours: --owner LOGIN, or [names] owners in releaseant.toml"
+            ),
+            Self::NamesRefused(v) => {
+                write!(f, "crate names taken or unchecked; nothing was uploaded:")?;
+                for (name, state) in v {
+                    write!(
+                        f,
+                        "
+  {}",
+                        describe_name(name, state)
+                    )?;
+                }
+                Ok(())
+            }
             Self::Metadata(v) => {
                 write!(
                     f,
@@ -324,6 +345,14 @@ pub fn describe_state(lookup: &Lookup) -> String {
 /// Shows metadata warnings to the person running the command.
 pub type WarningSink<'a> = &'a dyn Fn(&[Problem]);
 
+/// `--check-names` for [`publish`]: who counts as ours, and where owners come from.
+pub struct NameCheck<'a> {
+    /// Logins named on the command line; the commit's `[names] owners` are added.
+    pub ours: BTreeSet<String>,
+    /// The owners source (crates.io's web API in a real run).
+    pub owners: &'a std::cell::RefCell<dyn OwnerSource + 'a>,
+}
+
 /// Inputs to [`publish`].
 pub struct PublishArgs<'a> {
     /// The repository to publish from.
@@ -358,6 +387,9 @@ pub struct PublishArgs<'a> {
     /// repeat the whole verification). The ledger records each carried crate as `verified` with
     /// the run and time it is carried from. `None` verifies every crate every time.
     pub reuse_verified: Option<Duration>,
+    /// Refuse before any upload a crate name that another owner holds (see [`crate::names`]).
+    /// `None` does not ask.
+    pub name_check: Option<NameCheck<'a>>,
 }
 
 /// What a publish did.
@@ -485,6 +517,39 @@ pub fn publish(
     let missing = missing_externals(&prepared.meta, &prepared.plan, registry.as_mut())?;
     if !missing.is_empty() {
         return Err(PipelineError::MissingExternals(missing));
+    }
+    if let Some(nc) = &args.name_check {
+        let ours: BTreeSet<String> = nc
+            .ours
+            .iter()
+            .chain(&prepared.config.names.owners)
+            .cloned()
+            .collect();
+        if ours.is_empty() {
+            return Err(PipelineError::NamesNoOwners);
+        }
+        let crates: Vec<(String, Version)> = prepared
+            .plan
+            .order
+            .iter()
+            .map(|c| (c.name.clone(), c.version.clone()))
+            .collect();
+        let found = check_names(
+            registry.as_mut(),
+            &mut *nc.owners.borrow_mut(),
+            &crates,
+            &ours,
+        );
+        if let Some(sink) = &args.on_progress {
+            for (name, state) in &found {
+                sink(&format!("names: {}", describe_name(name, state)));
+            }
+        }
+        let refused: Vec<(String, NameState)> =
+            found.into_iter().filter(|(_, s)| s.refuses()).collect();
+        if !refused.is_empty() {
+            return Err(PipelineError::NamesRefused(refused));
+        }
     }
     let mut ledger = Ledger::open(args.ledger)?;
     if let Some(sink) = &args.on_progress {
@@ -808,6 +873,7 @@ mod tests {
             on_warnings: None,
             on_progress: None,
             reuse_verified: None,
+            name_check: None,
         }
     }
 
@@ -1183,6 +1249,135 @@ zzrl-not-yet-published = \"0.23.0\"",
             ),
             other => panic!("expected Metadata, got {other}"),
         }
+    }
+
+    struct FixedOwners(std::collections::BTreeMap<String, Vec<crate::names::Owner>>);
+    impl OwnerSource for FixedOwners {
+        fn owners(&mut self, name: &str) -> Result<Vec<crate::names::Owner>, String> {
+            self.0
+                .get(name)
+                .cloned()
+                .ok_or_else(|| format!("no owners scripted for {name}"))
+        }
+    }
+
+    fn owner(login: &str) -> crate::names::Owner {
+        crate::names::Owner {
+            kind: "user".into(),
+            login: login.into(),
+        }
+    }
+
+    /// A dry run with `--check-names`: crate `a` already exists on the registry (at another version)
+    /// and is owned by `stranger`; crate `b` is a new name.
+    fn publish_named(
+        repo: &Path,
+        sha: &str,
+        tmp: &Path,
+        a_name: &str,
+        scripted: &str,
+        ours: &[&str],
+    ) -> Result<Summary, PipelineError> {
+        let owners = std::cell::RefCell::new(FixedOwners(
+            [(scripted.to_owned(), vec![owner("stranger")])].into(),
+        ));
+        let ledger = tmp.join("l.jsonl");
+        let work = tmp.join("w");
+        let mut a = args(repo, sha, &ledger, &work, Mode::DryRun, vec![]);
+        a.name_check = Some(NameCheck {
+            ours: ours.iter().map(|s| (*s).to_owned()).collect(),
+            owners: &owners,
+        });
+        let name = a_name.to_owned();
+        publish(
+            &Cargo::from_env(),
+            &a,
+            move |_, _| {
+                let mut r = FakeRegistry::new();
+                r.published.insert((name, "0.0.0".into()), "ck".into());
+                Box::new(r)
+            },
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+    }
+
+    // `publish --check-names`: a name held by someone else stops the run before the ledger is even
+    // opened; the same run with that owner named as ours goes on (the control).
+    #[test]
+    fn check_names_refuses_a_taken_name_before_anything_is_written() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let a = format!("{p}-a");
+        let err = publish_named(repo.path(), &sha, tmp.path(), &a, &a, &["me"]).unwrap_err();
+        match &err {
+            PipelineError::NamesRefused(v) => {
+                assert_eq!(v.len(), 1, "{err}");
+                assert_eq!(v[0].0, a);
+                assert!(matches!(v[0].1, NameState::Taken(_)), "{err}");
+            }
+            other => panic!("expected NamesRefused, got {other}"),
+        }
+        assert!(
+            !tmp.path().join("l.jsonl").exists(),
+            "no ledger before the check passes"
+        );
+
+        let tmp2 = tempfile::tempdir().unwrap();
+        let ok = publish_named(repo.path(), &sha, tmp2.path(), &a, &a, &["me", "Stranger"]);
+        assert!(ok.is_ok(), "{:?}", ok.err());
+        assert!(tmp2.path().join("l.jsonl").exists());
+    }
+
+    #[test]
+    fn check_names_without_any_owner_named_is_an_error_not_a_pass() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let err =
+            publish_named(repo.path(), &sha, tmp.path(), &format!("{p}-a"), "x", &[]).unwrap_err();
+        assert!(matches!(err, PipelineError::NamesNoOwners), "{err}");
+        assert!(!tmp.path().join("l.jsonl").exists());
+    }
+
+    // A crate whose owners cannot be read is not free and not ours: the run stops.
+    #[test]
+    fn check_names_stops_on_an_owners_lookup_that_failed() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let err = publish_named(
+            repo.path(),
+            &sha,
+            tmp.path(),
+            &format!("{p}-a"),
+            "nobody",
+            &["me"],
+        )
+        .unwrap_err();
+        match &err {
+            PipelineError::NamesRefused(v) => {
+                assert!(matches!(v[0].1, NameState::Unknown(_)), "{err}");
+            }
+            other => panic!("expected NamesRefused, got {other}"),
+        }
+    }
+
+    // The owners can be committed with the release instead of given on the command line.
+    #[test]
+    fn check_names_reads_the_owners_from_the_commits_releaseant_toml() {
+        let p = pid();
+        let (repo, sha) = repo_full(
+            &p,
+            false,
+            |_, m| m,
+            &[("releaseant.toml", "[names]\nowners = [\"stranger\"]\n")],
+        );
+        let tmp = tempfile::tempdir().unwrap();
+        let a = format!("{p}-a");
+        let ok = publish_named(repo.path(), &sha, tmp.path(), &a, &a, &[]);
+        assert!(ok.is_ok(), "{:?}", ok.err());
     }
 
     // A `releaseant.toml` at the root of the commit makes chosen warnings errors, and the command line's

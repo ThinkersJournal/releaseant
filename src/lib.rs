@@ -18,6 +18,7 @@ pub mod crates_io;
 pub mod externals;
 pub mod ledger;
 pub mod metadata;
+pub mod names;
 pub mod pipeline;
 pub mod plan;
 pub mod preflight;
