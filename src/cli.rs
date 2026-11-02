@@ -12,7 +12,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand};
 
 use crate::cargo::Cargo;
-use crate::ci::{CiVerdict, GhProbe, slug_of, wait_green};
+use crate::ci::{CiVerdict, GhProbe, choose_checks, slug_of, wait_checks, wait_green};
 use crate::clock::{SystemClock, now_unix};
 use crate::crates_io::{CratesIo, INDEX_URL, Index};
 use crate::externals::missing_externals;
@@ -169,6 +169,16 @@ enum Command {
         /// Longest wait for CI to finish, in seconds (default 2700).
         #[arg(long, default_value_t = 2700, requires = "require_green")]
         ci_wait: u64,
+        /// Judge only these checks (comma-separated names, as branch protection lists them) instead of
+        /// every run on the commit. Fails closed: a named check that is absent or not finished is no
+        /// answer (exit 4), one that failed is red (exit 3), every other run is ignored. Without it,
+        /// the checks that branch protection of `--protection-branch` requires are judged; if it
+        /// requires none (or cannot be read), every run is, and a line says which rule ran.
+        #[arg(long, value_delimiter = ',', requires = "require_green")]
+        require_checks: Vec<String>,
+        /// The branch whose protection names the required checks (default `main`).
+        #[arg(long, default_value = "main", requires = "require_green")]
+        protection_branch: String,
         /// After a run that did not end with every crate on the registry, run again, up to this many
         /// more times. Stops when the index, asked afresh, shows every crate at its version and not
         /// yanked (not on the tool's word); stops early for a held version or a checksum mismatch.
@@ -234,7 +244,13 @@ impl std::fmt::Display for ExitWith {
 impl std::error::Error for ExitWith {}
 
 /// The `--require-green` guard: wait for the commit's CI and refuse unless it is green.
-fn require_green(source: &Source, github: Option<String>, wait: u64) -> Result<(), ExitWith> {
+fn require_green(
+    source: &Source,
+    github: Option<String>,
+    wait: u64,
+    require_checks: &[String],
+    protection_branch: &str,
+) -> Result<(), ExitWith> {
     let slug = github.or_else(|| {
         let out = std::process::Command::new("git")
             .arg("-C")
@@ -253,14 +269,28 @@ fn require_green(source: &Source, github: Option<String>, wait: u64) -> Result<(
     })?;
     let short = &source.sha[..8.min(source.sha.len())];
     eprintln!("waiting for CI on {slug} {short}");
-    let verdict = wait_green(
-        &mut GhProbe,
-        &mut SystemClock,
-        &slug,
-        &source.sha,
-        Duration::from_secs(wait),
-        Duration::from_secs(30),
-    );
+    let (names, rule) = choose_checks(&mut GhProbe, &slug, protection_branch, require_checks);
+    eprintln!("{rule}");
+    let (wait, poll) = (Duration::from_secs(wait), Duration::from_secs(30));
+    let verdict = match names {
+        Some(names) => wait_checks(
+            &mut GhProbe,
+            &mut SystemClock,
+            &slug,
+            &source.sha,
+            &names,
+            wait,
+            poll,
+        ),
+        None => wait_green(
+            &mut GhProbe,
+            &mut SystemClock,
+            &slug,
+            &source.sha,
+            wait,
+            poll,
+        ),
+    };
     match verdict {
         CiVerdict::Green => {
             eprintln!("CI is green on {short}");
@@ -438,13 +468,21 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             require_green: guard_ci,
             github,
             ci_wait,
+            require_checks,
+            protection_branch,
             retries,
             retry_pause,
             reuse_verified_hours,
         } => {
             let require_metadata = policy.set()?;
             if guard_ci {
-                require_green(&source, github, ci_wait)?;
+                require_green(
+                    &source,
+                    github,
+                    ci_wait,
+                    &require_checks,
+                    &protection_branch,
+                )?;
             }
             if execute && !allow_not_tip {
                 crate::source::check_tip(&source.repo, &source.sha)?;

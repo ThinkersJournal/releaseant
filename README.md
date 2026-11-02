@@ -160,7 +160,12 @@ unreachable origin is a refusal too); `--allow-not-tip` overrides it. A dry run 
 Two guards for an unattended release, both off by default. `--require-green` waits for the CI runs on the commit to
 finish (`gh run list`; `--github OWNER/NAME` if origin is not a GitHub URL, `--ci-wait` seconds, default 2700) and
 refuses unless every one succeeded: exit status 3 if a run failed or was cancelled, 4 if CI gave no answer in time. No
-runs at all is not green. `--retries N` (with `--execute`; `--retry-pause` seconds, default 120) runs again after any
+runs at all is not green. Which checks count: by default the ones branch protection of `main` requires
+(`--protection-branch`), read from the forge, so a self-hosted run that does not gate the merge cannot hold a release
+up; `--require-checks A,B` names them instead (job names, as branch protection lists them, not workflow names).
+Either way it fails closed: a named check that is absent or unfinished is exit 4, one that failed is exit 3, every
+other run is ignored. If protection requires nothing or cannot be read, every run on the commit is judged, as before,
+and a line printed first says which rule ran. `--retries N` (with `--execute`; `--retry-pause` seconds, default 120) runs again after any
 failure, up to N more times, and stops only when the index, asked afresh, lists every crate of the plan at its version
 and not yanked; the run's own word is not enough. A version someone else put on the registry (held) or a checksum
 that differs stops it at once, because running again cannot fix those.
