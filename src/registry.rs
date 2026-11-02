@@ -47,6 +47,17 @@ pub enum Upload {
 }
 
 /// The registry operations a run needs.
+/// One published version of a crate, as the index lists it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VersionInfo {
+    /// The version.
+    pub version: Version,
+    /// Whether it is yanked.
+    pub yanked: bool,
+    /// The `rust-version` it declares, as written in the index.
+    pub rust_version: Option<String>,
+}
+
 pub trait Registry {
     /// Ask whether `name@version` is on the registry.
     fn lookup(&mut self, name: &str, version: &Version) -> Lookup;
@@ -58,6 +69,23 @@ pub trait Registry {
     /// # Errors
     /// The failure text when the registry could not be asked (never read as "no versions").
     fn versions(&mut self, name: &str) -> Result<Vec<(Version, bool)>, String>;
+
+    /// Like [`Self::versions`], with each version's `rust-version` as the index records it (`None`
+    /// when it declares none). A registry that does not know them says `None` for all.
+    ///
+    /// # Errors
+    /// As [`Self::versions`].
+    fn version_infos(&mut self, name: &str) -> Result<Vec<VersionInfo>, String> {
+        Ok(self
+            .versions(name)?
+            .into_iter()
+            .map(|(version, yanked)| VersionInfo {
+                version,
+                yanked,
+                rust_version: None,
+            })
+            .collect())
+    }
 
     /// The status lines of the last [`Self::upload`] with their offsets in seconds from its start,
     /// for the ledger's timing notes; taken once. A registry that cannot say returns none.
@@ -84,7 +112,7 @@ pub trait Clock {
 pub mod fake {
     use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-    use super::{Clock, Duration, Lookup, Registry, Upload, Version};
+    use super::{Clock, Duration, Lookup, Registry, Upload, Version, VersionInfo};
 
     /// A callback run at the start of every upload with `(name, version)`.
     pub type UploadHook = Box<dyn FnMut(&str, &str)>;
@@ -113,8 +141,12 @@ pub mod fake {
         pub on_upload: Option<UploadHook>,
         /// Crates whose published versions all count as yanked in `versions`.
         pub yanked: BTreeSet<String>,
+        /// Single versions, `(name, version)`, that count as yanked in `versions`.
+        pub yanked_versions: BTreeSet<(String, String)>,
         /// Crates for which `versions` fails with this text.
         pub versions_error: BTreeMap<String, String>,
+        /// The `rust-version` the index records for `(name, version)`.
+        pub rust_versions: BTreeMap<(String, String), String>,
         /// What [`Registry::take_rate_limit_text`] returns after each rate-limited upload, oldest first.
         pub rate_limit_texts: VecDeque<String>,
         lag_left: BTreeMap<(String, String), u32>,
@@ -177,8 +209,26 @@ pub mod fake {
                 .published
                 .keys()
                 .filter(|(n, _)| n == name)
-                .filter_map(|(_, v)| v.parse().ok())
-                .map(|v| (v, self.yanked.contains(name)))
+                .filter_map(|(n, v)| {
+                    let yanked = self.yanked.contains(name)
+                        || self.yanked_versions.contains(&(n.clone(), v.clone()));
+                    v.parse().ok().map(|v| (v, yanked))
+                })
+                .collect())
+        }
+
+        fn version_infos(&mut self, name: &str) -> Result<Vec<VersionInfo>, String> {
+            Ok(self
+                .versions(name)?
+                .into_iter()
+                .map(|(version, yanked)| VersionInfo {
+                    rust_version: self
+                        .rust_versions
+                        .get(&(name.to_owned(), version.to_string()))
+                        .cloned(),
+                    version,
+                    yanked,
+                })
                 .collect())
         }
 

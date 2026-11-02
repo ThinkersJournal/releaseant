@@ -72,6 +72,9 @@ pub struct Dependency {
     /// Whether the dependency is optional.
     #[serde(default)]
     pub optional: bool,
+    /// The `cfg(...)` or target triple the dependency is limited to, if any.
+    #[serde(default)]
+    pub target: Option<String>,
 }
 
 impl Dependency {

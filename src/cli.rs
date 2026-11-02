@@ -90,6 +90,11 @@ enum Command {
         /// Also ask the index whether every dependency outside the set is satisfiable (needs network).
         #[arg(long)]
         check_externals: bool,
+        /// Refuse (exit 4) a crate whose `rust-version` is older than a dependency needs: no matching
+        /// published version fits it, or a crate of the set declares a newer one. Notes (an older
+        /// matching version fits) are printed and do not refuse (needs network).
+        #[arg(long)]
+        check_rust_version: bool,
         /// Show the plan without this crate, as `publish --exclude` would run it.
         #[arg(long = "exclude")]
         exclude: Vec<String>,
@@ -176,6 +181,10 @@ enum Command {
         /// The GitHub `owner/name` whose CI to read (default: taken from origin's URL).
         #[arg(long, requires = "require_green")]
         github: Option<String>,
+        /// Before any build or upload, refuse (exit 4) a crate whose `rust-version` is older than a
+        /// dependency needs, as `plan --check-rust-version` does. Off by default.
+        #[arg(long)]
+        check_rust_version: bool,
         /// Before any build or upload, refuse (exit 4) a crate name that another owner holds, as `plan
         /// --check-names` does; a lookup that fails refuses too. Off by default.
         #[arg(long)]
@@ -260,6 +269,32 @@ impl std::fmt::Display for ExitWith {
 }
 
 impl std::error::Error for ExitWith {}
+
+/// `plan --check-rust-version`: print every finding; `Some` (exit 4) if any is an error.
+fn refused_rust_version(
+    prepared: &crate::pipeline::Prepared,
+) -> Result<Option<ExitWith>, Box<dyn std::error::Error>> {
+    let mut idx = IndexRegistry(Index::new(INDEX_URL));
+    let found = crate::msrv::check_rust_versions(&prepared.meta, &prepared.plan, &mut idx)?;
+    let errors = found
+        .iter()
+        .filter(|f| f.severity == crate::msrv::Severity::Error)
+        .count();
+    for f in &found {
+        println!("{f}");
+    }
+    if found.is_empty() {
+        println!("rust-version: no dependency needs a newer Rust than its dependent declares");
+    }
+    Ok((errors > 0).then(|| {
+        ExitWith(
+            4,
+            format!(
+                "--check-rust-version: {errors} dependency need(s) a newer Rust than declared: not publishing"
+            ),
+        )
+    }))
+}
 
 /// `plan --check-names`: print one line per crate; `Some` (exit 4) if any name is taken or unknown.
 /// Asking who "we" are comes first, because without it every existing name would look taken.
@@ -417,7 +452,7 @@ pub fn run_code(args: Vec<OsString>) -> u8 {
             eprintln!("error: {e}");
             e.downcast_ref::<ExitWith>().map_or_else(
                 || match e.downcast_ref::<PipelineError>() {
-                    Some(PipelineError::NamesRefused(_)) => 4,
+                    Some(PipelineError::NamesRefused(_) | PipelineError::RustVersion(_)) => 4,
                     _ => 2,
                 },
                 |x| x.0,
@@ -432,6 +467,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
         Command::Plan {
             source: s,
             check_externals,
+            check_rust_version,
             exclude,
             only,
             registry,
@@ -491,8 +527,15 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             } else {
                 None
             };
+            let msrv_refused = if check_rust_version {
+                refused_rust_version(&prepared)?
+            } else {
+                None
+            };
             if !check_externals {
-                return names_refused.map_or(Ok(true), |e| Err(e.into()));
+                return msrv_refused
+                    .or(names_refused)
+                    .map_or(Ok(true), |e| Err(e.into()));
             }
             let mut idx = IndexRegistry(Index::new(INDEX_URL));
             let missing = missing_externals(&prepared.meta, &prepared.plan, &mut idx)?;
@@ -502,7 +545,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             if missing.is_empty() {
                 println!("externals: every dependency outside the set is on the registry");
             }
-            if let Some(e) = names_refused {
+            if let Some(e) = msrv_refused.or(names_refused) {
                 return Err(e.into());
             }
             Ok(missing.is_empty())
@@ -548,6 +591,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             allow_not_tip,
             require_green: guard_ci,
             github,
+            check_rust_version,
             check_names,
             owner,
             ci_wait,
@@ -622,6 +666,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                         reuse_verified: (reuse_verified_hours > 0).then(|| {
                             Duration::from_secs(reuse_verified_hours.saturating_mul(3600))
                         }),
+                        check_rust_version,
                         name_check: check_names.then(|| NameCheck {
                             ours: owner.iter().cloned().collect(),
                             owners: &owners_source,
@@ -992,6 +1037,10 @@ impl Registry for IndexRegistry {
 
     fn versions(&mut self, name: &str) -> Result<Vec<(semver::Version, bool)>, String> {
         self.0.versions(name)
+    }
+
+    fn version_infos(&mut self, name: &str) -> Result<Vec<crate::registry::VersionInfo>, String> {
+        self.0.version_infos(name)
     }
 
     fn upload(&mut self, _: &str, _: &semver::Version) -> crate::registry::Upload {

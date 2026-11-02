@@ -114,6 +114,18 @@ published and adds to the flag. Every problem of every crate is listed at once, 
 half-published at the crate that lacked one. ReleaseAnt also needs a dependency on a crate of the workspace
 to name a `version` as well as a `path` (the demo's `releaseant-demo-app` does).
 
+### A dependency that needs a newer Rust than the crate declares
+
+A crate that says `rust-version = "1.70"` promises it builds on 1.70; if a dependency it cannot do without needs 1.85,
+the promise is false and nothing says so until a user on 1.70 tries. `plan --check-rust-version` (and `publish
+--check-rust-version`, which asks before the ledger is opened or anything is built) reads the `rust_version` the
+index records for every published version and compares. It is an error (`RUST-VERSION`, exit 4) when no live version
+that satisfies the requirement fits, or when a crate of the same set declares a newer one. It is only a `note` when the
+newest match is too new but an older match fits, since a resolver that respects `rust-version` will find that one, and
+for a dependency limited to a target. Dev and optional dependencies are skipped, a version that declares nothing is taken
+to fit, and a crate that declares no `rust-version` promises nothing and is skipped (`--require-metadata rust-version`
+makes that a requirement). Off unless you ask; it only reads the index.
+
 ### A crate name someone else owns
 
 crates.io refuses a new crate whose name is taken by another owner only at upload, in the middle of a set.
