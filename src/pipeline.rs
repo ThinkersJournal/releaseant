@@ -6,11 +6,12 @@ use std::fmt;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use semver::Version;
 
 use crate::cargo::{Cargo, CargoError};
+use crate::clock::parse_utc;
 use crate::config::{self, Config, ConfigError};
 use crate::externals::{ExternalsError, MissingExternal, missing_externals};
 use crate::ledger::{Event, EventKind, Ledger, LedgerError};
@@ -272,6 +273,44 @@ impl ConsumerCheck for CargoAddCheck {
 /// The ledger reason for a crate left out because `--only` named others.
 pub const NOT_SELECTED: &str = "not selected by --only";
 
+/// The crates of `plan` whose verification can be carried over (see [`PublishArgs::reuse_verified`]),
+/// each with where it is carried from. Anything unreadable, unparseable or too old means "verify".
+fn carried_verifications(
+    ledger: &Ledger,
+    clock: &mut dyn Clock,
+    args: &PublishArgs<'_>,
+    plan: &Plan,
+    already_skipped: &[String],
+) -> Vec<(String, String)> {
+    let Some(window) = args.reuse_verified else {
+        return Vec::new();
+    };
+    let Some(now) = parse_utc(&clock.now_utc()) else {
+        return Vec::new();
+    };
+    let Ok(events) = ledger.read() else {
+        return Vec::new();
+    };
+    let window = i64::try_from(window.as_secs()).unwrap_or(i64::MAX);
+    plan.order
+        .iter()
+        .filter(|c| !already_skipped.contains(&c.name))
+        .filter_map(|c| {
+            let version = c.version.to_string();
+            // The latest verification of this crate and version at this commit.
+            let e = events.iter().rev().find(|e| {
+                e.event == EventKind::Verified
+                    && e.sha == args.sha
+                    && e.crate_name.as_deref() == Some(c.name.as_str())
+                    && e.version.as_deref() == Some(version.as_str())
+            })?;
+            let at = parse_utc(&e.ts)?;
+            (now >= at && now - at <= window)
+                .then(|| (c.name.clone(), format!("run {} at {}", e.run, e.ts)))
+        })
+        .collect()
+}
+
 /// The registry state of a planned crate, as `plan --registry` prints it.
 #[must_use]
 pub fn describe_state(lookup: &Lookup) -> String {
@@ -314,6 +353,11 @@ pub struct PublishArgs<'a> {
     /// Called with one line of text per step as the run goes (packaging, each verification, and
     /// a line for every ledger event), so a long run is not silent.
     pub on_progress: Option<ProgressSink>,
+    /// Carry over a verification: a crate the ledger shows as `verified` at this SHA and version no
+    /// longer than this long ago is not built again (a resume after a rate limit would otherwise
+    /// repeat the whole verification). The ledger records each carried crate as `verified` with
+    /// the run and time it is carried from. `None` verifies every crate every time.
+    pub reuse_verified: Option<Duration>,
 }
 
 /// What a publish did.
@@ -486,7 +530,16 @@ pub fn publish(
     let package_began = Instant::now();
     let packaged = package_all(cargo, &prepared, &target_dir)?;
     let package_took = package_began.elapsed().as_secs_f64();
-    let skip: Vec<String> = args.exceptions.iter().map(|e| e.krate.clone()).collect();
+    let mut skip: Vec<String> = args.exceptions.iter().map(|e| e.krate.clone()).collect();
+    let carried = carried_verifications(&ledger, clock, args, &prepared.plan, &skip);
+    if !carried.is_empty() {
+        say(format!(
+            "verification carried over from the ledger for {} of {} crates",
+            carried.len(),
+            prepared.plan.order.len()
+        ));
+    }
+    skip.extend(carried.iter().map(|(n, _)| n.clone()));
     let starts: RefCell<Vec<(String, Instant)>> = RefCell::new(Vec::new());
     let verify_began = Instant::now();
     let verified = verify_set_with(
@@ -547,6 +600,17 @@ pub fn publish(
     for (n, _) in &verified {
         let v = version_of(n);
         record(&ledger, clock, args, EventKind::Verified, Some((n, &v)), "")?;
+    }
+    for (n, from) in &carried {
+        let v = version_of(n);
+        record(
+            &ledger,
+            clock,
+            args,
+            EventKind::Verified,
+            Some((n, &v)),
+            &format!("carried over, not built again: {from}"),
+        )?;
     }
 
     let ctx = RunContext {
@@ -743,6 +807,7 @@ mod tests {
             require_metadata: BTreeSet::new(),
             on_warnings: None,
             on_progress: None,
+            reuse_verified: None,
         }
     }
 
@@ -1498,5 +1563,126 @@ zzrl-not-yet-published = \"0.23.0\"",
         };
         assert_eq!(c.check("semver", &"1.0.0".parse().unwrap()), Ok(()));
         assert!(c.check("semver", &"99.0.0".parse().unwrap()).is_err());
+    }
+
+    /// Verification events and `cargo check` timing notes of the run named `run`.
+    fn verification_of(ledger: &Path, run: &str) -> (Vec<Event>, usize) {
+        let events = Ledger::open(ledger).unwrap().read().unwrap();
+        let checks = events
+            .iter()
+            .filter(|e| e.run == run && e.detail.starts_with("verify (cargo check) took"))
+            .count();
+        let verified = events
+            .into_iter()
+            .filter(|e| e.run == run && e.event == EventKind::Verified)
+            .collect();
+        (verified, checks)
+    }
+
+    // A resume must not repeat the verification (105 minutes for Fuel): the second run, at the same
+    // commit, builds nothing and says in the ledger where each verification is carried over from.
+    // The control is the same second run with carrying over off: it builds both crates again.
+    #[test]
+    fn a_verification_already_in_the_ledger_is_carried_over_not_repeated() {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let ledger = tmp.path().join("l.jsonl");
+        let go = |run_id: &'static str, reuse: Option<Duration>| {
+            let work = tmp.path().join(run_id);
+            let mut a = args(repo.path(), &sha, &ledger, &work, Mode::DryRun, vec![]);
+            a.run_id = run_id;
+            a.reuse_verified = reuse;
+            publish(
+                &Cargo::from_env(),
+                &a,
+                |_, _| Box::new(FakeRegistry::new()),
+                &mut FakeClock::default(),
+                &mut NoConsumer,
+            )
+            .unwrap()
+        };
+        let twelve_hours = Some(Duration::from_secs(12 * 3600));
+        go("first", twelve_hours);
+        let (v1, checks1) = verification_of(&ledger, "first");
+        assert_eq!((v1.len(), checks1), (2, 2), "the first run builds both");
+        assert!(v1.iter().all(|e| e.detail.is_empty()));
+
+        go("second", twelve_hours);
+        let (v2, checks2) = verification_of(&ledger, "second");
+        assert_eq!(checks2, 0, "nothing was built again");
+        assert_eq!(v2.len(), 2, "both are still recorded as verified");
+        assert!(
+            v2.iter().all(|e| e
+                .detail
+                .starts_with("carried over, not built again: run first at ")),
+            "{v2:?}"
+        );
+
+        // Control: with carrying over off the same run builds both again.
+        go("third", None);
+        let (v3, checks3) = verification_of(&ledger, "third");
+        assert_eq!((v3.len(), checks3), (2, 2));
+        assert!(v3.iter().all(|e| e.detail.is_empty()));
+
+        // so a zero window keeps it and only a ledger event from the future or the past is refused).
+        go("fourth", Some(Duration::ZERO));
+        let (_, checks4) = verification_of(&ledger, "fourth");
+        assert_eq!(
+            checks4, 0,
+            "an event at exactly now is inside a zero window"
+        );
+    }
+
+    // Only a verification of the same commit that is recent enough is carried over: another commit's, or
+    // one older than the window, is built again. The last row is the control that the seeded event counts.
+    #[test]
+    fn only_a_recent_verification_of_the_same_commit_is_carried_over() {
+        let other = "0123456789abcdef0123456789abcdef01234567";
+        // (seeded event's commit is this repo's: yes/no, its time, window in hours, crates built)
+        for (same_commit, ts, hours, built) in [
+            (false, "2026-10-24T00:00:00Z", 12, 2),
+            (true, "2026-10-23T00:00:00Z", 12, 2),
+            (true, "2026-10-24T01:00:00Z", 12, 2),
+            (true, "2026-10-23T00:00:00Z", 48, 0),
+            (true, "2026-10-24T00:00:00Z", 12, 0),
+        ] {
+            let p = pid();
+            let (repo, sha) = repo(&p, false);
+            let tmp = tempfile::tempdir().unwrap();
+            let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+            let l = Ledger::open(&ledger).unwrap();
+            for name in [format!("{p}-a"), format!("{p}-b")] {
+                l.append(&Event {
+                    ts: ts.into(),
+                    run: "old".into(),
+                    sha: if same_commit {
+                        sha.clone()
+                    } else {
+                        other.into()
+                    },
+                    crate_name: Some(name),
+                    version: Some("0.0.1".into()),
+                    event: EventKind::Verified,
+                    detail: String::new(),
+                })
+                .unwrap();
+            }
+            let mut a = args(repo.path(), &sha, &ledger, &work, Mode::DryRun, vec![]);
+            a.reuse_verified = Some(Duration::from_secs(hours * 3600));
+            publish(
+                &Cargo::from_env(),
+                &a,
+                |_, _| Box::new(FakeRegistry::new()),
+                &mut FakeClock::default(),
+                &mut NoConsumer,
+            )
+            .unwrap();
+            let (_, checks) = verification_of(&ledger, "t");
+            assert_eq!(
+                checks, built,
+                "same_commit={same_commit} ts={ts} window={hours}h"
+            );
+        }
     }
 }

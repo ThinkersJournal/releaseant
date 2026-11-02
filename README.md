@@ -165,6 +165,11 @@ failure, up to N more times, and stops only when the index, asked afresh, lists 
 and not yanked; the run's own word is not enough. A version someone else put on the registry (held) or a checksum
 that differs stops it at once, because running again cannot fix those.
 
+A resume or a `--retries` run does not build again what the ledger already shows as verified at the same commit
+in the last 12 hours (`--reuse-verified-hours N`; 0 verifies everything every time): the crate is recorded as `verified`
+with `carried over, not built again: run <id> at <time>`, and the progress line says how many were carried over.
+The first run at a commit always builds every crate.
+
 Tag the release in git in the same action: add `--tag` (`releaseant publish --sha $SHA --execute --tag`). Once every
 crate is on the registry it creates an annotated `v<version>` on exactly that commit, pushes only that tag to
 `origin` and reads it back. It refuses a commit that is on no origin branch and never moves an existing tag; a

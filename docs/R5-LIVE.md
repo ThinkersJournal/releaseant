@@ -4,6 +4,45 @@ Status: evidence for the PM (ROADMAP R5, `[TASK]` of 2026-11-02). Written by the
 Tool: `releaseant 0.0.49` (a debug build of `origin/main` `01ae1001b6a9406e1a590e33f5ddda71148ce574`),
 `gh 2.94.0`, the real forge `ThinkersJournal/releaseant`. No fake `gh`, no fake registry.
 
+## 0. Dry runs on baracuda and Fuel (2026-11-02, ahead of tonight's publishes; no `--execute`, no writes)
+
+Tool `releaseant 0.0.50` (debug build of `main` `1588e91`), `CARGO_BUILD_JOBS=2`, one verify at a time. Commands:
+`releaseant plan|plan --registry|verify --repo C:/Projects/<repo> --sha <origin/main>`; baracuda's verify with `DOCS_RS=1`.
+Plans and the baracuda output: `C:\Projects\r5run` (not committed).
+
+| | baracuda | fuel |
+|---|---|---|
+| ref (`origin/main` at 00:35 UTC) | `87957c5754ab3f698a0b5a1f27e0847251621f5a` (alpha.79) | `3f6ec6a49386acbe71cc71539b4f28e3d5f62368` |
+| crates in the plan | **73** (71 at `0.1.0-alpha.79`, 2 at `0.40.0`) | **43**, all `0.36.0` |
+| order starts | baracuda-build, baracuda-cuda-parse, baracuda-cuda-vocab | fuel-conv, fuel-cpu-kernels, fuel-ir |
+| `plan --registry` | all 73 "not on registry" | all 43 "not on registry" |
+| `plan` | exit 0 | exit 0 |
+| `verify` | exit 0, **73 of 73 verified, 8.5 min** (00:42:27 to 00:50:53 UTC; my own cargo builds ran alongside, so an upper bound for this box) | **exit 1, 43 of 43 FAILED in 2 min** (00:50:54 to 00:52:51 UTC), see below |
+
+The PM's figures for tonight (alpha.80, Fuel 0.36.2, "100+" and 45 crates) were estimates; main did not have those
+versions at this ref, so the numbers above are for the SHAs named.
+
+**Fuel is blocked on a yanked dependency.** Every one of the 43 `cargo check`s failed the same way:
+`failed to select a version for the requirement baracuda-kernels-sys = "^0.0.1-alpha.158": version 0.0.1-alpha.158 is
+yanked`. `Cargo.toml` line 354 of `3f6ec6a4` pins that version for `fuel-cuda-backend`. The crates.io API lists 73
+versions of `baracuda-kernels-sys` and none is un-yanked (the newest, `0.1.0-alpha.25`, is yanked too). `releaseant
+plan --repo C:/Projects/fuel --sha 3f6ec6a4... --check-externals` reports it in seconds and exits 1 (`MISSING EXTERNAL:
+fuel-cuda-backend needs baracuda-kernels-sys ^0.0.1-alpha.158: every published version is yanked`); the same check on
+baracuda exits 0. So Fuel cannot be verified or published until baracuda has republished `baracuda-kernels-sys` and
+Fuel's `main` depends on that version; **run `plan --check-externals` first, it costs seconds and verify costs 105
+minutes.** Fuel's verify time at this ref is therefore not measured.
+
+**Time estimates for the real publishes, with what each rests on:**
+- baracuda: about 9 minutes before the first upload (the verify above), then 73 uploads. `cargo publish` rebuilds each
+  crate; Fuel's median was 23 s per crate (0.35.2), so about 28 minutes if baracuda's crates are alike (not measured for
+  baracuda). About 40 minutes without a rate-limit stop.
+- fuel (not measurable at this ref, see above; the 0.35.2 run is the only data): 225.8 minutes = 104.9 before the first upload (package and `cargo check` of 43 crates) + 119.7
+  of uploads (88.8 of them `fuel-cuda-backend`) + 1.1 other. The `phase` ledger events will show where the 88.8 go.
+- crates.io's new-version rate limit: R4's six uploads never met one, so there is **no measured rate**. A 429 is
+  waited out inside the run, for the time cargo prints ("try again after <date>") plus 5 s, spending the run's
+  `--max-wait` budget (default 3600 s for the whole run); past it the run stops resumable. `--max-wait 21600` was
+  advised. With 0.0.51 a resume after that stop no longer repeats the verification.
+
 ## 1. `--require-green`, live (2026-11-02, no registry writes)
 
 Each case ran `releaseant publish --repo C:/Projects/releaseant-rehearsal --sha <sha> --execute --ledger <scratch>
