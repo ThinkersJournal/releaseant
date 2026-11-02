@@ -17,6 +17,7 @@ use crate::clock::{SystemClock, now_unix};
 use crate::crates_io::{CratesIo, INDEX_URL, Index};
 use crate::externals::missing_externals;
 use crate::ledger::{Event, EventKind, Ledger};
+use crate::names::{CratesIoOwners, check_names, describe as describe_name};
 use crate::pipeline::{
     CargoAddCheck, Exception, PipelineError, PublishArgs, Summary, check_metadata, describe_state,
     package_all, prepare, publish, readback,
@@ -98,6 +99,15 @@ enum Command {
         /// After each crate, say whether the registry already has that version (needs network).
         #[arg(long)]
         registry: bool,
+        /// For every crate whose planned version is not on the registry, ask who owns the name if it
+        /// exists (needs network). A name owned by none of ours (`--owner`, `[names] owners`) is exit 4,
+        /// and so is a lookup that fails: the collision that crates.io otherwise reports at upload.
+        #[arg(long)]
+        check_names: bool,
+        /// A crates.io login that counts as ours for `--check-names` (repeatable, or comma-separated);
+        /// adds to `[names] owners` in `releaseant.toml`.
+        #[arg(long, value_delimiter = ',', requires = "check_names")]
+        owner: Vec<String>,
         #[command(flatten)]
         policy: MetadataPolicy,
     },
@@ -243,6 +253,53 @@ impl std::fmt::Display for ExitWith {
 
 impl std::error::Error for ExitWith {}
 
+/// `plan --check-names`: print one line per crate; `Some` (exit 4) if any name is taken or unknown.
+/// Asking who "we" are comes first, because without it every existing name would look taken.
+fn refused_names(
+    prepared: &crate::pipeline::Prepared,
+    owner: &[String],
+) -> Result<Option<ExitWith>, ExitWith> {
+    let ours: BTreeSet<String> = prepared
+        .config
+        .names
+        .owners
+        .iter()
+        .chain(owner)
+        .cloned()
+        .collect();
+    if ours.is_empty() {
+        return Err(ExitWith(
+            2,
+            "--check-names: say whose crates are ours: --owner LOGIN, or [names] owners in releaseant.toml"
+                .to_owned(),
+        ));
+    }
+    let crates: Vec<(String, semver::Version)> = prepared
+        .plan
+        .order
+        .iter()
+        .map(|c| (c.name.clone(), c.version.clone()))
+        .collect();
+    let mut idx = IndexRegistry(Index::new(INDEX_URL));
+    let found = check_names(
+        &mut idx,
+        &mut CratesIoOwners::new(crate::names::BASE),
+        &crates,
+        &ours,
+    );
+    let mut bad = 0;
+    for (name, state) in &found {
+        println!("{}", describe_name(name, state));
+        bad += usize::from(state.refuses());
+    }
+    Ok((bad > 0).then(|| {
+        ExitWith(
+            4,
+            format!("--check-names: {bad} crate name(s) taken or unchecked: not publishing"),
+        )
+    }))
+}
+
 /// The `--require-green` guard: wait for the commit's CI and refuse unless it is green.
 fn require_green(
     source: &Source,
@@ -364,6 +421,8 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             exclude,
             only,
             registry,
+            check_names,
+            owner,
             policy,
         } => {
             let require = policy.set()?;
@@ -413,8 +472,13 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                     println!("{} {}", c.name, c.version);
                 }
             }
+            let names_refused = if check_names {
+                refused_names(&prepared, &owner)?
+            } else {
+                None
+            };
             if !check_externals {
-                return Ok(true);
+                return names_refused.map_or(Ok(true), |e| Err(e.into()));
             }
             let mut idx = IndexRegistry(Index::new(INDEX_URL));
             let missing = missing_externals(&prepared.meta, &prepared.plan, &mut idx)?;
@@ -423,6 +487,9 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             }
             if missing.is_empty() {
                 println!("externals: every dependency outside the set is on the registry");
+            }
+            if let Some(e) = names_refused {
+                return Err(e.into());
             }
             Ok(missing.is_empty())
         }
