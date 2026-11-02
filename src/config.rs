@@ -7,6 +7,9 @@
 //! require = ["keywords", "rust-version", "readme"]
 //! ```
 //!
+//! A `[names]` table with `owners = ["ciresnave", "github:org:team"]` says whose crates are ours for
+//! `plan --check-names`.
+//!
 //! `require` names the metadata fields that are warnings by default and must be errors for this
 //! project (see [`crate::preflight`]). The command line's `--require-metadata` adds to it; neither can
 //! relax what is an error anyway. An unknown key or an unknown field name is an error, not ignored: a
@@ -32,6 +35,19 @@ pub struct Config {
     /// `[metadata]`.
     #[serde(default)]
     pub metadata: MetadataConfig,
+    /// `[names]`.
+    #[serde(default)]
+    pub names: NamesConfig,
+}
+
+/// `[names]`: whose crates are ours, for `plan --check-names`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NamesConfig {
+    /// crates.io logins (a user such as `ciresnave`, or a team such as `github:org:team`) whose
+    /// ownership of a crate makes its name ours.
+    #[serde(default)]
+    pub owners: Vec<String>,
 }
 
 /// `[metadata]`.
@@ -127,6 +143,22 @@ mod tests {
         assert_eq!(
             load(dir.path()).unwrap().required(),
             set(&["keywords", "readme", "rust-version"])
+        );
+    }
+
+    #[test]
+    fn the_names_owners_are_read_and_default_to_none() {
+        assert!(parse("").unwrap().names.owners.is_empty());
+        assert_eq!(
+            parse("[names]\nowners = [\"ciresnave\", \"github:o:t\"]\n")
+                .unwrap()
+                .names
+                .owners,
+            vec!["ciresnave".to_owned(), "github:o:t".to_owned()]
+        );
+        assert!(
+            parse("[names]\nowner = [\"x\"]\n").is_err(),
+            "a misspelt key is an error"
         );
     }
 
