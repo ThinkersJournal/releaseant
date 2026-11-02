@@ -210,7 +210,7 @@ a code change: a run of an hour or more needs a machine that cannot sleep or run
 - **The verbatim text of this run's 429s.** The ledger stores only the parsed `retry_after`, not cargo's message, so the
   wording of these 20 was not captured. The only verbatim 429 on file is the PM's sample of 2026-10-24
   (`tests/fixtures/rate_limited.txt`, "too many updates to existing crates"); it is not known whether these 20 said the
-  same. 0.0.54 logs the message in a `classified` event so the next run keeps it.
+  same. A following release logs the message in a `classified` event so the next run keeps it.
 - A kill between upload and read-back (this run was not killed).
 - A lagging index: cargo's own wait for availability took at most 7.8 s here and every crate was `visible` at once, but
   the ledger has no event for read-back retries, so a short lag would not show.
