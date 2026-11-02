@@ -603,6 +603,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
         } => {
             let require_metadata = policy.set()?;
             if guard_ci {
+                crate::ci::validate_check_names(&require_checks).map_err(|m| ExitWith(2, m))?;
                 require_green(
                     &source,
                     github,

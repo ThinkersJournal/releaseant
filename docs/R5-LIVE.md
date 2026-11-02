@@ -402,11 +402,11 @@ did not slow down at all (238.1 s to 239.9 s) but its publish build did (135.2 s
   branch protection of main requires: Clippy, Rustfmt, trufflehog, Check (ubuntu-latest), Test Suite (ubuntu-latest),
   Packaged crates` and `CI is green on 79b2a83c`. This is the case section 4e was written for, in a real publish: the
   two queued self-hosted runs (not required) did not hold it up.
-- **An empty `--require-checks` is judged as one check with no name.** `...-run2-out.empty-names.txt` is `judging the 1
-  check(s) named by --require-checks: ` and nothing after it: the flag was given an empty value (a shell variable that
-  was unset, most likely) and the guard looked for a check called `""`, which never exists, so it can only time out
-  (exit 4). That fails closed, as designed, but the message does not say why. Not fixed here; a small follow-up would
-  drop empty names (an empty list then means "use branch protection") or refuse them with exit 2 at once.
+- **An empty `--require-checks` was judged as one check with no name (fixed in 0.0.59).** `...-run2-out.empty-names.txt` is `judging the 1
+  check(s) named by --require-checks: ` and nothing after it: the flag was given an empty value (an unset shell variable, most
+  likely) and the guard looked for a check called `""`, which never exists, so it could only wait out `--ci-wait` and fail with exit
+  4. That failed closed but late and without a reason. Now an empty entry (`""`, `a,,b`, or only spaces) is refused before anything
+  waits: exit 2, `--require-checks: entry N is empty`. No names at all still means the branch-protection rule.
 
 ### 5e. What stays unmeasured
 
