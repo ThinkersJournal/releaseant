@@ -162,7 +162,9 @@ finish (`gh run list`; `--github OWNER/NAME` if origin is not a GitHub URL, `--c
 refuses unless every one succeeded: exit status 3 if a run failed or was cancelled, 4 if CI gave no answer in time. No
 runs at all is not green. Which checks count: by default the ones branch protection of `main` requires
 (`--protection-branch`), read from the forge, so a self-hosted run that does not gate the merge cannot hold a release
-up; `--require-checks A,B` names them instead (job names, as branch protection lists them, not workflow names).
+up; `--require-checks A,B` names them instead. Names are JOB names, as branch protection lists them, not workflow
+names: Fuel's workflow `checkpoint-tests` has the job `Qwen3.5-0.8B Gated DeltaNet oracles (self-hosted)`, and
+`--require-checks checkpoint-tests` reads as absent (exit 4), not as that workflow's result.
 Either way it fails closed: a named check that is absent or unfinished is exit 4, one that failed is exit 3, every
 other run is ignored. If protection requires nothing or cannot be read, every run on the commit is judged, as before,
 and a line printed first says which rule ran. `--retries N` (with `--execute`; `--retry-pause` seconds, default 120) runs again after any

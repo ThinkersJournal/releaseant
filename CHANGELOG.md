@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.56
+
+- `--require-checks A,B`: `--require-green` judges only the named checks and fails closed (a named check that is absent or unfinished is exit 4, one that failed is exit 3, every other run is ignored). Without names it judges the checks that branch protection of `--protection-branch` (default `main`) requires, read from the forge; if that requires none or cannot be read, every run on the commit is judged as before, and a line printed first says which rule ran. Names are job names, not workflow names. Why: two queued self-hosted runs that gate nothing held Fuel's release up (`docs/R5-LIVE.md` section 4e).
+
 ## 0.0.54
 
 - Ledger: when an upload is rate-limited, the registry's own words (the 429 line cargo printed, cut to 400 characters) are kept as a `classified` event, `rate-limited: <line>`, so a ledger keeps the wording of each limit it met (the real baracuda run's 20 rate limits left only the parsed `retry_after`). New `Registry::take_rate_limit_text`, default none. Waiting and every outcome are unchanged.
