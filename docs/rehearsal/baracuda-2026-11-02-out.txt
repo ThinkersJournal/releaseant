@@ -1,0 +1,572 @@
+waiting for CI on ciresnave/baracuda d9b28b6f
+CI is green on d9b28b6f
+warning: baracuda-cuda-parse: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cutlass-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-forge: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cutlass-kernels-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-kernels-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-flashinfer-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-seam: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cuda-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cublas-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cudf-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cudnn-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cufft-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cufile-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cupti-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-curand-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cusolver-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cusparse-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cutensor-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cuvs-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cvcuda-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-driver: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cublas: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cudf: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cudnn: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cufft: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cufile: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cupti: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-curand: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cusolver: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cusparse: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cutensor: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cuvs: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cvcuda: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-kernels-types: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nccl-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nccl: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-megatron: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-npp-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-npp: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvcomp-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvcomp: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvimagecodec-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvimagecodec: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvjitlink-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvjitlink: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvjpeg-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvjpeg: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvml-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvml: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvrtc-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvrtc: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cuda-seam: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvshmem-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-nvshmem: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-optim: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-ozimmu-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-ozimmu: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-cutlass: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-runtime: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-tensorrt-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-tensorrt: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-tensorrt-builder: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-transformer-engine-sys: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-transformer-engine: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-kernels: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: baracuda-flashinfer: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+[00:09] packaging 73 crates
+[02:08] verifying baracuda-build (1 of 73)
+[02:14] verifying baracuda-cuda-parse (2 of 73)
+[03:03] verifying baracuda-cuda-vocab (3 of 73)
+[03:06] verifying baracuda-cutlass-sys (4 of 73)
+[03:25] verifying baracuda-forge (5 of 73)
+[03:51] verifying baracuda-cutlass-kernels-sys (6 of 73)
+[04:24] verifying baracuda-kernels-sys (7 of 73)
+[04:35] verifying baracuda-flashinfer-sys (8 of 73)
+[04:48] verifying baracuda-seam (9 of 73)
+[04:59] verifying baracuda-types-derive (10 of 73)
+[05:07] verifying baracuda-types (11 of 73)
+[05:09] verifying baracuda-core (12 of 73)
+[05:11] verifying baracuda-cuda-sys (13 of 73)
+[05:18] verifying baracuda-cublas-sys (14 of 73)
+[05:27] verifying baracuda-cudf-sys (15 of 73)
+[05:34] verifying baracuda-cudnn-sys (16 of 73)
+[05:40] verifying baracuda-cufft-sys (17 of 73)
+[05:45] verifying baracuda-cufile-sys (18 of 73)
+[05:49] verifying baracuda-cupti-sys (19 of 73)
+[05:55] verifying baracuda-curand-sys (20 of 73)
+[06:00] verifying baracuda-cusolver-sys (21 of 73)
+[06:05] verifying baracuda-cusparse-sys (22 of 73)
+[06:11] verifying baracuda-cutensor-sys (23 of 73)
+[06:15] verifying baracuda-cuvs-sys (24 of 73)
+[06:21] verifying baracuda-cvcuda-sys (25 of 73)
+[06:23] verifying baracuda-driver (26 of 73)
+[06:30] verifying baracuda-cublas (27 of 73)
+[06:35] verifying baracuda-cudf (28 of 73)
+[06:40] verifying baracuda-cudnn (29 of 73)
+[06:48] verifying baracuda-cufft (30 of 73)
+[06:53] verifying baracuda-cufile (31 of 73)
+[06:59] verifying baracuda-cupti (32 of 73)
+[07:03] verifying baracuda-curand (33 of 73)
+[07:09] verifying baracuda-cusolver (34 of 73)
+[07:13] verifying baracuda-cusparse (35 of 73)
+[07:17] verifying baracuda-cutensor (36 of 73)
+[07:19] verifying baracuda-cuvs (37 of 73)
+[07:22] verifying baracuda-cvcuda (38 of 73)
+[07:27] verifying baracuda-kernels-types (39 of 73)
+[07:37] verifying baracuda-nccl-sys (40 of 73)
+[07:41] verifying baracuda-nccl (41 of 73)
+[07:43] verifying baracuda-megatron (42 of 73)
+[07:48] verifying baracuda-npp-sys (43 of 73)
+[07:51] verifying baracuda-npp (44 of 73)
+[07:55] verifying baracuda-nvcomp-sys (45 of 73)
+[07:59] verifying baracuda-nvcomp (46 of 73)
+[08:02] verifying baracuda-nvimagecodec-sys (47 of 73)
+[08:08] verifying baracuda-nvimagecodec (48 of 73)
+[08:11] verifying baracuda-nvjitlink-sys (49 of 73)
+[08:16] verifying baracuda-nvjitlink (50 of 73)
+[08:20] verifying baracuda-nvjpeg-sys (51 of 73)
+[08:24] verifying baracuda-nvjpeg (52 of 73)
+[08:28] verifying baracuda-nvml-sys (53 of 73)
+[08:37] verifying baracuda-nvml (54 of 73)
+[08:45] verifying baracuda-nvrtc-sys (55 of 73)
+[08:55] verifying baracuda-nvrtc (56 of 73)
+[09:01] verifying baracuda-cuda-emit (57 of 73)
+[09:17] verifying baracuda-cuda-seam (58 of 73)
+[09:25] verifying baracuda-nvshmem-sys (59 of 73)
+[09:30] verifying baracuda-nvshmem (60 of 73)
+[09:33] verifying baracuda-optim (61 of 73)
+[09:45] verifying baracuda-ozimmu-sys (62 of 73)
+[09:54] verifying baracuda-ozimmu (63 of 73)
+[10:00] verifying baracuda-cutlass (64 of 73)
+[10:06] verifying baracuda-runtime (65 of 73)
+[10:10] verifying baracuda-tensorrt-sys (66 of 73)
+[10:15] verifying baracuda-tensorrt (67 of 73)
+[10:17] verifying baracuda (68 of 73)
+[10:23] verifying baracuda-tensorrt-builder (69 of 73)
+[10:26] verifying baracuda-transformer-engine-sys (70 of 73)
+[10:30] verifying baracuda-transformer-engine (71 of 73)
+[10:33] verifying baracuda-kernels (72 of 73)
+[10:54] verifying baracuda-flashinfer (73 of 73)
+[11:01] verified baracuda-build 0.1.0-alpha.80
+[11:01] verified baracuda-cuda-parse 0.40.0
+[11:01] verified baracuda-cuda-vocab 0.1.0-alpha.80
+[11:01] verified baracuda-cutlass-sys 0.1.0-alpha.80
+[11:01] verified baracuda-forge 0.1.0-alpha.80
+[11:01] verified baracuda-cutlass-kernels-sys 0.1.0-alpha.80
+[11:01] verified baracuda-kernels-sys 0.1.0-alpha.80
+[11:01] verified baracuda-flashinfer-sys 0.1.0-alpha.80
+[11:01] verified baracuda-seam 0.1.0-alpha.80
+[11:01] verified baracuda-types-derive 0.1.0-alpha.80
+[11:01] verified baracuda-types 0.1.0-alpha.80
+[11:01] verified baracuda-core 0.1.0-alpha.80
+[11:01] verified baracuda-cuda-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cublas-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cudf-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cudnn-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cufft-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cufile-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cupti-sys 0.1.0-alpha.80
+[11:01] verified baracuda-curand-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cusolver-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cusparse-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cutensor-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cuvs-sys 0.1.0-alpha.80
+[11:01] verified baracuda-cvcuda-sys 0.1.0-alpha.80
+[11:01] verified baracuda-driver 0.1.0-alpha.80
+[11:01] verified baracuda-cublas 0.1.0-alpha.80
+[11:01] verified baracuda-cudf 0.1.0-alpha.80
+[11:01] verified baracuda-cudnn 0.1.0-alpha.80
+[11:01] verified baracuda-cufft 0.1.0-alpha.80
+[11:01] verified baracuda-cufile 0.1.0-alpha.80
+[11:01] verified baracuda-cupti 0.1.0-alpha.80
+[11:01] verified baracuda-curand 0.1.0-alpha.80
+[11:01] verified baracuda-cusolver 0.1.0-alpha.80
+[11:01] verified baracuda-cusparse 0.1.0-alpha.80
+[11:01] verified baracuda-cutensor 0.1.0-alpha.80
+[11:01] verified baracuda-cuvs 0.1.0-alpha.80
+[11:01] verified baracuda-cvcuda 0.1.0-alpha.80
+[11:01] verified baracuda-kernels-types 0.1.0-alpha.80
+[11:01] verified baracuda-nccl-sys 0.1.0-alpha.80
+[11:01] verified baracuda-nccl 0.1.0-alpha.80
+[11:01] verified baracuda-megatron 0.1.0-alpha.80
+[11:01] verified baracuda-npp-sys 0.1.0-alpha.80
+[11:01] verified baracuda-npp 0.1.0-alpha.80
+[11:01] verified baracuda-nvcomp-sys 0.1.0-alpha.80
+[11:01] verified baracuda-nvcomp 0.1.0-alpha.80
+[11:01] verified baracuda-nvimagecodec-sys 0.1.0-alpha.80
+[11:01] verified baracuda-nvimagecodec 0.1.0-alpha.80
+[11:01] verified baracuda-nvjitlink-sys 0.1.0-alpha.80
+[11:01] verified baracuda-nvjitlink 0.1.0-alpha.80
+[11:01] verified baracuda-nvjpeg-sys 0.1.0-alpha.80
+[11:01] verified baracuda-nvjpeg 0.1.0-alpha.80
+[11:01] verified baracuda-nvml-sys 0.1.0-alpha.80
+[11:01] verified baracuda-nvml 0.1.0-alpha.80
+[11:01] verified baracuda-nvrtc-sys 0.1.0-alpha.80
+[11:01] verified baracuda-nvrtc 0.1.0-alpha.80
+[11:01] verified baracuda-cuda-emit 0.40.0
+[11:01] verified baracuda-cuda-seam 0.1.0-alpha.80
+[11:01] verified baracuda-nvshmem-sys 0.1.0-alpha.80
+[11:01] verified baracuda-nvshmem 0.1.0-alpha.80
+[11:01] verified baracuda-optim 0.1.0-alpha.80
+[11:01] verified baracuda-ozimmu-sys 0.1.0-alpha.80
+[11:01] verified baracuda-ozimmu 0.1.0-alpha.80
+[11:01] verified baracuda-cutlass 0.1.0-alpha.80
+[11:01] verified baracuda-runtime 0.1.0-alpha.80
+[11:01] verified baracuda-tensorrt-sys 0.1.0-alpha.80
+[11:01] verified baracuda-tensorrt 0.1.0-alpha.80
+[11:01] verified baracuda 0.1.0-alpha.80
+[11:01] verified baracuda-tensorrt-builder 0.1.0-alpha.80
+[11:01] verified baracuda-transformer-engine-sys 0.1.0-alpha.80
+[11:01] verified baracuda-transformer-engine 0.1.0-alpha.80
+[11:01] verified baracuda-kernels 0.1.0-alpha.80
+[11:01] verified baracuda-flashinfer 0.1.0-alpha.80
+[11:01] run planned
+[11:02] uploading baracuda-build 0.1.0-alpha.80
+[11:10] upload returned baracuda-build 0.1.0-alpha.80 (8 s)
+[11:10] baracuda-build 0.1.0-alpha.80: read back, visible
+[11:10] uploading baracuda-cuda-parse 0.40.0
+[12:38] upload returned baracuda-cuda-parse 0.40.0 (87 s)
+[12:38] baracuda-cuda-parse 0.40.0: read back, visible
+[12:38] uploading baracuda-cuda-vocab 0.1.0-alpha.80
+[12:47] upload returned baracuda-cuda-vocab 0.1.0-alpha.80 (8 s)
+[12:47] baracuda-cuda-vocab 0.1.0-alpha.80: read back, visible
+[12:47] uploading baracuda-cutlass-sys 0.1.0-alpha.80
+[13:09] upload returned baracuda-cutlass-sys 0.1.0-alpha.80 (22 s)
+[13:10] baracuda-cutlass-sys 0.1.0-alpha.80: read back, visible
+[13:10] uploading baracuda-forge 0.1.0-alpha.80
+[13:59] upload returned baracuda-forge 0.1.0-alpha.80 (48 s)
+[13:59] baracuda-forge 0.1.0-alpha.80: read back, visible
+[13:59] uploading baracuda-cutlass-kernels-sys 0.1.0-alpha.80
+[14:59] upload returned baracuda-cutlass-kernels-sys 0.1.0-alpha.80 (59 s)
+[14:59] baracuda-cutlass-kernels-sys 0.1.0-alpha.80: read back, visible
+[15:00] uploading baracuda-kernels-sys 0.1.0-alpha.80
+[15:35] upload returned baracuda-kernels-sys 0.1.0-alpha.80 (35 s)
+[15:36] baracuda-kernels-sys 0.1.0-alpha.80: read back, visible
+[15:36] uploading baracuda-flashinfer-sys 0.1.0-alpha.80
+[16:06] upload returned baracuda-flashinfer-sys 0.1.0-alpha.80 (30 s)
+[16:07] baracuda-flashinfer-sys 0.1.0-alpha.80: read back, visible
+[16:07] uploading baracuda-seam 0.1.0-alpha.80
+[16:24] upload returned baracuda-seam 0.1.0-alpha.80 (16 s)
+[16:24] baracuda-seam 0.1.0-alpha.80: read back, visible
+[16:24] uploading baracuda-types-derive 0.1.0-alpha.80
+[16:41] upload returned baracuda-types-derive 0.1.0-alpha.80 (17 s)
+[16:42] baracuda-types-derive 0.1.0-alpha.80: read back, visible
+[16:42] uploading baracuda-types 0.1.0-alpha.80
+[16:57] upload returned baracuda-types 0.1.0-alpha.80 (15 s)
+[16:58] baracuda-types 0.1.0-alpha.80: read back, visible
+[16:58] uploading baracuda-core 0.1.0-alpha.80
+[17:12] upload returned baracuda-core 0.1.0-alpha.80 (14 s)
+[17:12] baracuda-core 0.1.0-alpha.80: read back, visible
+[17:13] uploading baracuda-cuda-sys 0.1.0-alpha.80
+[17:37] upload returned baracuda-cuda-sys 0.1.0-alpha.80 (24 s)
+[17:37] baracuda-cuda-sys 0.1.0-alpha.80: read back, visible
+[17:38] uploading baracuda-cublas-sys 0.1.0-alpha.80
+[18:02] upload returned baracuda-cublas-sys 0.1.0-alpha.80 (24 s)
+[18:02] baracuda-cublas-sys 0.1.0-alpha.80: read back, visible
+[18:03] uploading baracuda-cudf-sys 0.1.0-alpha.80
+[18:17] upload returned baracuda-cudf-sys 0.1.0-alpha.80 (14 s)
+[18:17] baracuda-cudf-sys 0.1.0-alpha.80: read back, visible
+[18:18] uploading baracuda-cudnn-sys 0.1.0-alpha.80
+[18:36] upload returned baracuda-cudnn-sys 0.1.0-alpha.80 (18 s)
+[18:37] baracuda-cudnn-sys 0.1.0-alpha.80: read back, visible
+[18:37] uploading baracuda-cufft-sys 0.1.0-alpha.80
+[18:52] upload returned baracuda-cufft-sys 0.1.0-alpha.80 (14 s)
+[18:52] baracuda-cufft-sys 0.1.0-alpha.80: read back, visible
+[18:52] uploading baracuda-cufile-sys 0.1.0-alpha.80
+[19:09] upload returned baracuda-cufile-sys 0.1.0-alpha.80 (16 s)
+[19:09] baracuda-cufile-sys 0.1.0-alpha.80: read back, visible
+[19:09] uploading baracuda-cupti-sys 0.1.0-alpha.80
+[19:29] upload returned baracuda-cupti-sys 0.1.0-alpha.80 (19 s)
+[19:30] baracuda-cupti-sys 0.1.0-alpha.80: read back, visible
+[19:30] uploading baracuda-curand-sys 0.1.0-alpha.80
+[19:42] upload returned baracuda-curand-sys 0.1.0-alpha.80 (12 s)
+[19:42] baracuda-curand-sys 0.1.0-alpha.80: read back, visible
+[19:43] uploading baracuda-cusolver-sys 0.1.0-alpha.80
+[20:01] upload returned baracuda-cusolver-sys 0.1.0-alpha.80 (18 s)
+[20:02] baracuda-cusolver-sys 0.1.0-alpha.80: read back, visible
+[20:02] uploading baracuda-cusparse-sys 0.1.0-alpha.80
+[20:15] upload returned baracuda-cusparse-sys 0.1.0-alpha.80 (12 s)
+[20:15] baracuda-cusparse-sys 0.1.0-alpha.80: read back, visible
+[20:15] uploading baracuda-cutensor-sys 0.1.0-alpha.80
+[20:26] upload returned baracuda-cutensor-sys 0.1.0-alpha.80 (10 s)
+[20:26] baracuda-cutensor-sys 0.1.0-alpha.80: read back, visible
+[20:26] uploading baracuda-cuvs-sys 0.1.0-alpha.80
+[20:37] upload returned baracuda-cuvs-sys 0.1.0-alpha.80 (10 s)
+[20:37] baracuda-cuvs-sys 0.1.0-alpha.80: read back, visible
+[20:37] uploading baracuda-cvcuda-sys 0.1.0-alpha.80
+[20:45] upload returned baracuda-cvcuda-sys 0.1.0-alpha.80 (7 s)
+[20:45] baracuda-cvcuda-sys 0.1.0-alpha.80: read back, visible
+[20:45] uploading baracuda-driver 0.1.0-alpha.80
+[21:00] upload returned baracuda-driver 0.1.0-alpha.80 (15 s)
+[21:01] baracuda-driver 0.1.0-alpha.80: read back, visible
+[21:01] uploading baracuda-cublas 0.1.0-alpha.80
+[21:23] upload returned baracuda-cublas 0.1.0-alpha.80 (21 s)
+[21:23] baracuda-cublas 0.1.0-alpha.80: read back, visible
+[21:23] uploading baracuda-cudf 0.1.0-alpha.80
+[21:44] upload returned baracuda-cudf 0.1.0-alpha.80 (20 s)
+[21:44] baracuda-cudf 0.1.0-alpha.80: read back, visible
+[21:44] uploading baracuda-cudnn 0.1.0-alpha.80
+[22:05] upload returned baracuda-cudnn 0.1.0-alpha.80 (20 s)
+[22:06] baracuda-cudnn 0.1.0-alpha.80: read back, visible
+[22:06] uploading baracuda-cufft 0.1.0-alpha.80
+[22:25] upload returned baracuda-cufft 0.1.0-alpha.80 (19 s)
+[22:25] baracuda-cufft 0.1.0-alpha.80: read back, visible
+[22:26] uploading baracuda-cufile 0.1.0-alpha.80
+[22:47] upload returned baracuda-cufile 0.1.0-alpha.80 (21 s)
+[22:48] baracuda-cufile 0.1.0-alpha.80: read back, visible
+[22:48] uploading baracuda-cupti 0.1.0-alpha.80
+[23:11] upload returned baracuda-cupti 0.1.0-alpha.80 (22 s)
+[23:11] baracuda-cupti 0.1.0-alpha.80: read back, visible
+[23:11] uploading baracuda-curand 0.1.0-alpha.80
+[23:30] upload returned baracuda-curand 0.1.0-alpha.80 (18 s)
+[23:30] baracuda-curand 0.1.0-alpha.80: read back, visible
+[23:30] uploading baracuda-cusolver 0.1.0-alpha.80
+[23:56] upload returned baracuda-cusolver 0.1.0-alpha.80 (25 s)
+[23:57] baracuda-cusolver 0.1.0-alpha.80: read back, visible
+[23:57] uploading baracuda-cusparse 0.1.0-alpha.80
+[24:18] upload returned baracuda-cusparse 0.1.0-alpha.80 (21 s)
+[24:19] baracuda-cusparse 0.1.0-alpha.80: read back, visible
+[24:19] uploading baracuda-cutensor 0.1.0-alpha.80
+[24:42] upload returned baracuda-cutensor 0.1.0-alpha.80 (23 s)
+[24:42] baracuda-cutensor 0.1.0-alpha.80: read back, visible
+[24:43] uploading baracuda-cuvs 0.1.0-alpha.80
+[25:15] upload returned baracuda-cuvs 0.1.0-alpha.80 (32 s)
+[25:15] baracuda-cuvs 0.1.0-alpha.80: read back, visible
+[25:16] uploading baracuda-cvcuda 0.1.0-alpha.80
+[25:35] upload returned baracuda-cvcuda 0.1.0-alpha.80 (19 s)
+[25:36] baracuda-cvcuda 0.1.0-alpha.80: read back, visible
+[25:36] uploading baracuda-kernels-types 0.1.0-alpha.80
+[26:08] upload returned baracuda-kernels-types 0.1.0-alpha.80 (32 s)
+[26:08] baracuda-kernels-types 0.1.0-alpha.80: read back, visible
+[26:09] uploading baracuda-nccl-sys 0.1.0-alpha.80
+[26:19] upload returned baracuda-nccl-sys 0.1.0-alpha.80 (10 s)
+[26:20] baracuda-nccl-sys 0.1.0-alpha.80: read back, visible
+[26:20] uploading baracuda-nccl 0.1.0-alpha.80
+[26:40] upload returned baracuda-nccl 0.1.0-alpha.80 (19 s)
+[26:40] baracuda-nccl 0.1.0-alpha.80: read back, visible
+[26:40] uploading baracuda-megatron 0.1.0-alpha.80
+[26:50] upload returned baracuda-megatron 0.1.0-alpha.80 (9 s)
+[26:50] baracuda-megatron 0.1.0-alpha.80: read back, visible
+[26:50] uploading baracuda-npp-sys 0.1.0-alpha.80
+[27:01] upload returned baracuda-npp-sys 0.1.0-alpha.80 (10 s)
+[27:01] baracuda-npp-sys 0.1.0-alpha.80: read back, visible
+[27:01] uploading baracuda-npp 0.1.0-alpha.80
+[27:13] upload returned baracuda-npp 0.1.0-alpha.80 (12 s)
+[27:13] baracuda-npp 0.1.0-alpha.80: read back, visible
+[27:13] uploading baracuda-nvcomp-sys 0.1.0-alpha.80
+[27:22] upload returned baracuda-nvcomp-sys 0.1.0-alpha.80 (8 s)
+[27:22] baracuda-nvcomp-sys 0.1.0-alpha.80: read back, visible
+[27:23] uploading baracuda-nvcomp 0.1.0-alpha.80
+[27:36] upload returned baracuda-nvcomp 0.1.0-alpha.80 (13 s)
+[27:36] baracuda-nvcomp 0.1.0-alpha.80: read back, visible
+[27:36] uploading baracuda-nvimagecodec-sys 0.1.0-alpha.80
+[27:46] upload returned baracuda-nvimagecodec-sys 0.1.0-alpha.80 (10 s)
+[27:46] waiting: 17s
+[28:03] uploading baracuda-nvimagecodec-sys 0.1.0-alpha.80
+[28:10] upload returned baracuda-nvimagecodec-sys 0.1.0-alpha.80 (6 s)
+[28:10] baracuda-nvimagecodec-sys 0.1.0-alpha.80: read back, visible
+[28:10] uploading baracuda-nvimagecodec 0.1.0-alpha.80
+[28:18] upload returned baracuda-nvimagecodec 0.1.0-alpha.80 (7 s)
+[28:18] waiting: 46s
+[29:04] uploading baracuda-nvimagecodec 0.1.0-alpha.80
+[29:13] upload returned baracuda-nvimagecodec 0.1.0-alpha.80 (9 s)
+[29:14] baracuda-nvimagecodec 0.1.0-alpha.80: read back, visible
+[29:14] uploading baracuda-nvjitlink-sys 0.1.0-alpha.80
+[29:27] upload returned baracuda-nvjitlink-sys 0.1.0-alpha.80 (13 s)
+[29:27] waiting: 36s
+[30:03] uploading baracuda-nvjitlink-sys 0.1.0-alpha.80
+[30:12] upload returned baracuda-nvjitlink-sys 0.1.0-alpha.80 (8 s)
+[30:12] baracuda-nvjitlink-sys 0.1.0-alpha.80: read back, visible
+[30:12] uploading baracuda-nvjitlink 0.1.0-alpha.80
+[30:18] upload returned baracuda-nvjitlink 0.1.0-alpha.80 (6 s)
+[30:18] waiting: 45s
+[31:03] uploading baracuda-nvjitlink 0.1.0-alpha.80
+[31:15] upload returned baracuda-nvjitlink 0.1.0-alpha.80 (11 s)
+[31:16] baracuda-nvjitlink 0.1.0-alpha.80: read back, visible
+[31:16] uploading baracuda-nvjpeg-sys 0.1.0-alpha.80
+[31:24] upload returned baracuda-nvjpeg-sys 0.1.0-alpha.80 (8 s)
+[31:24] waiting: 39s
+[32:03] uploading baracuda-nvjpeg-sys 0.1.0-alpha.80
+[32:54] upload returned baracuda-nvjpeg-sys 0.1.0-alpha.80 (50 s)
+[32:54] baracuda-nvjpeg-sys 0.1.0-alpha.80: read back, visible
+[32:55] uploading baracuda-nvjpeg 0.1.0-alpha.80
+[33:48] upload returned baracuda-nvjpeg 0.1.0-alpha.80 (53 s)
+[33:49] baracuda-nvjpeg 0.1.0-alpha.80: read back, visible
+[33:49] uploading baracuda-nvml-sys 0.1.0-alpha.80
+[34:43] upload returned baracuda-nvml-sys 0.1.0-alpha.80 (53 s)
+[34:43] baracuda-nvml-sys 0.1.0-alpha.80: read back, visible
+[34:43] uploading baracuda-nvml 0.1.0-alpha.80
+[35:34] upload returned baracuda-nvml 0.1.0-alpha.80 (50 s)
+[35:34] baracuda-nvml 0.1.0-alpha.80: read back, visible
+[35:34] uploading baracuda-nvrtc-sys 0.1.0-alpha.80
+[36:14] upload returned baracuda-nvrtc-sys 0.1.0-alpha.80 (40 s)
+[36:15] baracuda-nvrtc-sys 0.1.0-alpha.80: read back, visible
+[36:15] uploading baracuda-nvrtc 0.1.0-alpha.80
+[36:57] upload returned baracuda-nvrtc 0.1.0-alpha.80 (41 s)
+[36:57] waiting: 6s
+[37:03] uploading baracuda-nvrtc 0.1.0-alpha.80
+[37:33] upload returned baracuda-nvrtc 0.1.0-alpha.80 (29 s)
+[37:33] baracuda-nvrtc 0.1.0-alpha.80: read back, visible
+[37:33] uploading baracuda-cuda-emit 0.40.0
+[38:13] upload returned baracuda-cuda-emit 0.40.0 (40 s)
+[38:14] baracuda-cuda-emit 0.40.0: read back, visible
+[38:14] uploading baracuda-cuda-seam 0.1.0-alpha.80
+[38:25] upload returned baracuda-cuda-seam 0.1.0-alpha.80 (11 s)
+[38:25] waiting: 39s
+[39:04] uploading baracuda-cuda-seam 0.1.0-alpha.80
+[39:12] upload returned baracuda-cuda-seam 0.1.0-alpha.80 (8 s)
+[39:13] baracuda-cuda-seam 0.1.0-alpha.80: read back, visible
+[39:13] uploading baracuda-nvshmem-sys 0.1.0-alpha.80
+[39:20] upload returned baracuda-nvshmem-sys 0.1.0-alpha.80 (7 s)
+[39:20] waiting: 43s
+[40:03] uploading baracuda-nvshmem-sys 0.1.0-alpha.80
+[40:24] upload returned baracuda-nvshmem-sys 0.1.0-alpha.80 (20 s)
+[40:24] baracuda-nvshmem-sys 0.1.0-alpha.80: read back, visible
+[40:25] uploading baracuda-nvshmem 0.1.0-alpha.80
+[40:33] upload returned baracuda-nvshmem 0.1.0-alpha.80 (8 s)
+[40:33] waiting: 30s
+[41:03] uploading baracuda-nvshmem 0.1.0-alpha.80
+[41:11] upload returned baracuda-nvshmem 0.1.0-alpha.80 (7 s)
+[41:11] baracuda-nvshmem 0.1.0-alpha.80: read back, visible
+[41:11] uploading baracuda-optim 0.1.0-alpha.80
+[41:42] upload returned baracuda-optim 0.1.0-alpha.80 (30 s)
+[41:42] waiting: 21s
+[42:03] uploading baracuda-optim 0.1.0-alpha.80
+[42:12] upload returned baracuda-optim 0.1.0-alpha.80 (8 s)
+[42:12] baracuda-optim 0.1.0-alpha.80: read back, visible
+[42:13] uploading baracuda-ozimmu-sys 0.1.0-alpha.80
+[42:27] upload returned baracuda-ozimmu-sys 0.1.0-alpha.80 (14 s)
+[42:27] waiting: 36s
+[43:03] uploading baracuda-ozimmu-sys 0.1.0-alpha.80
+[43:13] upload returned baracuda-ozimmu-sys 0.1.0-alpha.80 (9 s)
+[43:13] baracuda-ozimmu-sys 0.1.0-alpha.80: read back, visible
+[43:14] uploading baracuda-ozimmu 0.1.0-alpha.80
+[43:29] upload returned baracuda-ozimmu 0.1.0-alpha.80 (15 s)
+[43:29] waiting: 34s
+[44:03] uploading baracuda-ozimmu 0.1.0-alpha.80
+[44:10] upload returned baracuda-ozimmu 0.1.0-alpha.80 (7 s)
+[44:10] baracuda-ozimmu 0.1.0-alpha.80: read back, visible
+[44:11] uploading baracuda-cutlass 0.1.0-alpha.80
+[44:36] upload returned baracuda-cutlass 0.1.0-alpha.80 (25 s)
+[44:36] waiting: 27s
+[45:03] uploading baracuda-cutlass 0.1.0-alpha.80
+[45:22] upload returned baracuda-cutlass 0.1.0-alpha.80 (18 s)
+[45:22] baracuda-cutlass 0.1.0-alpha.80: read back, visible
+[45:23] uploading baracuda-runtime 0.1.0-alpha.80
+[45:37] upload returned baracuda-runtime 0.1.0-alpha.80 (13 s)
+[45:37] waiting: 27s
+[46:04] uploading baracuda-runtime 0.1.0-alpha.80
+[46:12] upload returned baracuda-runtime 0.1.0-alpha.80 (8 s)
+[46:12] baracuda-runtime 0.1.0-alpha.80: read back, visible
+[46:12] uploading baracuda-tensorrt-sys 0.1.0-alpha.80
+[46:24] upload returned baracuda-tensorrt-sys 0.1.0-alpha.80 (11 s)
+[46:24] waiting: 39s
+[47:03] uploading baracuda-tensorrt-sys 0.1.0-alpha.80
+[47:12] upload returned baracuda-tensorrt-sys 0.1.0-alpha.80 (9 s)
+[47:13] baracuda-tensorrt-sys 0.1.0-alpha.80: read back, visible
+[47:13] uploading baracuda-tensorrt 0.1.0-alpha.80
+[47:26] upload returned baracuda-tensorrt 0.1.0-alpha.80 (12 s)
+[47:26] waiting: 38s
+[48:04] uploading baracuda-tensorrt 0.1.0-alpha.80
+[48:16] upload returned baracuda-tensorrt 0.1.0-alpha.80 (11 s)
+[48:16] baracuda-tensorrt 0.1.0-alpha.80: read back, visible
+[48:17] uploading baracuda 0.1.0-alpha.80
+[48:33] upload returned baracuda 0.1.0-alpha.80 (16 s)
+[48:33] waiting: 30s
+[49:03] uploading baracuda 0.1.0-alpha.80
+[49:18] upload returned baracuda 0.1.0-alpha.80 (14 s)
+[49:18] baracuda 0.1.0-alpha.80: read back, visible
+[49:19] uploading baracuda-tensorrt-builder 0.1.0-alpha.80
+[49:31] upload returned baracuda-tensorrt-builder 0.1.0-alpha.80 (12 s)
+[49:31] baracuda-tensorrt-builder 0.1.0-alpha.80: read back, visible
+[49:31] uploading baracuda-transformer-engine-sys 0.1.0-alpha.80
+[49:48] upload returned baracuda-transformer-engine-sys 0.1.0-alpha.80 (16 s)
+[49:48] waiting: 15s
+[50:03] uploading baracuda-transformer-engine-sys 0.1.0-alpha.80
+[50:12] upload returned baracuda-transformer-engine-sys 0.1.0-alpha.80 (8 s)
+[50:12] baracuda-transformer-engine-sys 0.1.0-alpha.80: read back, visible
+[50:13] uploading baracuda-transformer-engine 0.1.0-alpha.80
+[50:24] upload returned baracuda-transformer-engine 0.1.0-alpha.80 (11 s)
+[50:24] waiting: 39s
+[51:03] uploading baracuda-transformer-engine 0.1.0-alpha.80
+[51:13] upload returned baracuda-transformer-engine 0.1.0-alpha.80 (9 s)
+[51:13] baracuda-transformer-engine 0.1.0-alpha.80: read back, visible
+[51:13] uploading baracuda-kernels 0.1.0-alpha.80
+[52:03] upload returned baracuda-kernels 0.1.0-alpha.80 (49 s)
+[52:03] baracuda-kernels 0.1.0-alpha.80: read back, visible
+[52:04] uploading baracuda-flashinfer 0.1.0-alpha.80
+[52:38] upload returned baracuda-flashinfer 0.1.0-alpha.80 (34 s)
+[52:38] waiting: 26s
+[69:34] uploading baracuda-flashinfer 0.1.0-alpha.80
+[69:45] upload returned baracuda-flashinfer 0.1.0-alpha.80 (10 s)
+[69:46] baracuda-flashinfer 0.1.0-alpha.80: read back, visible
+[69:46] run finished: complete
+the registry shows every crate after 1 run(s)
+baracuda-build: published and read back
+baracuda-cuda-parse: published and read back
+baracuda-cuda-vocab: published and read back
+baracuda-cutlass-sys: published and read back
+baracuda-forge: published and read back
+baracuda-cutlass-kernels-sys: published and read back
+baracuda-kernels-sys: published and read back
+baracuda-flashinfer-sys: published and read back
+baracuda-seam: published and read back
+baracuda-types-derive: published and read back
+baracuda-types: published and read back
+baracuda-core: published and read back
+baracuda-cuda-sys: published and read back
+baracuda-cublas-sys: published and read back
+baracuda-cudf-sys: published and read back
+baracuda-cudnn-sys: published and read back
+baracuda-cufft-sys: published and read back
+baracuda-cufile-sys: published and read back
+baracuda-cupti-sys: published and read back
+baracuda-curand-sys: published and read back
+baracuda-cusolver-sys: published and read back
+baracuda-cusparse-sys: published and read back
+baracuda-cutensor-sys: published and read back
+baracuda-cuvs-sys: published and read back
+baracuda-cvcuda-sys: published and read back
+baracuda-driver: published and read back
+baracuda-cublas: published and read back
+baracuda-cudf: published and read back
+baracuda-cudnn: published and read back
+baracuda-cufft: published and read back
+baracuda-cufile: published and read back
+baracuda-cupti: published and read back
+baracuda-curand: published and read back
+baracuda-cusolver: published and read back
+baracuda-cusparse: published and read back
+baracuda-cutensor: published and read back
+baracuda-cuvs: published and read back
+baracuda-cvcuda: published and read back
+baracuda-kernels-types: published and read back
+baracuda-nccl-sys: published and read back
+baracuda-nccl: published and read back
+baracuda-megatron: published and read back
+baracuda-npp-sys: published and read back
+baracuda-npp: published and read back
+baracuda-nvcomp-sys: published and read back
+baracuda-nvcomp: published and read back
+baracuda-nvimagecodec-sys: published and read back
+baracuda-nvimagecodec: published and read back
+baracuda-nvjitlink-sys: published and read back
+baracuda-nvjitlink: published and read back
+baracuda-nvjpeg-sys: published and read back
+baracuda-nvjpeg: published and read back
+baracuda-nvml-sys: published and read back
+baracuda-nvml: published and read back
+baracuda-nvrtc-sys: published and read back
+baracuda-nvrtc: published and read back
+baracuda-cuda-emit: published and read back
+baracuda-cuda-seam: published and read back
+baracuda-nvshmem-sys: published and read back
+baracuda-nvshmem: published and read back
+baracuda-optim: published and read back
+baracuda-ozimmu-sys: published and read back
+baracuda-ozimmu: published and read back
+baracuda-cutlass: published and read back
+baracuda-runtime: published and read back
+baracuda-tensorrt-sys: published and read back
+baracuda-tensorrt: published and read back
+baracuda: published and read back
+baracuda-tensorrt-builder: published and read back
+baracuda-transformer-engine-sys: published and read back
+baracuda-transformer-engine: published and read back
+baracuda-kernels: published and read back
+baracuda-flashinfer: published and read back
+ledger: C:/Projects/.lane-state/baracuda-pub/ledger.jsonl
