@@ -12,7 +12,7 @@ use sha2::{Digest, Sha256};
 use crate::cargo::Cargo;
 use crate::classify::{Class, classify};
 use crate::clock::now_unix;
-use crate::registry::{Lookup, Registry, Upload};
+use crate::registry::{Lookup, Registry, Upload, VersionInfo};
 
 /// The public sparse index.
 pub const INDEX_URL: &str = "https://index.crates.io";
@@ -37,6 +37,31 @@ struct Entry {
     cksum: String,
     #[serde(default)]
     yanked: bool,
+    #[serde(default)]
+    rust_version: Option<String>,
+}
+
+/// Every version in an index file body with its yanked flag and declared `rust-version`.
+///
+/// # Errors
+/// A line that is not JSON in the index shape, or a version that is not semver.
+pub fn parse_version_infos(body: &str) -> Result<Vec<VersionInfo>, String> {
+    body.lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|line| {
+            let e: Entry =
+                serde_json::from_str(line).map_err(|e| format!("bad index line: {e}"))?;
+            let version = e
+                .vers
+                .parse()
+                .map_err(|err| format!("bad version {:?}: {err}", e.vers))?;
+            Ok(VersionInfo {
+                version,
+                yanked: e.yanked,
+                rust_version: e.rust_version,
+            })
+        })
+        .collect()
 }
 
 /// Find `version` in an index file body.
@@ -111,6 +136,18 @@ impl Index {
     /// # Errors
     /// Transport errors, unexpected statuses and unparseable bodies, as text.
     pub fn versions(&self, name: &str) -> Result<Vec<(Version, bool)>, String> {
+        Ok(self
+            .version_infos(name)?
+            .into_iter()
+            .map(|i| (i.version, i.yanked))
+            .collect())
+    }
+
+    /// All versions of `name` with their declared `rust-version`; a 404 is an empty list.
+    ///
+    /// # Errors
+    /// As [`Self::versions`].
+    pub fn version_infos(&self, name: &str) -> Result<Vec<VersionInfo>, String> {
         let url = format!("{}/{}", self.base, index_path(name));
         let mut resp = self
             .agent
@@ -124,7 +161,7 @@ impl Index {
                     .body_mut()
                     .read_to_string()
                     .map_err(|e| format!("reading {url}: {e}"))?;
-                parse_versions(&body)
+                parse_version_infos(&body)
             }
             404 => Ok(Vec::new()),
             s => Err(format!("GET {url}: HTTP {s}")),
@@ -255,6 +292,10 @@ impl Registry for CratesIo {
 
     fn versions(&mut self, name: &str) -> Result<Vec<(Version, bool)>, String> {
         self.index.versions(name)
+    }
+
+    fn version_infos(&mut self, name: &str) -> Result<Vec<VersionInfo>, String> {
+        self.index.version_infos(name)
     }
 
     fn take_phase_marks(&mut self) -> Vec<(f64, String)> {

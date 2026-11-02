@@ -16,6 +16,7 @@ use crate::config::{self, Config, ConfigError};
 use crate::externals::{ExternalsError, MissingExternal, missing_externals};
 use crate::ledger::{Event, EventKind, Ledger, LedgerError};
 use crate::metadata::Metadata;
+use crate::msrv::{Finding, MsrvError, Severity, check_rust_versions};
 use crate::plan::{Plan, PlanError, plan};
 use crate::preflight::{self, Problem};
 use crate::progress::{ProgressSink, observer};
@@ -70,6 +71,10 @@ pub enum PipelineError {
     Metadata(Vec<Problem>),
     /// The commit's `releaseant.toml` cannot be used; nothing was uploaded.
     Config(ConfigError),
+    /// `--check-rust-version` could not finish (the registry was unreachable); nothing was uploaded.
+    Msrv(MsrvError),
+    /// Crates whose `rust-version` is older than a dependency needs; nothing was uploaded.
+    RustVersion(Vec<Finding>),
 }
 
 impl fmt::Display for PipelineError {
@@ -108,6 +113,21 @@ impl fmt::Display for PipelineError {
             }
             Self::Externals(e) => write!(f, "{e}"),
             Self::Config(e) => write!(f, "{e}"),
+            Self::Msrv(e) => write!(f, "{e}"),
+            Self::RustVersion(v) => {
+                write!(
+                    f,
+                    "a dependency needs a newer Rust than a crate declares; nothing was uploaded:"
+                )?;
+                for x in v {
+                    write!(
+                        f,
+                        "
+  {x}"
+                    )?;
+                }
+                Ok(())
+            }
             Self::Metadata(v) => {
                 write!(
                     f,
@@ -147,7 +167,7 @@ macro_rules! from_err {
 }
 from_err!(SourceError => Source, CargoError => Cargo, PlanError => Plan, RunError => Run,
           LedgerError => Ledger, io::Error => Io, ExternalsError => Externals,
-          ConfigError => Config);
+          ConfigError => Config, MsrvError => Msrv);
 
 /// A commit archived and planned.
 #[derive(Debug)]
@@ -358,6 +378,9 @@ pub struct PublishArgs<'a> {
     /// repeat the whole verification). The ledger records each carried crate as `verified` with
     /// the run and time it is carried from. `None` verifies every crate every time.
     pub reuse_verified: Option<Duration>,
+    /// Refuse before any upload a crate whose `rust-version` is older than a dependency needs (see
+    /// [`crate::msrv`]). Notes are shown through `on_progress` and do not refuse.
+    pub check_rust_version: bool,
 }
 
 /// What a publish did.
@@ -485,6 +508,21 @@ pub fn publish(
     let missing = missing_externals(&prepared.meta, &prepared.plan, registry.as_mut())?;
     if !missing.is_empty() {
         return Err(PipelineError::MissingExternals(missing));
+    }
+    if args.check_rust_version {
+        let found = check_rust_versions(&prepared.meta, &prepared.plan, registry.as_mut())?;
+        if let Some(sink) = &args.on_progress {
+            for x in found.iter().filter(|x| x.severity == Severity::Note) {
+                sink(&x.to_string());
+            }
+        }
+        let errors: Vec<Finding> = found
+            .into_iter()
+            .filter(|x| x.severity == Severity::Error)
+            .collect();
+        if !errors.is_empty() {
+            return Err(PipelineError::RustVersion(errors));
+        }
     }
     let mut ledger = Ledger::open(args.ledger)?;
     if let Some(sink) = &args.on_progress {
@@ -808,6 +846,7 @@ mod tests {
             on_warnings: None,
             on_progress: None,
             reuse_verified: None,
+            check_rust_version: false,
         }
     }
 
@@ -1183,6 +1222,65 @@ zzrl-not-yet-published = \"0.23.0\"",
             ),
             other => panic!("expected Metadata, got {other}"),
         }
+    }
+
+    /// A dry run of `repo` with `--check-rust-version` set or not.
+    fn publish_msrv(
+        repo: &Path,
+        sha: &str,
+        tmp: &Path,
+        check: bool,
+    ) -> Result<Summary, PipelineError> {
+        let ledger = tmp.join("l.jsonl");
+        let work = tmp.join("w");
+        let mut a = args(repo, sha, &ledger, &work, Mode::DryRun, vec![]);
+        a.check_rust_version = check;
+        publish(
+            &Cargo::from_env(),
+            &a,
+            |_, _| Box::new(FakeRegistry::new()),
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        )
+    }
+
+    // `b` (rust-version 1.70) depends on `a`; here `a` declares 1.85. With the flag the run stops before
+    // the ledger is opened; without it, and with versions that agree, it goes on (the controls).
+    #[test]
+    fn check_rust_version_refuses_a_set_member_that_needs_a_newer_rust() {
+        let p = pid();
+        let (bad, bad_sha) = repo_with(&p, false, |name, m| {
+            if name.ends_with("-a") {
+                m.replace("rust-version = \"1.70\"", "rust-version = \"1.85\"")
+            } else {
+                m
+            }
+        });
+        let tmp = tempfile::tempdir().unwrap();
+        let err = publish_msrv(bad.path(), &bad_sha, tmp.path(), true).unwrap_err();
+        match &err {
+            PipelineError::RustVersion(v) => {
+                assert_eq!(v.len(), 1, "{err}");
+                assert_eq!(v[0].dependent, format!("{p}-b"));
+                assert_eq!(v[0].dependency, format!("{p}-a"));
+            }
+            other => panic!("expected RustVersion, got {other}"),
+        }
+        assert!(
+            !tmp.path().join("l.jsonl").exists(),
+            "nothing written before the check passes"
+        );
+
+        let tmp2 = tempfile::tempdir().unwrap();
+        assert!(
+            publish_msrv(bad.path(), &bad_sha, tmp2.path(), false).is_ok(),
+            "off by default"
+        );
+
+        let (good, good_sha) = repo(&p, false);
+        let tmp3 = tempfile::tempdir().unwrap();
+        let ok = publish_msrv(good.path(), &good_sha, tmp3.path(), true);
+        assert!(ok.is_ok(), "versions that agree pass: {:?}", ok.err());
     }
 
     // A `releaseant.toml` at the root of the commit makes chosen warnings errors, and the command line's

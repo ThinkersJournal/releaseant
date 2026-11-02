@@ -278,6 +278,7 @@ mod tests {
             req: req.into(),
             kind: kind.map(Into::into),
             optional: false,
+            target: None,
         }
     }
 
