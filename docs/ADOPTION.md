@@ -152,6 +152,9 @@ For a lane or the PM running `releaseant` instead of a hand-written loop. Each l
      --max-wait 21600 --retries 5 --retry-pause 120
    ```
 
+   **For baracuda, `export DOCS_RS=1` in the shell first** (as `bk2-pub.py` does): without it `nvcc` compiles the CUDA
+   crates during verification. Seen 2026-11-02: a baracuda publish started without it was aborted by the PM
+   (`C:\Projects\.lane-state\baracuda-pub\*.aborted-nvcc.*`); with it the 73-crate verify took 8.5 minutes.
    `--sha` must be the tip of origin's default branch (a real upload refuses anything else; `--allow-not-tip` is the
    override). `--require-green` is checked first and exits 3 on a red commit, 4 if CI gave no answer in time.
 4. **Rate limits (HTTP 429) are waited out inside a run**, not by `--retries`: the time cargo prints ("try again after
