@@ -133,6 +133,46 @@ releaseant publish --repo C:/Projects/<name> --sha <full sha> --execute --tag --
 `--require-green` is checked first (before anything is built); `--retries` needs `--execute`. Not done here, and not
 in the repository's scope: Fuel and baracuda (held, board 307), and rewriting the PM's scripts into one-line wrappers.
 
+## Notes for callers: a real multi-crate publish, step by step (0.0.51)
+
+For a lane or the PM running `releaseant` instead of a hand-written loop. Each line says what it rests on.
+
+1. **`releaseant plan --repo R --sha S --check-externals` first.** It costs seconds and exits 1 on a dependency outside
+   the set that the registry cannot satisfy. Measured 2026-11-02: it reported Fuel's yanked
+   `baracuda-kernels-sys ^0.0.1-alpha.158` at once, where `verify` spent 2 minutes failing 43 crates (and would have
+   cost 105 minutes on a set that got further). `docs/R5-LIVE.md`.
+2. **Publish in dependency order across repositories.** The tool orders crates inside one repository only. A repository
+   whose crates need another repository's new version (Fuel needs baracuda's `baracuda-kernels-sys`) waits until that
+   version is on the registry and the pin in its `Cargo.toml` has moved; `plan --check-externals` is the test.
+3. **The command:**
+
+   ```bash
+   releaseant publish --repo C:/Projects/<name> --sha <full sha> --execute --tag --tag-name <name> \
+     --require-green --github ThinkersJournal/<name> \
+     --max-wait 21600 --retries 5 --retry-pause 120
+   ```
+
+   `--sha` must be the tip of origin's default branch (a real upload refuses anything else; `--allow-not-tip` is the
+   override). `--require-green` is checked first and exits 3 on a red commit, 4 if CI gave no answer in time.
+4. **Rate limits (HTTP 429) are waited out inside a run**, not by `--retries`: the time cargo prints ("try again after
+   <date>") plus 5 seconds, taken from the run's `--max-wait` budget, which is **per run and 3600 s by default**. A
+   run that runs out of budget stops resumable, naming the crate. 21600 (6 h) is generous; the real rate of
+   crates.io's new-version limit is **not measured** (R4's six uploads never met one), so no number here is a
+   promise.
+5. **A stop or failure is resumed, not restarted.** `--retries N` runs `publish` again up to N more times, and the
+   loop ends only when the index, asked afresh, lists every crate of the run's plan at its version and not yanked
+   (exit 0), or at a held version or checksum mismatch (stops at once, exit 1, needs a person), or when the attempts
+   run out (exit 1). The same command run by hand later resumes the same way: the ledger knows what was uploaded.
+6. **A resume does not repeat the verification** (0.0.51): a crate the ledger shows as `verified` at the same commit
+   and version in the last 12 hours (`--reuse-verified-hours N`, 0 = always rebuild) is recorded as `carried over,
+   not built again: run <id> at <time>`. The first run at a commit always builds every crate, and that is the long
+   pole (Fuel at 0.35.2: 105 of 226 minutes before the first upload).
+7. **Exit statuses:** 0 done (and tagged, with `--tag`); 1 the run ran and something is not published (look at the
+   per-crate lines and the ledger); 2 an error before or around the run; 3 CI red; 4 CI gave no answer.
+8. **Read the ledger, not the log.** `.releaseant/ledger.jsonl` (or `--ledger FILE`): `phase` events say where the
+   time went, `waiting` events the rate-limit waits, `verified` events with `carried over` the saved builds.
+   Copy it somewhere durable if the machine is not.
+
 ## Open items and risks
 
 1. **Publish metadata is checked before upload (0.0.16, ROADMAP R6), split by who refuses (PM, 2026-10-29).**
@@ -154,8 +194,9 @@ in the repository's scope: Fuel and baracuda (held, board 307), and rewriting th
    Publishing (`PORTFOLIO-ROADMAP.md` C3) would run it in CI and need the ledger somewhere durable. Not designed.
 3. **Name collisions** (fuel's `fuel-core`, `fuel-compression`) are found only at upload. `plan --check-names` is in
    the design and not built.
-4. **A kill between upload and read-back, a lagging index, and the "new crates" 429 wording** have not been seen
-   against the real registry; they are covered by fake-registry tests only.
+4. **A kill between upload and read-back, a lagging index, a real transient failure and the "new crates" 429 wording**
+   have not been seen against the real registry; they are covered by fake-registry tests only. A retry after an
+   injected `cargo publish` failure was run live (2026-11-02, `docs/R5-LIVE.md`).
 5. **Windows only for real runs.** The rehearsal and every real read here were on this machine; CI runs the tests
    on Linux and macOS too. A real tag push from a lane uses the repository's own git identity and credentials.
 6. **`--no-verify` is not gone, it is explicit.** A set whose crates all need `--no-verify-crate` is no safer
