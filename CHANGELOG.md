@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.56
+
+- `--require-checks A,B`: `--require-green` judges only the named checks and fails closed (a named check that is absent or unfinished is exit 4, one that failed is exit 3, every other run is ignored). Without names it judges the checks that branch protection of `--protection-branch` (default `main`) requires, read from the forge; if that requires none or cannot be read, every run on the commit is judged as before, and a line printed first says which rule ran. Names are job names, not workflow names. Why: two queued self-hosted runs that gate nothing held Fuel's release up (`docs/R5-LIVE.md` section 4e).
+
 ## 0.0.55
 
 - Docs: `docs/R5-LIVE.md` section 4 reads the real Fuel 0.36.4 publish (43 crates, one run, 46 min 24 s) from its ledger: no 429 at all (43 accepts in 29.5 min), builds are 89.8 % of the run, `fuel-datasets` dominates both build passes, and why `--require-green` was unusable there (two queued self-hosted runs outside the required checks), with the options. The ledger and transcripts are kept under `docs/rehearsal/`. No code change.
