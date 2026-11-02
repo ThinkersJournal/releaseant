@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.51
+
+- New `publish` flag `--reuse-verified-hours N` (default 12; 0 = off). A crate the ledger shows as `verified` at the same commit and version no more than N hours ago is not built again, so a resume after a rate-limit stop, or each `--retries` run, no longer repeats the whole verification (105 minutes for Fuel's 43 crates at 0.35.2). The ledger records the crate as `verified` with `carried over, not built again: run <id> at <time>`, and the progress line says how many were carried over. The first run at a commit still builds everything. Additive.
+- Measured (dry runs, no writes): `plan` and `verify` on baracuda `87957c57` (73 crates, 73 of 73 verified in 8.5 minutes) and fuel `3f6ec6a4` (43 crates); see `docs/R5-LIVE.md`.
+
 ## 0.0.50
 
 - Measured live (`docs/R5-LIVE.md`): `--require-green` against the real forge exits 3 on a commit whose CI failed, 4 on a commit with no runs, and a green commit passes the guard. `--retries` against crates.io on the three rehearsal crates: confirmed after 1 run (0.0.2, no lag seen), and after 2 runs when the first `cargo publish` was made to fail (0.0.3, failure injected at the cargo boundary; a real transient failure and a lagging index remain unmeasured). First real `phase` ledger events recorded.
