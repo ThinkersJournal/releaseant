@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.58
+
+- `plan --check-rust-version` and `publish --check-rust-version` (off by default): a crate that declares a `rust-version` is refused (`RUST-VERSION`, exit 4, before the ledger opens or anything builds) when no live version of a dependency that satisfies the requirement fits it, judged from the `rust_version` the index records per version, or when a crate of the same set declares a newer one. The newest match being too new while an older one fits, and target-limited dependencies, are notes. Dev and optional dependencies are skipped. A registry that cannot be asked is an error, never a pass. New `Registry::version_infos`.
+
 ## 0.0.56
 
 - `--require-checks A,B`: `--require-green` judges only the named checks and fails closed (a named check that is absent or unfinished is exit 4, one that failed is exit 3, every other run is ignored). Without names it judges the checks that branch protection of `--protection-branch` (default `main`) requires, read from the forge; if that requires none or cannot be read, every run on the commit is judged as before, and a line printed first says which rule ran. Names are job names, not workflow names. Why: two queued self-hosted runs that gate nothing held Fuel's release up (`docs/R5-LIVE.md` section 4e).
