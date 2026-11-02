@@ -214,4 +214,120 @@ a code change: a run of an hour or more needs a machine that cannot sleep or run
 - A kill between upload and read-back (this run was not killed).
 - A lagging index: cargo's own wait for availability took at most 7.8 s here and every crate was `visible` at once, but
   the ledger has no event for read-back retries, so a short lag would not show.
-- A real transient network failure; Fuel's run.
+- A real transient network failure; Fuel's run (section 4) had none either.
+
+## 4. The real Fuel publish (2026-11-02), read from its ledger
+
+Source: `docs/rehearsal/fuel-2026-11-02-ledger.jsonl`, `...-out.txt` and `...-out.waiting-ci.txt`, copied unedited (checked
+byte-identical with `cmp`) from `C:/Projects/.lane-state/fuel-pub/` (run by the PM). Run
+`9dc33d61-1793593061-21540-0`, commit `9dc33d611d5380210b429de5c63e41b03524439c`, 43 crates at `0.36.4`, **one run,
+finished `complete`, 46 min 24 s** (2784 s) by the transcript's clock. Flags as the PM gave them: `--retries 8
+--retry-pause 90 --max-wait 21600 --reuse-verified-hours 12`, `DOCS_RS=1`, releaseant 0.0.53 (not readable from the
+ledger). 563 ledger rows: 389 `phase`, 43 each of `verified`, `upload_started`, `upload_finished` and `visible`, one
+`planned`, one `finished`; **no `waiting` row and no `classified` row**. All numbers are computed from those rows; the
+scripts are not committed.
+
+### 4a. Was there a 429? No
+
+All 43 `upload_finished` rows are `Accepted`. The run met no rate limit, so no attempt was repeated and the largest gap
+between one crate finishing and the next starting was 1 s. The 43 accepts took 29.5 min (first 04:34:38Z, last
+05:04:07Z): the registry never set the pace here.
+
+- All 43 were new versions of crates already on crates.io (each crate has earlier versions in the crates.io API). I did
+  not check whether baracuda's were the same kind.
+- Fuel's fastest 30 consecutive accepts took 972 s (16.2 min); overall 1.46 accepts a minute. Baracuda took 46 in
+  16.75 min before its first 429 (section 3b), so Fuel never went as fast.
+- Replaying the 43 accept times through the bucket reading of 3b (30 tokens, one back a minute) leaves at least 13.6
+  tokens at every point. That is **consistent with no 429, and it is not a test of that reading**: 43 slower uploads
+  cannot tell it from other rules. No crates.io rate is quoted here as documented.
+- Independent check: crates.io's own `created_at` for `0.36.4` of each of the 43 crates is within -3 to +2 s of the
+  ledger's `upload_finished` time (43 of 43), two clocks that do not share a method.
+
+### 4b. Where the 46 min 24 s went
+
+| part | seconds | share of the run | what it is |
+|---|---|---|---|
+| before the first upload | 1007 (16:47) | 36.2 % | `cargo package` of the set 49.0 s + releaseant's `cargo check` of the 43 tarballs 936.2 s (the ledger's `verify all` says 939.7) + about 22 s other |
+| the upload phase | 1778 | 63.9 % | first `upload_started` to the last `upload_finished`, split next |
+
+The upload phase, 1778 s, adds up exactly:
+
+| part of the upload phase | seconds | share | detail |
+|---|---|---|---|
+| cargo's own verification build | 1514.9 | 85.2 % | inside `cargo publish`, from `Verifying` to `Finished` |
+| cargo's packaging | 74.1 | 4.2 % | `Packaging` to `Verifying` |
+| the upload and the wait for availability | 101.6 | 5.7 % | `Uploading` to `Published`: median 2.3 s a crate, max 4.5 |
+| other inside cargo | 68.4 | 3.8 % | |
+| gaps between crates | 19 | 1.1 % | |
+
+**Builds are 2500 s, 41.7 min, 89.8 % of the run** (package 49 + releaseant's check 936 + cargo's verify 1515); the
+registry's own work, the upload and its availability, is 101.6 s, 3.6 %. Baracuda's builds were 45 % of its run
+because its rate limit and a suspend took the rest (3c); with neither, Fuel's time is nearly all compiling. No
+attempt was repeated, so there is no rebuilt-after-429 cost here and R8 option A would have saved nothing on this run.
+`--reuse-verified-hours 12` did not engage: all 43 `verified` rows are fresh (there was no earlier ledger).
+
+Per crate (43 accepted attempts, seconds): wall start to finish median 24, p90 108, max 153; releaseant's pre-upload
+`cargo check` median 11.0, max 238.1.
+
+### 4c. Which crates dominated
+
+- Upload wall time: `fuel-examples` 153, `fuel-datasets` 139, `fuel-tensor` 138, `fuel-lazy-examples` 134,
+  `fuel-tensor-tools` 108. Those five are 672 s, 38.2 % of the 1759 s of attempts.
+- Pre-upload `cargo check`: `fuel-datasets` 238.1 s (25.4 % of the 936.2 s), `fuel-examples` 84.5,
+  `fuel-vulkan-backend` 51.3, `fuel-tensor` 51.1, `fuel-lazy-examples` 41.2. The first two are 34.5 %.
+- `fuel-datasets` is the largest in both passes: 238.1 + 139 = 377 s, 13.5 % of the whole run. The ledger does not say
+  why it is slow, and this section does not guess.
+- `fuel-cuda-backend`, the crate that took 88.8 of 119.7 upload minutes at 0.35.2 (an earlier measurement, not
+  re-read here), took 63 s wall here (32.7 s pre-check). The run as a whole took 29.5 min of upload against 119.7 at
+  0.35.2; the cause of the difference is not in this ledger.
+
+### 4d. No stall
+
+Section 3d's suspend does not appear. The largest gap between attempts is 1 s, there is no sleep, and the transcript's
+one long step (`[02:26]` to `[06:24]`, 4 min) is `fuel-datasets` being checked, which the ledger records as 238.1 s.
+
+### 4e. `--require-green` against a real repository
+
+The PM dropped `--require-green` for this run. The transcript kept from the attempt (`...-out.waiting-ci.txt`) is one
+line, `waiting for CI on ciresnave/fuel 9dc33d61`: the guard waited and nothing came after it. Read from the forge at
+2026-11-02T05:16Z (`gh run list -R ciresnave/fuel --commit 9dc33d61...`), the commit has 11 runs: 9 `completed` with
+conclusion `success` (`Continuous integration`, `lavapipe-vulkan`, two `Secret Leaks`, five Dependabot updates) and 2
+`queued` with no conclusion, **created 03:57:18Z, so 79 min queued at that reading**:
+
+| run | its one job | status |
+|---|---|---|
+| `checkpoint-tests` | `Qwen3.5-0.8B Gated DeltaNet oracles (self-hosted)` | queued |
+| `cuda-metal-compile-check` | `cargo check (cuda, jit) on the self-hosted runner` | queued |
+
+`src/ci.rs` counts every run on the commit and returns `Green` only when none is unfinished, so two runs that wait for
+a self-hosted runner end every `--require-green` in exit 4 until the runner appears or `--ci-wait` runs out. That is
+the designed "no answer is not green", but it makes the guard unusable on a repository with a self-hosted job that
+does not gate the merge. Fuel's `main` protection (`enforcement_level` `non_admins`) requires six checks: `Clippy`,
+`Rustfmt`, `trufflehog`, `Check (ubuntu-latest)`, `Test Suite (ubuntu-latest)`, `Packaged crates`. Neither queued run's
+name nor its job's name is among them.
+
+The options, for the PM to decide (not implemented):
+
+1. **Ignore runs that never started within the wait.** Smallest change, and it fails open: a required check that is
+   queued because its runner is down would count as green. Not recommended.
+2. **`--require-checks <name>,...`: judge only the named checks.** Any named check that is missing or unfinished is "no
+   answer", any that failed is red, the rest of the runs are ignored. Fails closed, explicit, and the default (every
+   run) is unchanged. It needs the check names, so the probe moves from `gh run list` (workflow-run names) to the
+   check-runs of the commit, whose names are what branch protection lists.
+3. **Take the names from the branch protection of the base branch** (`required_status_checks.contexts`, read-only) when
+   `--require-checks` is not given, falling back to today's behaviour when none are configured. The right default for a
+   gate, since it is the list the forge itself enforces; it needs read access to protection settings, which `gh`'s
+   login may not have on every repository.
+
+Recommendation: 2, then 3 if the PM wants the default to follow the forge. Either way, a never-started required check
+must stay "no answer".
+
+### 4f. What stays unmeasured
+
+- **The verbatim wording of a real 429 in a ledger.** Fuel met none, and ran 0.0.53, which has no `classified` event.
+  The `classified` event of 0.0.54 has still not met the real registry.
+- A kill between upload and read-back (this run was not killed).
+- A lagging index: cargo's wait for availability took at most 4.5 s and every crate was `visible` at once.
+- A real transient failure: neither real run had one, so `--retries` has only the forced failure of 2b behind it on
+  the real registry.
+- Where crates.io's limit lies. Baracuda reached it at the 47th attempt in 16.75 min; Fuel's 43 uploads did not.

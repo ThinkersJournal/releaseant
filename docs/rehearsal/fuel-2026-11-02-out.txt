@@ -1,0 +1,347 @@
+warning: fuel-conv: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-conv: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-cpu-kernels: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-cpu-kernels: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-ir: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-ir: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-backend-contract: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-backend-contract: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-correctness-fixtures: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-correctness-fixtures: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-datasets: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-formats: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-kernel-seam-announce: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-kernel-seam-announce: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-kernel-seam-types: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-kernel-seam-types: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-graph: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-graph: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-kernel-seam: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-kernel-seam: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-kernels-source: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-kernels-source: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-kiss-ref-backend: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-kiss-ref-backend: keywords: missing: add 1 to 5 `keywords = ["..."]` under [package]
+warning: fuel-kiss-ref-backend: categories: missing: add `categories = ["..."]` (slugs at https://crates.io/category_slugs)
+warning: fuel-kiss-ref-backend: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-kv-pool: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-kv-pool: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-metal-kernels: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-model-core: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-model-core: keywords: missing: add 1 to 5 `keywords = ["..."]` under [package]
+warning: fuel-model-core: categories: missing: add `categories = ["..."]` (slugs at https://crates.io/category_slugs)
+warning: fuel-model-core: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-quantized: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-quantized: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-cpu-backend: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-cpu-backend: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-cuda-backend: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-cuda-backend: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-loaders: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-loaders: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-metal-backend: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-metal-backend: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-test-support: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-test-support: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-vulkan-kernels: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-vulkan-kernels: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-vulkan-backend: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-vulkan-backend: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-hardware: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-hardware: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-memory: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-memory: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-dispatch: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-dispatch: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-aocl-cpu-backend: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-aocl-cpu-backend: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-mkl-cpu-backend: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-mkl-cpu-backend: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-tensor: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-tensor: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-model-llama: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-model-llama: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-model-phi: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-model-phi: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-nn: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-nn: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-posttrain: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-posttrain: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-transformers: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel: keywords: missing: add 1 to 5 `keywords = ["..."]` under [package]
+warning: fuel: categories: missing: add `categories = ["..."]` (slugs at https://crates.io/category_slugs)
+warning: fuel: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-inference: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-onnx: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-parallel: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-parallel: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-tensor-tools: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-tensor-tools: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-training: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-examples: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+warning: fuel-lazy-examples: readme: no README: put a README.md next to the Cargo.toml (cargo picks it up) or set `readme = "path"`
+warning: fuel-lazy-examples: rust-version: missing: add `rust-version = "1.88"` (the oldest Rust the crate builds with) under [package]
+[00:18] packaging 43 crates
+[01:11] verifying fuel-conv (1 of 43)
+[01:21] verifying fuel-cpu-kernels (2 of 43)
+[01:50] verifying fuel-ir (3 of 43)
+[02:10] verifying fuel-backend-contract (4 of 43)
+[02:18] verifying fuel-correctness-fixtures (5 of 43)
+[02:26] verifying fuel-datasets (6 of 43)
+[06:24] verifying fuel-formats (7 of 43)
+[06:34] verifying fuel-kernel-seam-announce (8 of 43)
+[06:44] verifying fuel-kernel-seam-types (9 of 43)
+[07:01] verifying fuel-graph (10 of 43)
+[07:18] verifying fuel-kernel-seam (11 of 43)
+[07:30] verifying fuel-kernels-source (12 of 43)
+[07:32] verifying fuel-kiss-ref-backend (13 of 43)
+[07:41] verifying fuel-kv-pool (14 of 43)
+[07:46] verifying fuel-metal-kernels (15 of 43)
+[08:14] verifying fuel-model-core (16 of 43)
+[08:25] verifying fuel-quantized (17 of 43)
+[08:30] verifying fuel-cpu-backend (18 of 43)
+[08:57] verifying fuel-cuda-backend (19 of 43)
+[09:30] verifying fuel-loaders (20 of 43)
+[09:49] verifying fuel-metal-backend (21 of 43)
+[09:51] verifying fuel-test-support (22 of 43)
+[09:52] verifying fuel-vulkan-kernels (23 of 43)
+[09:55] verifying fuel-vulkan-backend (24 of 43)
+[10:47] verifying fuel-hardware (25 of 43)
+[10:58] verifying fuel-memory (26 of 43)
+[11:03] verifying fuel-dispatch (27 of 43)
+[11:23] verifying fuel-aocl-cpu-backend (28 of 43)
+[11:46] verifying fuel-mkl-cpu-backend (29 of 43)
+[12:18] verifying fuel-tensor (30 of 43)
+[13:09] verifying fuel-model-llama (31 of 43)
+[13:12] verifying fuel-model-phi (32 of 43)
+[13:15] verifying fuel-nn (33 of 43)
+[13:18] verifying fuel-posttrain (34 of 43)
+[13:21] verifying fuel-transformers (35 of 43)
+[13:53] verifying fuel (36 of 43)
+[14:03] verifying fuel-inference (37 of 43)
+[14:07] verifying fuel-onnx (38 of 43)
+[14:23] verifying fuel-parallel (39 of 43)
+[14:26] verifying fuel-tensor-tools (40 of 43)
+[14:37] verifying fuel-training (41 of 43)
+[14:41] verifying fuel-examples (42 of 43)
+[16:06] verifying fuel-lazy-examples (43 of 43)
+[16:47] verified fuel-conv 0.36.4
+[16:47] verified fuel-cpu-kernels 0.36.4
+[16:47] verified fuel-ir 0.36.4
+[16:47] verified fuel-backend-contract 0.36.4
+[16:47] verified fuel-correctness-fixtures 0.36.4
+[16:47] verified fuel-datasets 0.36.4
+[16:47] verified fuel-formats 0.36.4
+[16:47] verified fuel-kernel-seam-announce 0.36.4
+[16:47] verified fuel-kernel-seam-types 0.36.4
+[16:47] verified fuel-graph 0.36.4
+[16:47] verified fuel-kernel-seam 0.36.4
+[16:47] verified fuel-kernels-source 0.36.4
+[16:47] verified fuel-kiss-ref-backend 0.36.4
+[16:47] verified fuel-kv-pool 0.36.4
+[16:47] verified fuel-metal-kernels 0.36.4
+[16:47] verified fuel-model-core 0.36.4
+[16:47] verified fuel-quantized 0.36.4
+[16:47] verified fuel-cpu-backend 0.36.4
+[16:47] verified fuel-cuda-backend 0.36.4
+[16:47] verified fuel-loaders 0.36.4
+[16:47] verified fuel-metal-backend 0.36.4
+[16:47] verified fuel-test-support 0.36.4
+[16:47] verified fuel-vulkan-kernels 0.36.4
+[16:47] verified fuel-vulkan-backend 0.36.4
+[16:47] verified fuel-hardware 0.36.4
+[16:47] verified fuel-memory 0.36.4
+[16:47] verified fuel-dispatch 0.36.4
+[16:47] verified fuel-aocl-cpu-backend 0.36.4
+[16:47] verified fuel-mkl-cpu-backend 0.36.4
+[16:47] verified fuel-tensor 0.36.4
+[16:47] verified fuel-model-llama 0.36.4
+[16:47] verified fuel-model-phi 0.36.4
+[16:47] verified fuel-nn 0.36.4
+[16:47] verified fuel-posttrain 0.36.4
+[16:47] verified fuel-transformers 0.36.4
+[16:47] verified fuel 0.36.4
+[16:47] verified fuel-inference 0.36.4
+[16:47] verified fuel-onnx 0.36.4
+[16:47] verified fuel-parallel 0.36.4
+[16:47] verified fuel-tensor-tools 0.36.4
+[16:47] verified fuel-training 0.36.4
+[16:47] verified fuel-examples 0.36.4
+[16:47] verified fuel-lazy-examples 0.36.4
+[16:47] run planned
+[16:48] uploading fuel-conv 0.36.4
+[16:57] upload returned fuel-conv 0.36.4 (8 s)
+[16:57] fuel-conv 0.36.4: read back, visible
+[16:57] uploading fuel-cpu-kernels 0.36.4
+[17:21] upload returned fuel-cpu-kernels 0.36.4 (24 s)
+[17:21] fuel-cpu-kernels 0.36.4: read back, visible
+[17:21] uploading fuel-ir 0.36.4
+[17:44] upload returned fuel-ir 0.36.4 (22 s)
+[17:44] fuel-ir 0.36.4: read back, visible
+[17:45] uploading fuel-backend-contract 0.36.4
+[17:52] upload returned fuel-backend-contract 0.36.4 (7 s)
+[17:52] fuel-backend-contract 0.36.4: read back, visible
+[17:52] uploading fuel-correctness-fixtures 0.36.4
+[17:58] upload returned fuel-correctness-fixtures 0.36.4 (5 s)
+[17:58] fuel-correctness-fixtures 0.36.4: read back, visible
+[17:58] uploading fuel-datasets 0.36.4
+[20:17] upload returned fuel-datasets 0.36.4 (139 s)
+[20:17] fuel-datasets 0.36.4: read back, visible
+[20:17] uploading fuel-formats 0.36.4
+[20:23] upload returned fuel-formats 0.36.4 (5 s)
+[20:23] fuel-formats 0.36.4: read back, visible
+[20:23] uploading fuel-kernel-seam-announce 0.36.4
+[20:28] upload returned fuel-kernel-seam-announce 0.36.4 (4 s)
+[20:28] fuel-kernel-seam-announce 0.36.4: read back, visible
+[20:28] uploading fuel-kernel-seam-types 0.36.4
+[20:34] upload returned fuel-kernel-seam-types 0.36.4 (6 s)
+[20:34] fuel-kernel-seam-types 0.36.4: read back, visible
+[20:34] uploading fuel-graph 0.36.4
+[20:49] upload returned fuel-graph 0.36.4 (14 s)
+[20:49] fuel-graph 0.36.4: read back, visible
+[20:49] uploading fuel-kernel-seam 0.36.4
+[20:55] upload returned fuel-kernel-seam 0.36.4 (6 s)
+[20:55] fuel-kernel-seam 0.36.4: read back, visible
+[20:55] uploading fuel-kernels-source 0.36.4
+[21:02] upload returned fuel-kernels-source 0.36.4 (6 s)
+[21:02] fuel-kernels-source 0.36.4: read back, visible
+[21:03] uploading fuel-kiss-ref-backend 0.36.4
+[21:11] upload returned fuel-kiss-ref-backend 0.36.4 (8 s)
+[21:11] fuel-kiss-ref-backend 0.36.4: read back, visible
+[21:11] uploading fuel-kv-pool 0.36.4
+[21:16] upload returned fuel-kv-pool 0.36.4 (4 s)
+[21:16] fuel-kv-pool 0.36.4: read back, visible
+[21:16] uploading fuel-metal-kernels 0.36.4
+[21:38] upload returned fuel-metal-kernels 0.36.4 (21 s)
+[21:38] fuel-metal-kernels 0.36.4: read back, visible
+[21:38] uploading fuel-model-core 0.36.4
+[21:58] upload returned fuel-model-core 0.36.4 (19 s)
+[21:58] fuel-model-core 0.36.4: read back, visible
+[21:58] uploading fuel-quantized 0.36.4
+[22:08] upload returned fuel-quantized 0.36.4 (9 s)
+[22:08] fuel-quantized 0.36.4: read back, visible
+[22:08] uploading fuel-cpu-backend 0.36.4
+[23:01] upload returned fuel-cpu-backend 0.36.4 (52 s)
+[23:01] fuel-cpu-backend 0.36.4: read back, visible
+[23:01] uploading fuel-cuda-backend 0.36.4
+[24:03] upload returned fuel-cuda-backend 0.36.4 (62 s)
+[24:04] fuel-cuda-backend 0.36.4: read back, visible
+[24:04] uploading fuel-loaders 0.36.4
+[24:39] upload returned fuel-loaders 0.36.4 (35 s)
+[24:39] fuel-loaders 0.36.4: read back, visible
+[24:39] uploading fuel-metal-backend 0.36.4
+[25:07] upload returned fuel-metal-backend 0.36.4 (27 s)
+[25:07] fuel-metal-backend 0.36.4: read back, visible
+[25:07] uploading fuel-test-support 0.36.4
+[25:11] upload returned fuel-test-support 0.36.4 (3 s)
+[25:11] fuel-test-support 0.36.4: read back, visible
+[25:11] uploading fuel-vulkan-kernels 0.36.4
+[25:19] upload returned fuel-vulkan-kernels 0.36.4 (7 s)
+[25:19] fuel-vulkan-kernels 0.36.4: read back, visible
+[25:19] uploading fuel-vulkan-backend 0.36.4
+[26:26] upload returned fuel-vulkan-backend 0.36.4 (66 s)
+[26:27] fuel-vulkan-backend 0.36.4: read back, visible
+[26:27] uploading fuel-hardware 0.36.4
+[27:05] upload returned fuel-hardware 0.36.4 (38 s)
+[27:06] fuel-hardware 0.36.4: read back, visible
+[27:06] uploading fuel-memory 0.36.4
+[27:20] upload returned fuel-memory 0.36.4 (14 s)
+[27:20] fuel-memory 0.36.4: read back, visible
+[27:21] uploading fuel-dispatch 0.36.4
+[28:32] upload returned fuel-dispatch 0.36.4 (71 s)
+[28:32] fuel-dispatch 0.36.4: read back, visible
+[28:32] uploading fuel-aocl-cpu-backend 0.36.4
+[29:20] upload returned fuel-aocl-cpu-backend 0.36.4 (47 s)
+[29:20] fuel-aocl-cpu-backend 0.36.4: read back, visible
+[29:20] uploading fuel-mkl-cpu-backend 0.36.4
+[30:50] upload returned fuel-mkl-cpu-backend 0.36.4 (90 s)
+[30:51] fuel-mkl-cpu-backend 0.36.4: read back, visible
+[30:51] uploading fuel-tensor 0.36.4
+[33:07] upload returned fuel-tensor 0.36.4 (135 s)
+[33:07] fuel-tensor 0.36.4: read back, visible
+[33:07] uploading fuel-model-llama 0.36.4
+[33:53] upload returned fuel-model-llama 0.36.4 (45 s)
+[33:54] fuel-model-llama 0.36.4: read back, visible
+[33:54] uploading fuel-model-phi 0.36.4
+[34:22] upload returned fuel-model-phi 0.36.4 (28 s)
+[34:22] fuel-model-phi 0.36.4: read back, visible
+[34:22] uploading fuel-nn 0.36.4
+[34:55] upload returned fuel-nn 0.36.4 (32 s)
+[34:55] fuel-nn 0.36.4: read back, visible
+[34:55] uploading fuel-posttrain 0.36.4
+[35:21] upload returned fuel-posttrain 0.36.4 (25 s)
+[35:21] fuel-posttrain 0.36.4: read back, visible
+[35:22] uploading fuel-transformers 0.36.4
+[36:47] upload returned fuel-transformers 0.36.4 (85 s)
+[36:47] fuel-transformers 0.36.4: read back, visible
+[36:48] uploading fuel 0.36.4
+[38:17] upload returned fuel 0.36.4 (89 s)
+[38:18] fuel 0.36.4: read back, visible
+[38:18] uploading fuel-inference 0.36.4
+[38:33] upload returned fuel-inference 0.36.4 (15 s)
+[38:33] fuel-inference 0.36.4: read back, visible
+[38:34] uploading fuel-onnx 0.36.4
+[39:08] upload returned fuel-onnx 0.36.4 (34 s)
+[39:08] fuel-onnx 0.36.4: read back, visible
+[39:08] uploading fuel-parallel 0.36.4
+[39:32] upload returned fuel-parallel 0.36.4 (23 s)
+[39:32] fuel-parallel 0.36.4: read back, visible
+[39:33] uploading fuel-tensor-tools 0.36.4
+[41:20] upload returned fuel-tensor-tools 0.36.4 (107 s)
+[41:21] fuel-tensor-tools 0.36.4: read back, visible
+[41:21] uploading fuel-training 0.36.4
+[41:36] upload returned fuel-training 0.36.4 (15 s)
+[41:36] fuel-training 0.36.4: read back, visible
+[41:37] uploading fuel-examples 0.36.4
+[44:09] upload returned fuel-examples 0.36.4 (152 s)
+[44:10] fuel-examples 0.36.4: read back, visible
+[44:10] uploading fuel-lazy-examples 0.36.4
+[46:23] upload returned fuel-lazy-examples 0.36.4 (133 s)
+[46:24] fuel-lazy-examples 0.36.4: read back, visible
+[46:24] run finished: complete
+the registry shows every crate after 1 run(s)
+fuel-conv: published and read back
+fuel-cpu-kernels: published and read back
+fuel-ir: published and read back
+fuel-backend-contract: published and read back
+fuel-correctness-fixtures: published and read back
+fuel-datasets: published and read back
+fuel-formats: published and read back
+fuel-kernel-seam-announce: published and read back
+fuel-kernel-seam-types: published and read back
+fuel-graph: published and read back
+fuel-kernel-seam: published and read back
+fuel-kernels-source: published and read back
+fuel-kiss-ref-backend: published and read back
+fuel-kv-pool: published and read back
+fuel-metal-kernels: published and read back
+fuel-model-core: published and read back
+fuel-quantized: published and read back
+fuel-cpu-backend: published and read back
+fuel-cuda-backend: published and read back
+fuel-loaders: published and read back
+fuel-metal-backend: published and read back
+fuel-test-support: published and read back
+fuel-vulkan-kernels: published and read back
+fuel-vulkan-backend: published and read back
+fuel-hardware: published and read back
+fuel-memory: published and read back
+fuel-dispatch: published and read back
+fuel-aocl-cpu-backend: published and read back
+fuel-mkl-cpu-backend: published and read back
+fuel-tensor: published and read back
+fuel-model-llama: published and read back
+fuel-model-phi: published and read back
+fuel-nn: published and read back
+fuel-posttrain: published and read back
+fuel-transformers: published and read back
+fuel: published and read back
+fuel-inference: published and read back
+fuel-onnx: published and read back
+fuel-parallel: published and read back
+fuel-tensor-tools: published and read back
+fuel-training: published and read back
+fuel-examples: published and read back
+fuel-lazy-examples: published and read back
+ledger: C:/Projects/.lane-state/fuel-pub/ledger.jsonl
