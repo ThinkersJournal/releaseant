@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.52
+
+- Docs: `docs/ADOPTION.md` gains "Notes for callers", the steps of a real multi-crate publish (`plan --check-externals` first, cross-repository order, the command with `--max-wait`, `--retries` and `--require-green`, rate limits, resume, `--reuse-verified-hours`, exit statuses, reading the ledger). No code change.
+
 ## 0.0.51
 
 - New `publish` flag `--reuse-verified-hours N` (default 12; 0 = off). A crate the ledger shows as `verified` at the same commit and version no more than N hours ago is not built again, so a resume after a rate-limit stop, or each `--retries` run, no longer repeats the whole verification (105 minutes for Fuel's 43 crates at 0.35.2). The ledger records the crate as `verified` with `carried over, not built again: run <id> at <time>`, and the progress line says how many were carried over. The first run at a commit still builds everything. Additive.
