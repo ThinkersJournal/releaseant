@@ -17,18 +17,26 @@ Plans and the baracuda output: `C:\Projects\r5run` (not committed).
 | order starts | baracuda-build, baracuda-cuda-parse, baracuda-cuda-vocab | fuel-conv, fuel-cpu-kernels, fuel-ir |
 | `plan --registry` | all 73 "not on registry" | all 43 "not on registry" |
 | `plan` | exit 0 | exit 0 |
-| `verify` | exit 0, **73 of 73 verified, 8.5 min** (00:42:27 to 00:50:53 UTC; my own cargo builds ran alongside, so an upper bound for this box) | see the line below |
+| `verify` | exit 0, **73 of 73 verified, 8.5 min** (00:42:27 to 00:50:53 UTC; my own cargo builds ran alongside, so an upper bound for this box) | **exit 1, 43 of 43 FAILED in 2 min** (00:50:54 to 00:52:51 UTC), see below |
 
 The PM's figures for tonight (alpha.80, Fuel 0.36.2, "100+" and 45 crates) were estimates; main did not have those
 versions at this ref, so the numbers above are for the SHAs named.
 
-Fuel `verify`: started 00:50:54 UTC. It had not finished when this note was written (expected about 1.75 h from the 0.35.2 measurement); the result goes in a later note, not here.
+**Fuel is blocked on a yanked dependency.** Every one of the 43 `cargo check`s failed the same way:
+`failed to select a version for the requirement baracuda-kernels-sys = "^0.0.1-alpha.158": version 0.0.1-alpha.158 is
+yanked`. `Cargo.toml` line 354 of `3f6ec6a4` pins that version for `fuel-cuda-backend`. The crates.io API lists 73
+versions of `baracuda-kernels-sys` and none is un-yanked (the newest, `0.1.0-alpha.25`, is yanked too). `releaseant
+plan --repo C:/Projects/fuel --sha 3f6ec6a4... --check-externals` reports it in seconds and exits 1 (`MISSING EXTERNAL:
+fuel-cuda-backend needs baracuda-kernels-sys ^0.0.1-alpha.158: every published version is yanked`); the same check on
+baracuda exits 0. So Fuel cannot be verified or published until baracuda has republished `baracuda-kernels-sys` and
+Fuel's `main` depends on that version; **run `plan --check-externals` first, it costs seconds and verify costs 105
+minutes.** Fuel's verify time at this ref is therefore not measured.
 
 **Time estimates for the real publishes, with what each rests on:**
 - baracuda: about 9 minutes before the first upload (the verify above), then 73 uploads. `cargo publish` rebuilds each
   crate; Fuel's median was 23 s per crate (0.35.2), so about 28 minutes if baracuda's crates are alike (not measured for
   baracuda). About 40 minutes without a rate-limit stop.
-- fuel: as 0.35.2: 225.8 minutes = 104.9 before the first upload (package and `cargo check` of 43 crates) + 119.7
+- fuel (not measurable at this ref, see above; the 0.35.2 run is the only data): 225.8 minutes = 104.9 before the first upload (package and `cargo check` of 43 crates) + 119.7
   of uploads (88.8 of them `fuel-cuda-backend`) + 1.1 other. The `phase` ledger events will show where the 88.8 go.
 - crates.io's new-version rate limit: R4's six uploads never met one, so there is **no measured rate**. A 429 is
   waited out inside the run, for the time cargo prints ("try again after <date>") plus 5 s, spending the run's
