@@ -19,8 +19,8 @@ use crate::externals::missing_externals;
 use crate::ledger::{Event, EventKind, Ledger};
 use crate::names::{CratesIoOwners, check_names, describe as describe_name};
 use crate::pipeline::{
-    CargoAddCheck, Exception, PipelineError, PublishArgs, Summary, check_metadata, describe_state,
-    package_all, prepare, publish, readback,
+    CargoAddCheck, Exception, NameCheck, PipelineError, PublishArgs, Summary, check_metadata,
+    describe_state, package_all, prepare, publish, readback,
 };
 use crate::preflight::{Problem, parse_require};
 use crate::registry::{Clock, Lookup, Registry};
@@ -176,6 +176,14 @@ enum Command {
         /// The GitHub `owner/name` whose CI to read (default: taken from origin's URL).
         #[arg(long, requires = "require_green")]
         github: Option<String>,
+        /// Before any build or upload, refuse (exit 4) a crate name that another owner holds, as `plan
+        /// --check-names` does; a lookup that fails refuses too. Off by default.
+        #[arg(long)]
+        check_names: bool,
+        /// A crates.io login that counts as ours for `--check-names` (repeatable, or comma-separated);
+        /// adds to `[names] owners` in `releaseant.toml`.
+        #[arg(long, value_delimiter = ',', requires = "check_names")]
+        owner: Vec<String>,
         /// Longest wait for CI to finish, in seconds (default 2700).
         #[arg(long, default_value_t = 2700, requires = "require_green")]
         ci_wait: u64,
@@ -407,7 +415,13 @@ pub fn run_code(args: Vec<OsString>) -> u8 {
         Ok(false) => 1,
         Err(e) => {
             eprintln!("error: {e}");
-            e.downcast_ref::<ExitWith>().map_or(2, |x| x.0)
+            e.downcast_ref::<ExitWith>().map_or_else(
+                || match e.downcast_ref::<PipelineError>() {
+                    Some(PipelineError::NamesRefused(_)) => 4,
+                    _ => 2,
+                },
+                |x| x.0,
+            )
         }
     }
 }
@@ -534,6 +548,8 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             allow_not_tip,
             require_green: guard_ci,
             github,
+            check_names,
+            owner,
             ci_wait,
             require_checks,
             protection_branch,
@@ -583,6 +599,7 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             }
             // The run id of the latest run: the tag record names it.
             let last_id = std::cell::RefCell::new(String::new());
+            let owners_source = std::cell::RefCell::new(CratesIoOwners::new(crate::names::BASE));
             let mut attempt = || {
                 let id = run_id(&source.sha);
                 let work = work_dir(&id);
@@ -604,6 +621,10 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                         on_progress: Some(stderr_progress()),
                         reuse_verified: (reuse_verified_hours > 0).then(|| {
                             Duration::from_secs(reuse_verified_hours.saturating_mul(3600))
+                        }),
+                        name_check: check_names.then(|| NameCheck {
+                            ours: owner.iter().cloned().collect(),
+                            owners: &owners_source,
                         }),
                     },
                     |dir, target| {

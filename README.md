@@ -121,7 +121,8 @@ crates.io refuses a new crate whose name is taken by another owner only at uploa
 sparse index (no such crate: free) and, for a name that exists, crates.io's owners list. Name whose crates are
 yours with `--owner LOGIN` (repeatable; a user such as `ciresnave` or a team such as `github:org:team`) or
 `[names]` `owners = ["ciresnave"]` in `releaseant.toml`; a name with at least one of your owners is fine, a name with
-none is `NAME TAKEN` and the command exits 4. A lookup that fails is `UNKNOWN` and refuses the same way, never
+none is `NAME TAKEN` and the command exits 4. `publish --check-names` (same flags) does the same before anything is built or
+uploaded, and is off unless you ask. A lookup that fails is `UNKNOWN` and refuses the same way, never
 "free". Without any owner named it stops with exit 2 rather than call every existing name taken. It only reads, and
 waits a second between owner requests, as crates.io asks.
 
