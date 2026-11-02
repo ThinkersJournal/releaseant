@@ -152,7 +152,7 @@ The upload phase, 3516 s, adds up exactly:
 | the 73 accepted `cargo publish` attempts | 1537 | 43.7 % | inside cargo: its own verification build 1001, packaging 173, upload 80, wait for availability 119, other 164 |
 | the 20 rate-limited attempts | 319 | 9.1 % | each repackaged and rebuilt before cargo was told no: 229 s of build repeated |
 | the 20 `waiting` pauses | 633 | 18.0 % | releaseant's own sleeps, each exactly the server's `retry_after` + 5 s |
-| **one unexplained stall** | **984** | **28.0 %** | see 3d |
+| **a host suspend (the laptop slept)** | **984** | **28.0 %** | see 3d |
 | gaps between crates | 43 | 1.2 % | |
 
 Per-crate distributions (73 accepted attempts, seconds): wall start to finish median 17, p90 48, max 88
@@ -171,7 +171,7 @@ to 41 s, median 30. Each of 20 different crates was told once and succeeded on i
 - The first 429 came at 02:15:02Z, on the **47th attempt: 46 uploads had been accepted before it**, in 16.75 min
   (21.6 s per crate, limited by building, not by the registry).
 - After it, the registry set the pace: consecutive accepted uploads were a median **59 s** apart (n = 25, range 13 to
-  99 s, excluding the stall), about **one upload a minute**. Before it, 46 in 16.75 min was above that rate.
+  99 s, excluding the suspend), about **one upload a minute**. Before it, 46 in 16.75 min was above that rate.
 - 46 is what a bucket of 30 that refills at one a minute would allow in 16.75 min (30 + 16.75). That is a reading of
   this one ledger, **not** checked against crates.io's documentation, which I did not consult.
 
@@ -180,7 +180,7 @@ to 41 s, median 30. Each of 20 different crates was told once and succeeded on i
 A crate is compiled up to three times: `cargo package`'s archive step (115 s for the set), releaseant's `cargo check`
 of the tarballs with siblings patched in (537 s), and `cargo publish`'s own verification build with siblings from the
 registry (1001 s on accepted attempts, **plus 229 s on the 20 attempts the registry then refused**). Builds total 1882 s,
-31.4 min, 45 % of the run; the rest is the registry's pace and the stall.
+31.4 min, 45 % of the run; the rest is the registry's pace and the host suspend.
 
 - **The registry's pace hides the builds in the throttled phase.** From the 47th attempt on, a crate took about a minute
   whatever it built; dropping a build there shortens the waiting, not the run. In the burst phase (46 crates, 994 s)
@@ -194,12 +194,16 @@ registry (1001 s on accepted attempts, **plus 229 s on the 20 attempts the regis
 - Fuel (43 crates) is a different shape: 0.35.2 spent 88.8 of 119.7 upload minutes in one crate; this ledger says
   nothing about it.
 
-### 3d. The stall
+### 3d. The stall: the laptop slept
 
 The 20th and last 429 was `baracuda-flashinfer` at 02:39:53Z, `waiting 26s`. The next `upload_started` is stamped
-02:56:43Z, **16 min 50 s later**: 984 s more than the sleep. Nothing in the ledger or the transcript explains it
-(`[52:38]` to `[69:34]` in the transcript). A sleeping or suspended host and a stalled process look the same from here;
-the Windows power log for 02:40 to 02:57 UTC would tell. It is 28 % of the upload phase and is not the tool's pacing.
+02:56:43Z, **16 min 50 s later**: 984 s more than the sleep. The ledger and the transcript cannot explain it
+(`[52:38]` to `[69:34]` in the transcript). **Explained by the PM from the Windows log** (Kernel-Power events 506, 507,
+42 and 107 and a system time change): `Critical Battery Trigger Met` at 02:39:57Z, the machine entered sleep at
+02:40:00Z and resumed at 02:40:04Z by a clock jump to 02:56:28Z. So the 26 s sleep spanned a host suspend: the stall
+is the machine's, not the tool's pacing and not the registry's, and the tool carried on correctly when the machine woke
+(the retry succeeded at once). It is 28 % of the upload phase. The lesson for a long publish is the power setting, not
+a code change: a run of an hour or more needs a machine that cannot sleep or run flat.
 
 ### 3e. What stays unmeasured
 

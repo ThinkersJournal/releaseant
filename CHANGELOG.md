@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.53
+
+- Docs: `docs/R5-LIVE.md` section 3 reads the real baracuda publish (73 crates, one run, 69 min 46 s) from its ledger: the time split, 20 real crates.io 429s (a burst of 46 accepted uploads, then about one a minute), the cost of each build pass (R8), and a 16 min 50 s stall that was the laptop sleeping. The ledger and transcript are kept under `docs/rehearsal/`. No code change.
+
 ## 0.0.52
 
 - Docs: `docs/ADOPTION.md` gains "Notes for callers", the steps of a real multi-crate publish (`plan --check-externals` first, cross-repository order, the command with `--max-wait`, `--retries` and `--require-green`, rate limits, resume, `--reuse-verified-hours`, exit statuses, reading the ledger). No code change.
