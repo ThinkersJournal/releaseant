@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.55
+
+- Docs: `docs/R5-LIVE.md` section 4 reads the real Fuel 0.36.4 publish (43 crates, one run, 46 min 24 s) from its ledger: no 429 at all (43 accepts in 29.5 min), builds are 89.8 % of the run, `fuel-datasets` dominates both build passes, and why `--require-green` was unusable there (two queued self-hosted runs outside the required checks), with the options. The ledger and transcripts are kept under `docs/rehearsal/`. No code change.
+
 ## 0.0.54
 
 - Ledger: when an upload is rate-limited, the registry's own words (the 429 line cargo printed, cut to 400 characters) are kept as a `classified` event, `rate-limited: <line>`, so a ledger keeps the wording of each limit it met (the real baracuda run's 20 rate limits left only the parsed `retry_after`). New `Registry::take_rate_limit_text`, default none. Waiting and every outcome are unchanged.
