@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.61
+
+- `[[artifact]]` in `releaseant.toml` (design: `docs/ARTIFACTS-DESIGN.md`, slice A1): installers (`kind = "file"`, a GitHub release asset) and container images (`kind = "image"`) are parsed and validated, every problem of every artifact listed at once; a field that does not belong to the kind, an unknown key, a path that leaves the artifacts directory, a bad hash, tag, platform or target are errors naming the artifact. `plan` prints one line per artifact after the crates. `artifact::combined_fingerprint` is the plan-hash extension: unchanged when there are no artifacts, so an old ledger still resumes. Nothing uploads yet and the run loop does not read artifacts (slice A2).
+
 ## 0.0.60
 
 - Docs only: `docs/ARTIFACTS-DESIGN.md`, the design note for publishing installers (GitHub release assets) and container images against a declared SHA-256, read back by hash, never overwriting, tagging last; ROADMAP row R9. No code.
