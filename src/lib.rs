@@ -7,6 +7,7 @@
 //! real registry), [`pipeline`] (prepare, verify, publish, read back) and [`yank`]. The design is
 //! `docs/DESIGN.md`.
 
+pub mod artifact;
 pub mod cargo;
 pub mod categories;
 pub mod ci;

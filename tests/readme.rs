@@ -326,6 +326,49 @@ fn the_flag_adds_to_the_releaseant_toml_it_does_not_replace_it() {
     );
 }
 
+// `[[artifact]]` tables (docs/ARTIFACTS-DESIGN.md, slice A1): `plan` prints one line per artifact after
+// the crates and writes nothing; a bad table is refused before any plan is printed, naming the artifact.
+// The control is the same demo without the file (the plan alone, above).
+#[test]
+fn plan_lists_the_artifacts_and_refuses_a_bad_one() {
+    let hash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    let good = format!(
+        "[[artifact]]\nname = \"installer\"\nkind = \"file\"\npath = \"dist/x.msi\"\nsha256 = \"{hash}\"\ntarget = \"github-release\"\n\n\
+         [[artifact]]\nname = \"img\"\nkind = \"image\"\nsource = \"oci-archive:dist/i.tar\"\nsums = \"dist/SHA256SUMS\"\n\
+         target = \"docker.io/thinkersjournal/demo\"\ntags = [\"0.1.0\"]\nplatforms = [\"linux/amd64\", \"linux/arm64\"]\n"
+    );
+    let (code, stdout, stderr) = plan_demo_files(true, &[("releaseant.toml", &good)], &[]);
+    assert_eq!(code, Some(0), "{stderr}");
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines[0], "releaseant-demo-core 0.1.0", "{stdout}");
+    assert_eq!(lines[1], "releaseant-demo-app 0.1.0", "{stdout}");
+    assert!(
+        lines[2].starts_with("artifact installer (file dist/x.msi -> github-release, sha256 "),
+        "{stdout}"
+    );
+    assert!(
+        lines[3].contains(
+            "artifact img (image oci-archive:dist/i.tar -> docker.io/thinkersjournal/demo"
+        ) && lines[3].contains("hash from dist/SHA256SUMS (read at run time)"),
+        "{stdout}"
+    );
+    assert_eq!(lines.len(), 4, "{stdout}");
+
+    let bad = good.replace("github-release", "s3");
+    let (code, stdout, stderr) = plan_demo_files(true, &[("releaseant.toml", &bad)], &[]);
+    assert_eq!(code, Some(2), "{stderr}");
+    assert!(
+        stdout.is_empty(),
+        "no plan for a manifest that cannot be used: {stdout}"
+    );
+    assert!(
+        stderr.contains("releaseant.toml")
+            && stderr.contains("\"installer\"")
+            && stderr.contains("s3"),
+        "names the file, the artifact and the value: {stderr}"
+    );
+}
+
 #[test]
 fn a_malformed_releaseant_toml_is_refused_naming_the_file() {
     for bad in [
