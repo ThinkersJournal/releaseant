@@ -612,6 +612,29 @@ impl Crane {
     }
 }
 
+impl Crane {
+    /// The executable named by `$CRANE`, else `crane` on the PATH.
+    #[must_use]
+    pub fn from_env() -> Self {
+        Self {
+            exe: std::env::var_os("CRANE").map_or_else(|| PathBuf::from("crane"), PathBuf::from),
+        }
+    }
+
+    /// Whether `crane` can be run, and its version line.
+    ///
+    /// # Errors
+    /// The reason it cannot: not found, or it ran and failed.
+    pub fn version(&self) -> Result<String, String> {
+        let out = self.run(&["version"])?;
+        if out.status.success() {
+            Ok(String::from_utf8_lossy(&out.stdout).trim().to_owned())
+        } else {
+            Err(Self::fail(&out))
+        }
+    }
+}
+
 impl ImageRegistry for Crane {
     fn manifest_digest(&mut self, repo: &str, reference: &str) -> Result<Option<String>, String> {
         let sep = if reference.starts_with("sha256:") {
@@ -1151,5 +1174,16 @@ pub(crate) mod tests {
             classify_digest(false, "", "Error: UNAUTHORIZED: authentication required\n").is_err()
         );
         assert!(classify_digest(true, "oops", "").is_err());
+    }
+
+    #[test]
+    fn a_crane_that_cannot_run_is_named_not_assumed() {
+        let c = Crane {
+            exe: PathBuf::from("C:/no/such/dir/crane-that-is-not-there"),
+        };
+        let why = c
+            .version()
+            .expect_err("a missing executable must not be reported as present");
+        assert!(why.contains("could not be run"), "{why}");
     }
 }
