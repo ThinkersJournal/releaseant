@@ -17,6 +17,7 @@ pub mod clock;
 pub mod config;
 pub mod crates_io;
 pub mod externals;
+pub mod images;
 pub mod ledger;
 pub mod metadata;
 pub mod msrv;

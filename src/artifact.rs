@@ -13,7 +13,7 @@
 //! [[artifact]]
 //! name      = "fuel-image"
 //! kind      = "image"
-//! source    = "oci-archive:dist/fuel.oci.tar"
+//! source    = "dir:dist/fuel-oci"           # an OCI image layout directory
 //! digest    = "sha256:<64 lowercase hex>"  # or: sums = "dist/SHA256SUMS"
 //! target    = "docker.io/thinkersjournal/fuel"
 //! tags      = ["0.3.1"]
@@ -62,7 +62,8 @@ pub struct Artifact {
     pub kind: Kind,
     /// file: the path of the file, relative to the artifacts directory.
     pub path: Option<String>,
-    /// image: `oci-archive:<path>` or `dir:<path>`, a local OCI layout.
+    /// image: `dir:<path>`, a local OCI image layout (`oci-layout`, `index.json`, `blobs/`). An
+    /// OCI archive tarball is not accepted: `crane` cannot push one (`docs/ARTIFACT-MEASUREMENTS.md` row 8).
     pub source: Option<String>,
     /// file: the declared SHA-256, 64 lowercase hex digits.
     pub sha256: Option<String>,
@@ -230,13 +231,13 @@ pub fn validate(artifacts: &[Artifact]) -> Result<(), ArtifactError> {
                 );
                 match &a.source {
                     None => bad("kind image needs `source`".into()),
-                    Some(s) => match s
-                        .strip_prefix("oci-archive:")
-                        .or_else(|| s.strip_prefix("dir:"))
-                    {
+                    Some(s) if s.starts_with("oci-archive:") => bad(format!(
+                        "source {s:?}: an OCI tar is not accepted (crane cannot push one); give `dir:<relative path>`, an OCI image layout directory (docs/ARTIFACTS-DESIGN.md section 4.2)"
+                    )),
+                    Some(s) => match s.strip_prefix("dir:") {
                         Some(p) if relative_inside(p) => {}
                         _ => bad(format!(
-                            "source {s:?} must be `oci-archive:<relative path>` or `dir:<relative path>`"
+                            "source {s:?} must be `dir:<relative path>` (an OCI image layout directory)"
                         )),
                     },
                 }
@@ -403,7 +404,7 @@ mod tests {
             name: "img".into(),
             kind: Kind::Image,
             path: None,
-            source: Some("oci-archive:dist/i.tar".into()),
+            source: Some("dir:dist/i-oci".into()),
             sha256: None,
             digest: Some(format!("sha256:{H}")),
             sums: None,
@@ -525,7 +526,13 @@ mod tests {
         assert!(p.iter().any(|m| m.contains("listed twice")), "{p:?}");
         let mut i = image();
         i.source = Some("docker-daemon:x".into());
-        assert!(has(&[i], "oci-archive"));
+        assert!(has(&[i], "OCI image layout"));
+        let mut i = image();
+        i.source = Some("oci-archive:dist/i.tar".into());
+        assert!(
+            has(&[i], "an OCI tar is not accepted"),
+            "a named error, not the generic one: an archive tarball cannot be pushed by crane"
+        );
     }
 
     #[test]

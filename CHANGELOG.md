@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.63
+
+- Artifacts slice A4 (`docs/ARTIFACTS-DESIGN.md`, measurements in `docs/ARTIFACT-MEASUREMENTS.md`): `images::stage_images` pushes `image` artifacts BY DIGEST (no tag) through `crane`, after checking the local OCI layout's digest and platforms against the declaration; a tag already pointing at another digest holds the image before anything is pushed; the registry's served manifest is hashed and every child manifest is looked up before the image counts as visible. `images::promote_images` sets the tags last, checking all of them first and moving none if one is taken, reading each back. `ImageRegistry` trait with a fake and a `Crane` implementation; `classify_digest` tells absent from could-not-ask using the real crane wording. New ledger event `artifact_promoted`. Image sources are `dir:` OCI layout directories only: `oci-archive:` is refused with a named error (crane cannot push an OCI tar). Not reachable from the CLI yet (A6). Nothing about Docker Hub is measured.
+
 ## 0.0.62
 
 - Artifacts slice A2 (`docs/ARTIFACTS-DESIGN.md`): `stage::stage_files` stages `file` artifacts into a DRAFT release through a `Forge` trait (tested against an in-memory fake; no real forge and no CLI path yet). Each file is hashed locally and must equal its declaration before anything is uploaded; an upload counts only when the bytes the forge serves back hash to the declaration; an existing asset is never replaced or removed (the same bytes with a ledger entry for this commit resume as already published, anything else, a partial asset or a public release is held); a forge that cannot be asked stops the run, resumable. Six `artifact_*` ledger event kinds.

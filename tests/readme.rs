@@ -334,7 +334,7 @@ fn plan_lists_the_artifacts_and_refuses_a_bad_one() {
     let hash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     let good = format!(
         "[[artifact]]\nname = \"installer\"\nkind = \"file\"\npath = \"dist/x.msi\"\nsha256 = \"{hash}\"\ntarget = \"github-release\"\n\n\
-         [[artifact]]\nname = \"img\"\nkind = \"image\"\nsource = \"oci-archive:dist/i.tar\"\nsums = \"dist/SHA256SUMS\"\n\
+         [[artifact]]\nname = \"img\"\nkind = \"image\"\nsource = \"dir:dist/i-oci\"\nsums = \"dist/SHA256SUMS\"\n\
          target = \"docker.io/thinkersjournal/demo\"\ntags = [\"0.1.0\"]\nplatforms = [\"linux/amd64\", \"linux/arm64\"]\n"
     );
     let (code, stdout, stderr) = plan_demo_files(true, &[("releaseant.toml", &good)], &[]);
@@ -347,9 +347,8 @@ fn plan_lists_the_artifacts_and_refuses_a_bad_one() {
         "{stdout}"
     );
     assert!(
-        lines[3].contains(
-            "artifact img (image oci-archive:dist/i.tar -> docker.io/thinkersjournal/demo"
-        ) && lines[3].contains("hash from dist/SHA256SUMS (read at run time)"),
+        lines[3].contains("artifact img (image dir:dist/i-oci -> docker.io/thinkersjournal/demo")
+            && lines[3].contains("hash from dist/SHA256SUMS (read at run time)"),
         "{stdout}"
     );
     assert_eq!(lines.len(), 4, "{stdout}");
