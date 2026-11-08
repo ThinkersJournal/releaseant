@@ -59,7 +59,7 @@ target = "github-release"                       # release for tag v<version> of 
 [[artifact]]
 name   = "fuel-image"
 kind   = "image"
-source = "oci-archive:dist/fuel.oci.tar"        # or "dir:..."; a local OCI layout, never a daemon
+source = "dir:dist/fuel-oci"                    # a local OCI layout directory, never a daemon (A4: oci-archive is not pushable by crane)
 digest = "sha256:<64 hex>"                      # digest of the manifest (or index) to publish
 target = "docker.io/thinkersjournal/fuel"
 tags   = ["0.3.1"]                              # tags to point at the digest, after confirmation

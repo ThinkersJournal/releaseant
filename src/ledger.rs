@@ -58,6 +58,8 @@ pub enum EventKind {
     ArtifactHeld,
     /// An artifact failed (a local hash that differs, a refused upload, a read-back that differs).
     ArtifactFailed,
+    /// An image's tag now points at the declared digest (read back), the user-visible commit point.
+    ArtifactPromoted,
 }
 
 /// One ledger line.

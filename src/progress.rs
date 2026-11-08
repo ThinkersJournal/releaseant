@@ -61,6 +61,7 @@ pub fn describe(e: &Event, took: Option<u64>) -> String {
         EventKind::ArtifactVisible => format!("artifact {who}: read back, the declared bytes"),
         EventKind::ArtifactHeld => format!("artifact {who}: HELD, {d}"),
         EventKind::ArtifactFailed => format!("artifact {who}: FAILED, {d}"),
+        EventKind::ArtifactPromoted => format!("artifact {who}: promoted, {d}"),
     }
 }
 
@@ -107,7 +108,7 @@ pub fn observer(sink: ProgressSink) -> Observer {
 mod tests {
     use super::*;
 
-    const ALL: [EventKind; 20] = [
+    const ALL: [EventKind; 21] = [
         EventKind::Planned,
         EventKind::Verified,
         EventKind::Exception,
@@ -128,6 +129,7 @@ mod tests {
         EventKind::ArtifactVisible,
         EventKind::ArtifactHeld,
         EventKind::ArtifactFailed,
+        EventKind::ArtifactPromoted,
     ];
 
     fn ev(kind: EventKind) -> Event {
@@ -152,7 +154,7 @@ mod tests {
             assert!(!line.trim().is_empty(), "{k:?}");
             assert!(seen.insert(line), "{k:?} repeats another kind's line");
         }
-        assert_eq!(seen.len(), 20);
+        assert_eq!(seen.len(), 21);
     }
 
     #[test]

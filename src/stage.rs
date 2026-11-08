@@ -163,7 +163,7 @@ fn asset_name(a: &Artifact) -> &str {
     &a.name
 }
 
-fn ours(earlier: &[Event], ctx: &Ctx, name: &str) -> bool {
+pub(crate) fn ours(earlier: &[Event], ctx: &Ctx, name: &str) -> bool {
     earlier.iter().any(|e| {
         e.sha == ctx.sha
             && e.crate_name.as_deref() == Some(name)
@@ -174,13 +174,13 @@ fn ours(earlier: &[Event], ctx: &Ctx, name: &str) -> bool {
     })
 }
 
-struct Rec<'a> {
-    ledger: &'a Ledger,
-    ctx: &'a Ctx,
+pub(crate) struct Rec<'a> {
+    pub(crate) ledger: &'a Ledger,
+    pub(crate) ctx: &'a Ctx,
 }
 
 impl Rec<'_> {
-    fn log(
+    pub(crate) fn log(
         &self,
         clock: &mut dyn Clock,
         kind: EventKind,
