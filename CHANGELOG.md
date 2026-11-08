@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.66
+
+- Docs only: ROADMAP R9 and the status of `docs/ARTIFACTS-DESIGN.md` now say that artifacts slices A1, A2, A4 and A6 are built and merged (0.0.61 to 0.0.65) and that A3, A5 and the CLI wiring are open. No code change.
+
 ## 0.0.65
 
 - Artifacts slice A6, part 2: the real-`crane` check against a real `registry:2` as a committed test, `tests/crane_runner.rs`, behind the new `runner-tests` cargo feature (not `#[ignore]`d; a missing Docker or `crane` is a failure with a message). `.github/workflows/runner-tests.yml` runs it on the self-hosted runner (push to main, schedule, manual dispatch only; no `pull_request` trigger, no secrets; inert until the repository variable `RUNNER_TESTS_ENABLED` is `true`); `runner-tests-detector.yml` goes red when no run has succeeded in 7 days. The hosted `cargo test` steps no longer pass `--all-features` (it would run the runner test without Docker; there was no other feature), clippy and doc still build everything. `docs/RUNNER-TESTS.md` says plainly that the runner lane is NOT running yet: no runner is registered for this repository, so no CI run has exercised the real-crane check. Nothing in the library changes.
