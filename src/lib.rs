@@ -17,6 +17,7 @@ pub mod clock;
 pub mod config;
 pub mod crates_io;
 pub mod externals;
+pub mod gh_forge;
 pub mod images;
 pub mod ledger;
 pub mod metadata;
