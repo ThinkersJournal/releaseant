@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.62
+
+- Artifacts slice A2 (`docs/ARTIFACTS-DESIGN.md`): `stage::stage_files` stages `file` artifacts into a DRAFT release through a `Forge` trait (tested against an in-memory fake; no real forge and no CLI path yet). Each file is hashed locally and must equal its declaration before anything is uploaded; an upload counts only when the bytes the forge serves back hash to the declaration; an existing asset is never replaced or removed (the same bytes with a ledger entry for this commit resume as already published, anything else, a partial asset or a public release is held); a forge that cannot be asked stops the run, resumable. Six `artifact_*` ledger event kinds.
+
 ## 0.0.61
 
 - `[[artifact]]` in `releaseant.toml` (design: `docs/ARTIFACTS-DESIGN.md`, slice A1): installers (`kind = "file"`, a GitHub release asset) and container images (`kind = "image"`) are parsed and validated, every problem of every artifact listed at once; a field that does not belong to the kind, an unknown key, a path that leaves the artifacts directory, a bad hash, tag, platform or target are errors naming the artifact. `plan` prints one line per artifact after the crates. `artifact::combined_fingerprint` is the plan-hash extension: unchanged when there are no artifacts, so an old ledger still resumes. Nothing uploads yet and the run loop does not read artifacts (slice A2).
