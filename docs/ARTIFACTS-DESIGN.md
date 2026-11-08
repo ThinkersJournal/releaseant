@@ -111,6 +111,19 @@ Failure modes (`UNVERIFIED` numbers, to be measured in slice A3):
 
 ### 4.2 `image` to an OCI registry (Docker Hub first)
 
+**What a builder must produce (PM ruling, 2026-11-08).** The input is an **OCI image layout
+directory**: `oci-layout`, `index.json` with exactly one entry (the image index, or the single image
+manifest, to publish), and `blobs/sha256/<hex>` holding that manifest, every child manifest it lists,
+and their configs and layers, each blob named by its own SHA-256 (the tool re-hashes them and refuses a
+layout where one is not). It is declared as `source = "dir:<path>"`, relative to the artifacts
+directory. The declared `digest` is the digest of that one top-level manifest and the declared
+`platforms` are exactly the platforms it lists (a single-platform image: the one in its config). An
+**OCI tar** (`oci-archive:`) is refused at `plan` with the named error `an OCI tar is not accepted
+(crane cannot push one)`, because `crane push` of a tarball of a layout fails
+(`docs/ARTIFACT-MEASUREMENTS.md` row 8); the builder unpacks it into a directory instead. A layout
+`crane pull --format oci` wrote is known to be accepted (measurements rows 2 to 4); other builders'
+layouts have not been tried.
+
 The tool moves an image **by digest** and never talks to a Docker daemon. Mechanism candidates (Q4):
 shell out to `skopeo` or `crane` (recommended: both push an OCI layout to a registry and print the
 digest; both exist as single binaries), or implement the OCI distribution API directly (more code, no
@@ -226,7 +239,7 @@ and `--crates-only` selectors (like `--only` today) keep both orders available.
 | A3 | `file` against a real throwaway GitHub repo; MEASURE the `UNVERIFIED` items of 4.1 and record them in a dated docs section | the measurements are the control; anything unmeasured stays labelled |
 | A4 | `image` against a local `registry:2`: pre-check, push by digest, multi-platform read-back, promote, held tag | an index missing one child platform is refused; a tag pointing elsewhere is `Held` and not retagged |
 | A5 | `image` against a throwaway Docker Hub repo (PM-run, needs org rights); capture the real 429/error wording as fixtures | as A3 |
-| A6 | mixed ordering (section 7), project tag only when crates and artifacts are all visible, `--artifacts-only`/`--crates-only` | a run with one artifact `Held` creates no tag even though all crates are visible |
+| A6 | mixed ordering (section 7), project tag only when crates and artifacts are all visible, `--artifacts-only`/`--crates-only`; ALSO (PM, 2026-11-08) the real-`crane` check against a local `registry:2` (the one run by hand in A4) as a committed test that runs on the self-hosted runner under the same conditions as the other runner tests, never `#[ignore]`d | a run with one artifact `Held` creates no tag even though all crates are visible |
 
 A patent re-sweep for the new families (artifact read-back by content hash before tagging; staged
 draft then promote) is owed before any ReleaseAnt release that ships them, as for earlier families

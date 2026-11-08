@@ -231,6 +231,9 @@ pub fn validate(artifacts: &[Artifact]) -> Result<(), ArtifactError> {
                 );
                 match &a.source {
                     None => bad("kind image needs `source`".into()),
+                    Some(s) if s.starts_with("oci-archive:") => bad(format!(
+                        "source {s:?}: an OCI tar is not accepted (crane cannot push one); give `dir:<relative path>`, an OCI image layout directory (docs/ARTIFACTS-DESIGN.md section 4.2)"
+                    )),
                     Some(s) => match s.strip_prefix("dir:") {
                         Some(p) if relative_inside(p) => {}
                         _ => bad(format!(
@@ -527,8 +530,8 @@ mod tests {
         let mut i = image();
         i.source = Some("oci-archive:dist/i.tar".into());
         assert!(
-            has(&[i], "OCI image layout"),
-            "an archive tarball cannot be pushed by crane"
+            has(&[i], "an OCI tar is not accepted"),
+            "a named error, not the generic one: an archive tarball cannot be pushed by crane"
         );
     }
 
