@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.60
+
+- Docs only: `docs/ARTIFACTS-DESIGN.md`, the design note for publishing installers (GitHub release assets) and container images against a declared SHA-256, read back by hash, never overwriting, tagging last; ROADMAP row R9. No code.
+
 ## 0.0.59
 
 - Fix: an empty `--require-checks` entry (`--require-checks ""`, or `a,,b`) is refused at once with exit 2 and a message naming the entry, instead of being judged as a check with no name that can never be found and failing only after the whole `--ci-wait` (found in Fuel's second real publish). Docs: `docs/R5-LIVE.md` section 5 reads that publish (0.36.7, 61 min 34 s, loaded box) against the first: zero 429s again, the registry's share unchanged, the extra 910 s is local builds. Ledger and transcripts kept under `docs/rehearsal/`.
