@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.65
+
+- Artifacts slice A6, part 2: the real-`crane` check against a real `registry:2` as a committed test, `tests/crane_runner.rs`, behind the new `runner-tests` cargo feature (not `#[ignore]`d; a missing Docker or `crane` is a failure with a message). `.github/workflows/runner-tests.yml` runs it on the self-hosted runner (push to main, schedule, manual dispatch only; no `pull_request` trigger, no secrets; inert until the repository variable `RUNNER_TESTS_ENABLED` is `true`); `runner-tests-detector.yml` goes red when no run has succeeded in 7 days. The hosted `cargo test` steps no longer pass `--all-features` (it would run the runner test without Docker; there was no other feature), clippy and doc still build everything. `docs/RUNNER-TESTS.md` says plainly that the runner lane is NOT running yet: no runner is registered for this repository, so no CI run has exercised the real-crane check. Nothing in the library changes.
+
 ## 0.0.64
 
 - Artifacts slice A6, part 1 (`docs/ARTIFACTS-DESIGN.md` section 7): `release::release` runs a mixed release in the designed order against any `Forge`, `ImageRegistry` and `Registry`: stage artifacts (draft release, images pushed by digest, nothing public), publish the crates, promote the image tags, create the project tag through a caller-supplied step, then publish the draft release onto it. A step that does not finish stops the sequence: a held or unverified artifact means no crate is published and no tag exists, a failed file stage stops before any image is pushed, an image that cannot be tagged or a failing tag step leaves the release a draft. The artifact declarations are part of the plan identity (a changed declaration for the same commit is refused). `Select::{Both, CratesOnly, ArtifactsOnly}`; a dry run touches nothing. `Forge` gains `publish_draft`. Not reachable from the CLI yet (it needs a measured real forge, slice A3).
