@@ -1,0 +1,45 @@
+name: Runner tests detector
+
+# Goes RED when the self-hosted runner run has not succeeded recently. Without this a dead runner, a
+# disabled schedule or a deleted workflow would look exactly like "all green". Runs on a hosted runner,
+# so it keeps working when the runner machine is off.
+#
+# INERT until RUNNER_TESTS_ENABLED is 'true' (same switch as runner-tests.yml).
+on:
+  schedule:
+    - cron: "53 6 * * *"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  freshness:
+    name: Last successful runner run is recent
+    if: vars.RUNNER_TESTS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      MAX_AGE_DAYS: "7"
+    steps:
+      - name: Check the last successful runner-tests.yml run
+        shell: bash
+        run: |
+          set -euo pipefail
+          json=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow runner-tests.yml \
+                   --status success --limit 1 --json createdAt,headSha,url)
+          echo "latest successful runner run: $json"
+          n=$(echo "$json" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+          if [ "$n" -lt 1 ]; then
+            echo "::error::no successful runner-tests.yml run exists - the runner tests have NEVER run (runner missing or workflow disabled)"
+            exit 1
+          fi
+          age_days=$(echo "$json" | python3 -c 'import json,sys,datetime as d; r=json.load(sys.stdin)[0]; t=d.datetime.fromisoformat(r["createdAt"].replace("Z","+00:00")); print((d.datetime.now(d.timezone.utc)-t).days)')
+          echo "age: ${age_days} day(s); limit: ${MAX_AGE_DAYS}"
+          if [ "$age_days" -gt "$MAX_AGE_DAYS" ]; then
+            echo "::error::last successful runner run is ${age_days} days old (limit ${MAX_AGE_DAYS}) - the runner tests are not being run"
+            exit 1
+          fi

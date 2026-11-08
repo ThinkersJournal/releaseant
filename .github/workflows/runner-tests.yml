@@ -1,0 +1,55 @@
+name: Runner tests (self-hosted)
+
+# Runs the tests that need Docker and crane (tests/crane_runner.rs, feature `runner-tests`) on the
+# self-hosted runner. See docs/RUNNER-TESTS.md.
+#
+# SECURITY (public repo, CIRESNAVE-EXPECTATIONS 5.1h): this job runs on a self-hosted machine, so it must
+# never run code from a fork. Triggers are limited to push to main, a schedule and manual dispatch, all
+# of which run only code already on `main` or that a maintainer chose to dispatch. There is
+# deliberately NO `pull_request` trigger, and the job names no secret.
+#
+# INERT until the repository variable RUNNER_TESTS_ENABLED is 'true' (set only after the runner is
+# registered for this repository).
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  crane:
+    name: real crane against registry:2
+    if: vars.RUNNER_TESTS_ENABLED == 'true'
+    # The labels are the PM's to set when the runner group exists (docs/RUNNER-TESTS.md); these are
+    # the ones this file was drafted with.
+    runs-on: [self-hosted, windows, releaseant]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          toolchain: stable
+      # Fails if the test fails, if Docker or crane is missing (the test panics, it does not skip), or
+      # if it did not run exactly one test: a run that passes zero tests is a failure.
+      - name: cargo test (runner-tests)
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --locked --features runner-tests --test crane_runner -- --nocapture 2>&1 | tee runner-test.log
+          grep -q "test result: ok. 1 passed; 0 failed" runner-test.log \
+            || { echo "::error::the runner test did not run and pass exactly once"; exit 1; }
+      - name: Upload run record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: runner-test-log
+          path: runner-test.log
+          if-no-files-found: error
