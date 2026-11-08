@@ -522,6 +522,9 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                     println!("{} {}", c.name, c.version);
                 }
             }
+            for a in &prepared.config.artifact {
+                println!("{}", crate::artifact::describe(a));
+            }
             let names_refused = if check_names {
                 refused_names(&prepared, &owner)?
             } else {

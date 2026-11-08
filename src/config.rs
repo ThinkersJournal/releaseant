@@ -10,6 +10,8 @@
 //! A `[names]` table with `owners = ["ciresnave", "github:org:team"]` says whose crates are ours for
 //! `plan --check-names`.
 //!
+//! `[[artifact]]` tables name installers and container images (see [`crate::artifact`]).
+//!
 //! `require` names the metadata fields that are warnings by default and must be errors for this
 //! project (see [`crate::preflight`]). The command line's `--require-metadata` adds to it; neither can
 //! relax what is an error anyway. An unknown key or an unknown field name is an error, not ignored: a
@@ -23,6 +25,7 @@ use std::path::Path;
 
 use serde::Deserialize;
 
+use crate::artifact::{self, Artifact, ArtifactError};
 use crate::preflight::parse_require;
 
 /// The file's name, at the root of the repository.
@@ -38,6 +41,9 @@ pub struct Config {
     /// `[names]`.
     #[serde(default)]
     pub names: NamesConfig,
+    /// `[[artifact]]`: installers and images published beside the crates (`crate::artifact`).
+    #[serde(default)]
+    pub artifact: Vec<Artifact>,
 }
 
 /// `[names]`: whose crates are ours, for `plan --check-names`.
@@ -76,6 +82,8 @@ pub enum ConfigError {
     Parse(String),
     /// `require` names a field that cannot be required.
     Require(String),
+    /// `[[artifact]]` has problems; every one is listed.
+    Artifact(ArtifactError),
 }
 
 impl fmt::Display for ConfigError {
@@ -84,6 +92,7 @@ impl fmt::Display for ConfigError {
             Self::Read(e) => write!(f, "{FILE}: could not be read: {e}"),
             Self::Parse(m) => write!(f, "{FILE}: {m}"),
             Self::Require(m) => write!(f, "{FILE}: [metadata] require: {m}"),
+            Self::Artifact(e) => write!(f, "{FILE}: [[artifact]]: {e}"),
         }
     }
 }
@@ -94,11 +103,12 @@ impl std::error::Error for ConfigError {}
 ///
 /// # Errors
 /// [`ConfigError::Parse`] for bad TOML, an unknown key or a wrong type; [`ConfigError::Require`] for a
-/// field name that cannot be required.
+/// field name that cannot be required; [`ConfigError::Artifact`] for a bad `[[artifact]]`.
 pub fn parse(text: &str) -> Result<Config, ConfigError> {
     let config: Config =
         toml::from_str(text).map_err(|e| ConfigError::Parse(e.to_string().trim().to_owned()))?;
     parse_require(&config.metadata.require).map_err(ConfigError::Require)?;
+    artifact::validate(&config.artifact).map_err(ConfigError::Artifact)?;
     Ok(config)
 }
 
@@ -191,5 +201,25 @@ mod tests {
             parse("[metadata\nrequire = []\n").unwrap_err(),
             ConfigError::Parse(_)
         ));
+    }
+
+    #[test]
+    fn artifacts_are_read_and_a_bad_one_is_an_error_naming_it() {
+        let ok = "[[artifact]]\nname = \"i\"\nkind = \"file\"\npath = \"dist/x\"\nsha256 = \"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"\ntarget = \"github-release\"\n";
+        let c = parse(ok).unwrap();
+        assert_eq!(c.artifact.len(), 1);
+        assert_eq!(c.artifact[0].name, "i");
+        assert!(
+            parse("").unwrap().artifact.is_empty(),
+            "control: none by default"
+        );
+        let bad = ok.replace("github-release", "s3");
+        let e = parse(&bad).unwrap_err().to_string();
+        assert!(e.contains("[[artifact]]") && e.contains("\"i\""), "{e}");
+        let unknown = format!("{ok}colour = \"red\"\n");
+        assert!(
+            matches!(parse(&unknown), Err(ConfigError::Parse(_))),
+            "unknown key"
+        );
     }
 }
