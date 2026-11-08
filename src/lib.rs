@@ -29,6 +29,7 @@ pub mod registry;
 pub mod retry;
 pub mod run;
 pub mod source;
+pub mod stage;
 pub mod tag;
 pub mod verify;
 pub mod yank;

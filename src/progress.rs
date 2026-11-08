@@ -55,6 +55,12 @@ pub fn describe(e: &Event, took: Option<u64>) -> String {
         EventKind::Tagged => format!("tagged {who}: {d}"),
         EventKind::Phase if who.is_empty() => format!("timing: {d}"),
         EventKind::Phase => format!("timing {who}: {d}"),
+        EventKind::ArtifactVerified => format!("artifact {who}: local hash equals the declaration"),
+        EventKind::ArtifactUploadStarted => format!("artifact {who}: uploading"),
+        EventKind::ArtifactUploadFinished => format!("artifact {who}: upload returned"),
+        EventKind::ArtifactVisible => format!("artifact {who}: read back, the declared bytes"),
+        EventKind::ArtifactHeld => format!("artifact {who}: HELD, {d}"),
+        EventKind::ArtifactFailed => format!("artifact {who}: FAILED, {d}"),
     }
 }
 
@@ -101,7 +107,7 @@ pub fn observer(sink: ProgressSink) -> Observer {
 mod tests {
     use super::*;
 
-    const ALL: [EventKind; 14] = [
+    const ALL: [EventKind; 20] = [
         EventKind::Planned,
         EventKind::Verified,
         EventKind::Exception,
@@ -116,6 +122,12 @@ mod tests {
         EventKind::Yanked,
         EventKind::Tagged,
         EventKind::Phase,
+        EventKind::ArtifactVerified,
+        EventKind::ArtifactUploadStarted,
+        EventKind::ArtifactUploadFinished,
+        EventKind::ArtifactVisible,
+        EventKind::ArtifactHeld,
+        EventKind::ArtifactFailed,
     ];
 
     fn ev(kind: EventKind) -> Event {
@@ -140,7 +152,7 @@ mod tests {
             assert!(!line.trim().is_empty(), "{k:?}");
             assert!(seen.insert(line), "{k:?} repeats another kind's line");
         }
-        assert_eq!(seen.len(), 14);
+        assert_eq!(seen.len(), 20);
     }
 
     #[test]

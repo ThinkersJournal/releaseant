@@ -159,6 +159,13 @@ DESIGN section 5's format, same file, new fields and events. One event per line,
   `artifact-skipped`.
 - New fields: `kind` (`crate`|`file`|`image`), `name` (replaces `crate` for artifacts), `sha256`/`digest`
   (declared), `observed` (what the read-back returned), `size`, `target`.
+- **Decided in A2 (built, `src/stage.rs`):** to avoid touching every `Event` constructor, an artifact
+  event reuses the `crate` field for the artifact's name (no version) and is told apart by its event kind:
+  `artifact_verified`, `artifact_upload_started`, `artifact_upload_finished`, `artifact_visible`,
+  `artifact_held`, `artifact_failed`. The separate `kind`/`name`/`observed` fields above are not added; the
+  hashes go in `detail` (`sha256=<hex>`). `ours` (the Held rule) looks only at `artifact_upload_started` and
+  `artifact_visible` for this SHA, so a crate event can never vouch for an artifact of the same name.
+  A2 stages `file` artifacts only; `promoted` and the release tag are A6.
 - Old readers: events of an unknown `kind` are an error naming the version that wrote them, not
   ignored (a ledger that old code half-understands would skip artifacts silently).
 - The terminal states of the per-crate machine (DESIGN section 3) carry over: `pending -> verified ->

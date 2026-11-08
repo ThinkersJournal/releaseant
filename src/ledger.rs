@@ -45,6 +45,19 @@ pub enum EventKind {
     /// records no state change and nothing reads it back; `ts` is when the note was written,
     /// the offsets in `detail` say when the phase happened.
     Phase,
+    /// An artifact (`crate` holds its name; no version) was hashed locally and equals its declaration.
+    ArtifactVerified,
+    /// An artifact upload is about to start (written before the upload, like `UploadStarted`).
+    ArtifactUploadStarted,
+    /// An artifact upload returned.
+    ArtifactUploadFinished,
+    /// Read-back served the declared bytes (or a resume found them there, put by this commit).
+    ArtifactVisible,
+    /// Something is in the way (a name that exists, a partial asset, a public release): the run
+    /// stops for a person, and nothing was changed.
+    ArtifactHeld,
+    /// An artifact failed (a local hash that differs, a refused upload, a read-back that differs).
+    ArtifactFailed,
 }
 
 /// One ledger line.
