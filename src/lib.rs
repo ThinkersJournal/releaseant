@@ -27,6 +27,7 @@ pub mod plan;
 pub mod preflight;
 pub mod progress;
 pub mod registry;
+pub mod release;
 pub mod retry;
 pub mod run;
 pub mod source;

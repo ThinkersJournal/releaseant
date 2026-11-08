@@ -688,6 +688,8 @@ pub mod fake {
         pub ask_error: Option<String>,
         /// The next `manifest_bytes` fails once (a kill between push and read-back).
         pub bytes_fail_once: bool,
+        /// A racing writer: right after a successful push, `(tag, digest)` is made to point there.
+        pub race_tag: Option<(String, String)>,
     }
 
     impl FakeImages {
@@ -745,6 +747,9 @@ pub mod fake {
                 self.bytes.insert((repo.into(), c.clone()), read(c)?);
                 self.refs.insert((repo.into(), c.clone()), c.clone());
             }
+            if let Some((tag, other)) = &self.race_tag {
+                self.refs.insert((repo.into(), tag.clone()), other.clone());
+            }
             Ok(())
         }
 
@@ -772,7 +777,7 @@ pub mod fake {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::fake::FakeImages;
     use super::*;
     use crate::registry::fake::FakeClock;
@@ -780,7 +785,7 @@ mod tests {
     const SHA: &str = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
     const REPO: &str = "docker.io/thinkersjournal/demo";
 
-    fn put(dir: &Path, bytes: &[u8]) -> String {
+    pub(crate) fn put(dir: &Path, bytes: &[u8]) -> String {
         let h = sha256_hex(bytes);
         fs::create_dir_all(dir.join("blobs/sha256")).unwrap();
         fs::write(dir.join("blobs/sha256").join(&h), bytes).unwrap();
@@ -788,7 +793,7 @@ mod tests {
     }
 
     /// A layout under `root/dist/img` with an index over the given platforms; returns its digest.
-    fn layout(root: &Path, platforms: &[(&str, &str)]) -> String {
+    pub(crate) fn layout(root: &Path, platforms: &[(&str, &str)]) -> String {
         let dir = root.join("dist/img");
         let mut kids = Vec::new();
         for (os, arch) in platforms {
