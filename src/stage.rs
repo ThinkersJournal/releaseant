@@ -63,6 +63,13 @@ pub trait Forge {
     /// # Errors
     /// The failure text when it could not be read.
     fn served_sha256(&mut self, tag: &str, name: &str) -> Result<String, String>;
+    /// Publish the draft release of `tag` (make it visible to users). The git tag it points at must
+    /// already exist (design Q3: annotated tag first, then undraft; slice A3 measures whether a real
+    /// forge allows it).
+    ///
+    /// # Errors
+    /// The forge's refusal.
+    fn publish_draft(&mut self, tag: &str) -> Result<(), String>;
 }
 
 /// What happened to one artifact.
@@ -431,6 +438,12 @@ pub mod fake {
         pub read_back_fails_once: BTreeSet<String>,
         /// Run at the start of each upload.
         pub on_upload: Option<UploadHook>,
+        /// Every `publish_draft` call, in order.
+        pub publish_calls: Vec<String>,
+        /// `publish_draft` fails with this text.
+        pub publish_error: Option<String>,
+        /// Shared order log: `publish_draft` appends `"publish_draft"` to it.
+        pub order: std::rc::Rc<std::cell::RefCell<Vec<String>>>,
     }
 
     impl FakeForge {
@@ -533,6 +546,19 @@ pub mod fake {
                 .get(&(tag.to_owned(), name.to_owned()))
                 .cloned()
                 .ok_or_else(|| format!("{name}: no such asset"))
+        }
+
+        fn publish_draft(&mut self, tag: &str) -> Result<(), String> {
+            self.publish_calls.push(tag.into());
+            self.order.borrow_mut().push("publish_draft".into());
+            if let Some(e) = &self.publish_error {
+                return Err(e.clone());
+            }
+            self.releases
+                .get_mut(tag)
+                .ok_or_else(|| format!("{tag}: no such release"))?
+                .draft = false;
+            Ok(())
         }
     }
 }
