@@ -1,6 +1,6 @@
 [package]
 name = "releaseant"
-version = "0.0.64"
+version = "0.0.65"
 edition = "2024"
 rust-version = "1.88"
 description = "Ordered, verified, resumable publishing of Rust crates and workspaces to crates.io, with read-back."
@@ -10,6 +10,12 @@ readme = "README.md"
 keywords = ["ant", "releaseant"]
 categories = ["development-tools"]
 include = ["src/**", "tests/**", "README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE-APACHE", "LICENSE-MIT"]
+
+[features]
+# Tests that need Docker and crane. Type-checked on every PR (clippy and doc build with all features),
+# RUN by .github/workflows/runner-tests.yml on the self-hosted runner, never #[ignore]d. See
+# docs/RUNNER-TESTS.md. Nothing in the library depends on it.
+runner-tests = []
 
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
