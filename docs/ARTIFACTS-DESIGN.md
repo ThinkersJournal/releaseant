@@ -15,8 +15,7 @@ Two kinds first.
 | `file` | a GitHub release asset (installer, archive, checksum file) | Humboldt installer |
 | `image` | an OCI image in a registry (Docker Hub `thinkersjournal/*`) | Fuel, Unpopped |
 
-The PM listed "WebHostAnt checks" as a first customer; it is not clear to this lane what artifact that
-is (a deploy check is not an uploaded artifact). Open question Q1.
+WebHostAnt is not a customer (PM, 2026-11-08, Q1): it only verifies checksums and digests.
 
 **The tool does not build and does not hold signing keys.** CI builds. A signing step, if any, is a
 separate step behind `with-secret`, and runs BEFORE ReleaseAnt: the tool is handed the final bytes.
@@ -226,18 +225,14 @@ A patent re-sweep for the new families (artifact read-back by content hash befor
 draft then promote) is owed before any ReleaseAnt release that ships them, as for earlier families
 (ROADMAP R6). The sweep stays INCOMPLETE.
 
-## 10. Questions for the PM
+## 10. Questions and the PM's answers (2026-11-08, `[ASK]` over Synapse)
 
-- **Q1.** What does WebHostAnt need ReleaseAnt to publish or check? (Not an installer or image as far as
-  this lane can tell.)
-- **Q2.** Where does a build's hash come from: CI sums file passed per run (recommended) or a
-  committed hash?
-- **Q3.** Release ordering: does the PM accept "annotated tag first, then undraft the release onto it",
-  subject to A3 confirming the forge allows it?
-- **Q4.** Image mechanism: shell out to `skopeo`/`crane` (recommended) or speak the OCI API in-tool? Is
-  adding one external binary acceptable (cf. `--check-externals`)?
-- **Q5.** Stage artifacts before the irreversible crate step (recommended) or after?
-- **Q6.** Who holds Docker Hub org-write rights for the A5 rehearsal, and may a throwaway repo be made?
+- **Q1 (answered).** WebHostAnt is not a customer: it only verifies checksums and digests. Dropped from section 1.
+- **Q2 (answered).** A CI sums file passed per run; no hash committed back to the repo.
+- **Q3 (accepted, conditional).** Annotated tag first, then undraft the release onto it, subject to slice A3 confirming the forge allows it.
+- **Q4 (answered).** Shell out to `skopeo` or `crane`; one external binary is fine and is reported by `--check-externals` (slice A4 adds it to that list).
+- **Q5 (answered).** Stage artifacts BEFORE the irreversible crate step (section 7 as written).
+- **Q6 (OPEN, CireSnave's).** Who holds Docker Hub org-write rights for `thinkersjournal/*`, and may a throwaway repo be made for the slice A5 rehearsal? The PM takes it to the board when A5 is next. Slices A1 to A4 need neither.
 
 ## 11. Unmeasured, stated once
 
