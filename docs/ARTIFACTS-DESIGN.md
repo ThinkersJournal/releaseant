@@ -1,6 +1,6 @@
 # ReleaseAnt: publishing artifacts (installers and container images), design
 
-Status: DESIGN ONLY, no code. Requested by CireSnave 2026-11-08 via the PM `[TASK]`. Extends DESIGN.md
+Status: design, with slices A1, A2, A4 and A6 built and merged (0.0.61 to 0.0.65; see section 9); A3, A5 and CLI wiring open. Requested by CireSnave 2026-11-08 via the PM `[TASK]`. Extends DESIGN.md
 (sections 3, 5, 6, 15, 17); read those first. Every number about a third-party service below is
 **recalled, not measured** and is marked `UNVERIFIED`: each is a thing the first rehearsal slice must
 measure and record with a date before any code depends on it (portfolio CLAUDE.md section 6).
@@ -233,13 +233,15 @@ and `--crates-only` selectors (like `--only` today) keep both orders available.
 
 | Slice | Delivers | Negative control |
 |---|---|---|
-| A0 | this note reviewed by the PM; Q1-Q6 answered | n/a |
+| A0 | this note reviewed by the PM; Q1-Q6 answered (Q6 still open) | n/a |
 | A1 | `[[artifact]]` parsing, validation, plan output, plan-hash change; dry run only | a manifest with a bad hash length, duplicate name or unknown kind is refused; removing the check fails the test |
 | A2 | `file` kind against a fake forge: verify, stage, read back, held, resume rows of section 6 | an asset whose served bytes differ from the declaration is NOT `visible` |
 | A3 | `file` against a real throwaway GitHub repo; MEASURE the `UNVERIFIED` items of 4.1 and record them in a dated docs section | the measurements are the control; anything unmeasured stays labelled |
 | A4 | `image` against a local `registry:2`: pre-check, push by digest, multi-platform read-back, promote, held tag | an index missing one child platform is refused; a tag pointing elsewhere is `Held` and not retagged |
 | A5 | `image` against a throwaway Docker Hub repo (PM-run, needs org rights); capture the real 429/error wording as fixtures | as A3 |
 | A6 | mixed ordering (section 7), project tag only when crates and artifacts are all visible, `--artifacts-only`/`--crates-only`; ALSO (PM, 2026-11-08) the real-`crane` check against a local `registry:2` (the one run by hand in A4) as a committed test that runs on the self-hosted runner under the same conditions as the other runner tests, never `#[ignore]`d | a run with one artifact `Held` creates no tag even though all crates are visible |
+
+Built status at `origin/main` 20aec7f (0.0.65): A0 done (0.0.60), A1 done (0.0.61), A2 done (0.0.62), A4 done (0.0.63; as built it pushes `dir:` OCI layouts through crane, not a `registry:2` push of a tar), A6 done in two parts (0.0.64 orchestration against fakes, 0.0.65 the runner-only real-crane test). OPEN: A3, A5, and the CLI wiring of `release()` that A6 names (`--artifacts-only` and `--crates-only` are not yet flags).
 
 A patent re-sweep for the new families (artifact read-back by content hash before tagging; staged
 draft then promote) is owed before any ReleaseAnt release that ships them, as for earlier families
