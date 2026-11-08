@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.64
+
+- Artifacts slice A6, part 1 (`docs/ARTIFACTS-DESIGN.md` section 7): `release::release` runs a mixed release in the designed order against any `Forge`, `ImageRegistry` and `Registry`: stage artifacts (draft release, images pushed by digest, nothing public), publish the crates, promote the image tags, create the project tag through a caller-supplied step, then publish the draft release onto it. A step that does not finish stops the sequence: a held or unverified artifact means no crate is published and no tag exists, a failed file stage stops before any image is pushed, an image that cannot be tagged or a failing tag step leaves the release a draft. The artifact declarations are part of the plan identity (a changed declaration for the same commit is refused). `Select::{Both, CratesOnly, ArtifactsOnly}`; a dry run touches nothing. `Forge` gains `publish_draft`. Not reachable from the CLI yet (it needs a measured real forge, slice A3).
+
 ## 0.0.63
 
 - Artifacts slice A4 (`docs/ARTIFACTS-DESIGN.md`, measurements in `docs/ARTIFACT-MEASUREMENTS.md`): `images::stage_images` pushes `image` artifacts BY DIGEST (no tag) through `crane`, after checking the local OCI layout's digest and platforms against the declaration; a tag already pointing at another digest holds the image before anything is pushed; the registry's served manifest is hashed and every child manifest is looked up before the image counts as visible. `images::promote_images` sets the tags last, checking all of them first and moving none if one is taken, reading each back. `ImageRegistry` trait with a fake and a `Crane` implementation; `classify_digest` tells absent from could-not-ask using the real crane wording. New ledger event `artifact_promoted`. Image sources are `dir:` OCI layout directories only: `oci-archive:` is refused with a named error (crane cannot push an OCI tar). Not reachable from the CLI yet (A6). Nothing about Docker Hub is measured.
