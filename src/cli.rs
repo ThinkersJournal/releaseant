@@ -548,10 +548,31 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             if missing.is_empty() {
                 println!("externals: every dependency outside the set is on the registry");
             }
+            let crane_ok = if prepared
+                .config
+                .artifact
+                .iter()
+                .any(|a| a.kind == crate::artifact::Kind::Image)
+            {
+                match crate::images::Crane::from_env().version() {
+                    Ok(v) => {
+                        println!(
+                            "externals: crane {v} is runnable (declared image artifacts need it)"
+                        );
+                        true
+                    }
+                    Err(why) => {
+                        println!("MISSING EXTERNAL: crane ({why}); image artifacts are declared");
+                        false
+                    }
+                }
+            } else {
+                true
+            };
             if let Some(e) = msrv_refused.or(names_refused) {
                 return Err(e.into());
             }
-            Ok(missing.is_empty())
+            Ok(missing.is_empty() && crane_ok)
         }
         Command::Verify { source: s, policy } => {
             let require = policy.set()?;

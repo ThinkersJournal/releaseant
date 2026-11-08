@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.67
+
+- `plan --check-externals` now also reports whether `crane` can be run (`$CRANE`, else the PATH) when `[[artifact]]` image artifacts are declared: a `crane` line with its version, or `MISSING EXTERNAL: crane (reason)` and a non-zero exit. New `Crane::from_env` and `Crane::version`. `release()` is still not reachable from `publish` (it needs the real forge, slice A3).
+
 ## 0.0.66
 
 - Docs only: ROADMAP R9 and the status of `docs/ARTIFACTS-DESIGN.md` now say that artifacts slices A1, A2, A4 and A6 are built and merged (0.0.61 to 0.0.65) and that A3, A5 and the CLI wiring are open. No code change.
