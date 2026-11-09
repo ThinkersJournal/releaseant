@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.68
+
+- Artifacts slice A3: `GhForge` (`src/gh_forge.rs`), the real `stage::Forge` over `gh api` (`$GH`, else `gh` on the PATH): finds a release by LISTING (a draft is not returned by `releases/tags/<tag>`), remembers the id of a draft it created because the listing can miss it for a moment, refuses a stored asset name that differs from the requested one (GitHub turns spaces into dots), reads back by downloading and hashing the bytes, and undrafts after an annotated tag exists. `tests/forge_runner.rs` (feature `runner-tests`) runs the whole cycle against `ciresnave-bot/releaseant-artifact-rehearsal`. Measurements, dated, in `docs/ARTIFACT-MEASUREMENTS.md` (A3); size caps, 429 wording and the state a dropped upload leaves stay `UNVERIFIED`. Not reachable from `publish` yet.
+- Fix: `Cargo::check` (the verification build of a packaged crate) now always passes `--target-dir <scratch>/target`. Left to the environment, a `CARGO_TARGET_DIR` (or `build.target-dir`) made every verification share one build cache, and a crate with the same name and version as an earlier different one could verify OK without being built from its own tarball. Measured: with `CARGO_TARGET_DIR` set, `pipeline::tests::a_crate_that_only_builds_from_the_tree_blocks_every_upload` failed in 3 of 4 full lib runs, with it unset 0 of 4 (the "known flake"); after the fix 0 of 4 with it set. `verify::tests::crate_that_only_builds_from_the_tree_fails_verification` now also asserts the build went into `<scratch>/target` (fails if the flag is dropped). Not shown: that hosted CI had `CARGO_TARGET_DIR` set when it flaked.
+
 ## 0.0.67
 
 - `plan --check-externals` now also reports whether `crane` can be run (`$CRANE`, else the PATH) when `[[artifact]]` image artifacts are declared: a `crane` line with its version, or `MISSING EXTERNAL: crane (reason)` and a non-zero exit. New `Crane::from_env` and `Crane::version`. `release()` is still not reachable from `publish` (it needs the real forge, slice A3).
