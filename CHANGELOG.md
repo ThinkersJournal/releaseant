@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.72
+
+- Docs: `docs/ARTIFACT-MEASUREMENTS.md` records the PM-run Docker Hub rehearsal (slice A5, runbook steps 1 to 9): digest-only and tag pushes and a silent tag move all succeed with `crane`, an unknown repository answers `MANIFEST_UNKNOWN` (not `NAME_UNKNOWN` or `UNAUTHORIZED`), and tags are mutable. 429 wording, a push that dies midway and our own code path against Hub are still unmeasured. No Rust change.
+
 ## 0.0.71
 
 - CI/docs: `.github/workflows/runner-tests.yml` gains an inert `forge` job that runs `tests/forge_runner.rs` (feature `runner-tests`) against the private rehearsal repository on the self-hosted runner, with the same exactly-one-passed check and log upload as the crane job. Still gated on `RUNNER_TESTS_ENABLED`, no `pull_request` trigger, no secret named (the runner machine's own `gh` login is used). `docs/RUNNER-TESTS.md` says what the runner must provide. No Rust change.
