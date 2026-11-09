@@ -88,3 +88,101 @@ dropped upload leaves behind (state of the partial asset); whether a published a
 or replaced; behaviour on a public repository (this one is private; visibility of drafts to others
 not tested); whether `gh` retries on its own.
 
+## A5, 2026-11-09: Docker Hub (`thinkersjournal/releaseant-a5-test`), runbook and observations
+
+**Status: runbook steps 1 to 9 recorded below (PM run, 2026-11-09, `crane` 0.22.1, login `ciresnave`);
+step 10 not observed; step 11 not run.** The runbook is kept as run. Nothing here is a claim about Docker
+Hub beyond what the "Observed" table says, and every row there comes from the PM's raw file, not from a
+run by the ReleaseAnt lane. The PM said CireSnave would delete the repository afterwards (not checked by the lane).
+
+### Target and who runs what
+
+- **Target:** `thinkersjournal/releaseant-a5-test` on Docker Hub, created by CireSnave as a PRIVATE
+  throwaway repository; he deletes the whole repository when A5 is done. **Never touch
+  `thinkersjournal/synapse`** (a real public repository: the Hub API lists it as the only public
+  `thinkersjournal` repository on 2026-11-09).
+- **Who pushes:** the PM, with the `ciresnave` Docker Desktop login. The ReleaseAnt lane's session cannot
+  push (its permission layer refuses a push to a Hub surface, even a private one) and never handles the
+  credentials. The lane writes the commands; the PM runs them and pastes the raw output back.
+- **Tool:** `crane` 0.22.1 at `C:/Projects/.claude-hooks/tools-crane/crane.exe` (see A4 above).
+  `docker.io` references below are written as `thinkersjournal/releaseant-a5-test`; crane resolves them
+  to Docker Hub.
+
+### First finding (reported by the PM, 2026-11-09; not re-run by the lane)
+
+| # | Question | Observed |
+|---|---|---|
+| 1 | Can the `ciresnave` login push to `thinkersjournal/*`? | Yes, per the PM's own run: `docker push thinkersjournal/releaseant-a5-test:a5-1` (a retagged `hello-world`) succeeded with digest `sha256:d1a8d0a4eeb63aff09f5f34d4d80505e0ba81905f36158cc3970d8e07179e59e`; an authenticated `crane digest` of the same tag printed the same digest; the anonymous Hub API answered 404 for the repository (so it is private). This is one push of one single-platform image through `docker`, not through `crane`, and says nothing yet about index pushes, push by digest, or limits. |
+
+### Runbook (PM runs; every step against the throwaway repository only)
+
+Record for each step: the exact command, the exit status, and stdout and stderr verbatim. If a step
+prints something unexpected, paste it unedited and stop; do not retry in a loop. `R` below is
+`thinkersjournal/releaseant-a5-test`.
+
+1. **Known tag reads back.** `crane digest R:a5-1`. Expect the digest in row 1. Confirms crane's auth
+   path reads a private Hub repository.
+2. **Absent tag.** `crane digest R:no-such-tag`. Record the exit status and the exact error code text
+   (A4 saw `MANIFEST_UNKNOWN` on `registry:2`; whether Hub says the same is unknown).
+3. **Unknown repository.** `crane digest thinkersjournal/releaseant-a5-does-not-exist:x`. Record whether
+   Hub answers `NAME_UNKNOWN` or `UNAUTHORIZED` (the design lists this as `UNVERIFIED`; the classifier
+   must not treat an unknown code as absent).
+4. **Build the A4 fixture without a daemon** (two one-file layers with `crane append`, platforms set
+   with `crane mutate --set-platform linux/amd64` and `linux/arm64`, then `crane index append`), as in
+   the A4 section, and export it with `crane pull --format oci <ref> <dir>` or build it as a layout.
+   Record the index digest `D`.
+5. **Push by digest, no tag.** `crane push <dir> R@D`. Record whether Hub accepts a digest-only push
+   (A4 row 3 saw `registry:2` accept it). Then `crane ls R` and `crane digest R@D`: is the index
+   readable by digest while no tag names it? Record all output.
+6. **Manifest bytes hash to the digest.** `crane manifest R@D` hashed with SHA-256 must equal `D`
+   (A4 row 1). Record the hash and the digest.
+7. **Push by tag.** `crane push <dir> R:a5-2`, then `crane digest R:a5-2`: equals `D`?
+8. **Tag mutability.** `crane tag R@<digest of a5-1> a5-2` (a different image) and then
+   `crane digest R:a5-2`. Record whether Hub moved the tag silently (A4 row 7 on `registry:2`) or
+   refused. Do this on the throwaway only.
+9. **Tag-immutability setting.** Read the repository's settings page on Hub and copy what it shows for
+   tag immutability (name of the setting, current value, whether it can be changed for this plan).
+   No guessing: if the page does not show it, write that.
+10. **Rate limits and 429 wording.** Do NOT provoke a limit. Record only a 429 or `TOOMANYREQUESTS`
+    text if one appears verbatim during the steps above, with the command that drew it. If none
+    appears, the row stays "not observed".
+11. **Optional: the lane's own code path.** The uncommitted A4 end-to-end test that drives
+    `images::Crane` (`stage_images`, `promote_images`, the held-tag case) could be pointed at `R`
+    instead of `127.0.0.1:5055`; this needs the lane to build it and the PM to supply the login, so it
+    is a separate request, not part of this runbook.
+
+### Observed (PM run 2026-11-09; raw commands and output in the PM's `a5-raw.txt`)
+
+Times 05:45 local. Step 4 ran on a local `registry:2`, not Docker Hub, and is only summarised in the
+raw file: the fixture is a two-platform index `D` = `sha256:34b902efbf04ca5be1330fe1a4349b79c5e5769952fa8d2f3992c2eaea24f7b5`
+(639 bytes; child manifests `sha256:729ba840...8525` and `sha256:b2777834...381d`, 423 bytes each),
+exported with `crane pull --format oci` to a layout directory.
+
+| Step | Command (repository `R` = `thinkersjournal/releaseant-a5-test`) | Observed |
+|---|---|---|
+| 1 | `crane digest R:a5-1` | exit 0, `sha256:d1a8d0a4...9e` (the row-1 digest above). |
+| 2 | `crane digest R:no-such-tag` | exit 1. stderr: `HEAD request failed, falling back on GET: HEAD https://index.docker.io/v2/thinkersjournal/releaseant-a5-test/manifests/no-such-tag: unexpected status code 404 Not Found (HEAD responses have no body, use GET for details)` then `Error: GET https://index.docker.io/v2/.../manifests/no-such-tag: MANIFEST_UNKNOWN: manifest unknown; unknown tag=no-such-tag`. |
+| 3 | `crane digest thinkersjournal/releaseant-a5-does-not-exist:x` | exit 1, same shape: HEAD 404, then `MANIFEST_UNKNOWN: manifest unknown; unknown tag=x`. **An unknown repository answers `MANIFEST_UNKNOWN`, not `NAME_UNKNOWN` and not `UNAUTHORIZED`, so crane's output cannot tell an absent repository from an absent tag.** Measured with the authenticated `ciresnave` login on a name that does not exist; what an anonymous or other login sees was not measured. |
+| 5 | `crane push <layout> R@D` | exit 0. Pushed four blobs, then the two child manifests by digest, then the index `D` by digest (size 639). Docker Hub accepted a digest-only push with no tag. |
+| 5b | `crane ls R` | exit 0, prints only `a5-1`: the index pushed by digest has no tag. |
+| 5c | `crane digest R@D` | exit 0, `D`: readable by digest while untagged. |
+| 6 | SHA-256 of the manifest bytes (the command was not recorded in the raw file) | the PM reports `34b902ef...f7b5`, equal to `D`. |
+| 7 | `crane push <layout> R:a5-2`, then `crane digest R:a5-2` | exit 0 both; the push reported `existing manifest` for both children, then `a5-2: digest: D size: 639`; the tag read back `D`. |
+| 8 | `crane tag R@sha256:d1a8d0a4...9e a5-2`, then `crane digest R:a5-2`, then `crane ls R` | exit 0, no warning, `a5-2: digest: sha256:d1a8d0a4...9e size: 1023`; the tag then read back `d1a8d0a4...`; `crane ls` printed `a5-1` and `a5-2`. **Docker Hub let an existing tag be moved to a different image silently**, as `registry:2` did in A4 row 7. |
+| 9 | the repository settings page | CireSnave's reading, relayed by the PM: the page says all tags are mutable. No screenshot; the setting's name and whether it can be changed on this plan were not copied. Consistent with step 8. |
+| 10 | rate limits and 429 wording | **Not observed.** No 429 appeared; none was provoked. Limits and wording stay `UNVERIFIED`. |
+| 11 | the lane's `images::Crane` path against Docker Hub | **Not run.** The lane's session cannot push to Hub and the throwaway repository was to be deleted. |
+
+What this changes for the design (section 4.2, `UNVERIFIED` rows): (a) tags on Docker Hub are mutable
+here, so the pre-check plus read-back remains the only guard and the named hole is real on Hub too;
+(b) an absent repository reads as an absent tag, so a mistyped repository name looks like "nothing
+published yet" (the classifier must not treat that as proof the repository is the intended one; the
+target repository comes from the declaration, never from a guess); (c) digest-only staging and tagging
+by digest both work on Hub with `crane`; (d) push-side limits, 429 wording, a push that dies midway and
+size limits are still unmeasured.
+
+### What this runbook does not cover
+
+A push that dies midway, layer and size limits, large-layer timeouts, crane's retry behaviour and
+`UNAUTHORIZED` from an expired login stay `UNVERIFIED`; they are not cheap or safe to provoke on a shared
+Hub account. Step 11 (our own code path against Hub) is also unmeasured.
