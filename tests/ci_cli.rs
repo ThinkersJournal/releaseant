@@ -10,6 +10,19 @@ use std::process::{Command, Output};
 
 const SHA: &str = "0123456789abcdef0123456789abcdef01234567";
 
+/// A command that finds no registry credentials: an empty `CARGO_HOME` and no token variables, so a
+/// run that gets further than its test expects cannot publish anything (a fixture crate once reached
+/// crates.io through the shared `CARGO_HOME`'s credentials).
+fn no_credentials(mut c: Command) -> Command {
+    c.env(
+        "CARGO_HOME",
+        std::env::temp_dir().join("releaseant-test-empty-cargo-home"),
+    )
+    .env_remove("CARGO_REGISTRY_TOKEN")
+    .env_remove("CARGO_REGISTRIES_CRATES_IO_TOKEN");
+    c
+}
+
 /// A program that prints `json` and exits 0, for `RELEASEANT_GH`.
 fn fake_gh(dir: &Path, json: &str) -> PathBuf {
     fs::write(dir.join("runs.json"), json).unwrap();
@@ -33,7 +46,7 @@ fn make_program(dir: &Path) -> PathBuf {
 }
 
 fn publish(work: &Path, gh: &Path, extra: &[&str]) -> (Option<i32>, String) {
-    let out: Output = Command::new(env!("CARGO_BIN_EXE_releaseant"))
+    let out: Output = no_credentials(Command::new(env!("CARGO_BIN_EXE_releaseant")))
         .current_dir(work)
         .env("RELEASEANT_GH", gh)
         .args([
@@ -201,19 +214,19 @@ fn an_empty_check_name_exits_2_at_once_and_never_asks_the_forge() {
 #[test]
 fn the_ci_options_need_the_guard_and_retries_need_execute() {
     let tmp = tempfile::tempdir().unwrap();
-    let out = Command::new(env!("CARGO_BIN_EXE_releaseant"))
+    let out = no_credentials(Command::new(env!("CARGO_BIN_EXE_releaseant")))
         .current_dir(tmp.path())
         .args(["publish", "--sha", SHA, "--retries", "2"])
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
-    let out = Command::new(env!("CARGO_BIN_EXE_releaseant"))
+    let out = no_credentials(Command::new(env!("CARGO_BIN_EXE_releaseant")))
         .current_dir(tmp.path())
         .args(["publish", "--sha", SHA, "--ci-wait", "5"])
         .output()
         .unwrap();
     assert_eq!(out.status.code(), Some(2));
-    let out = Command::new(env!("CARGO_BIN_EXE_releaseant"))
+    let out = no_credentials(Command::new(env!("CARGO_BIN_EXE_releaseant")))
         .current_dir(tmp.path())
         .args(["publish", "--sha", SHA, "--require-checks", "Clippy"])
         .output()

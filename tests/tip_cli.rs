@@ -31,8 +31,21 @@ fn text(out: &Output) -> String {
     .replace("\r\n", "\n")
 }
 
+/// A command that finds no registry credentials: an empty `CARGO_HOME` and no token variables, so a
+/// run that gets further than its test expects cannot publish anything (a fixture crate once reached
+/// crates.io through the shared `CARGO_HOME`'s credentials).
+fn no_credentials(mut c: Command) -> Command {
+    c.env(
+        "CARGO_HOME",
+        std::env::temp_dir().join("releaseant-test-empty-cargo-home"),
+    )
+    .env_remove("CARGO_REGISTRY_TOKEN")
+    .env_remove("CARGO_REGISTRIES_CRATES_IO_TOKEN");
+    c
+}
+
 fn publish(work: &Path, sha: &str, extra: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_releaseant"))
+    no_credentials(Command::new(env!("CARGO_BIN_EXE_releaseant")))
         .current_dir(work)
         .args(["publish", "--sha", sha])
         .args(extra)

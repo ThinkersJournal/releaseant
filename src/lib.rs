@@ -8,6 +8,7 @@
 //! `docs/DESIGN.md`.
 
 pub mod artifact;
+pub mod artifacts_cmd;
 pub mod cargo;
 pub mod categories;
 pub mod ci;
@@ -29,6 +30,7 @@ pub mod preflight;
 pub mod progress;
 pub mod registry;
 pub mod release;
+pub mod release_repo;
 pub mod retry;
 pub mod run;
 pub mod source;

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.69
+
+- CLI slice 2a: `publish --artifacts-only --artifacts-dir <dir>` stages and reads back the declared artifacts (files to a draft GitHub release through `GhForge`, images through crane, images tagged) with no crate step and no project tag; without `--execute` it prints the plan. The GitHub repository is derived from the crates' `repository` (`src/release_repo.rs`); `--artifacts-repo owner/name` fills a missing one and must equal a declared one; a missing, non-GitHub or conflicting `repository` is a named refusal, never a guess. New `--crates-only`; a real `publish` of a commit that declares `[[artifact]]` refuses unless `--crates-only` or `--artifacts-only` is given (the mixed release is slice 2b).
+- Tests that spawn the binary (`tip_cli`, `ci_cli`, `artifacts_cli`) now run with an empty `CARGO_HOME` and no registry token variables, after a mutation check of a new test published a fixture crate (`zzart-one` 0.1.0, yanked) through the shared `CARGO_HOME` credentials.
+
 ## 0.0.68
 
 - Artifacts slice A3: `GhForge` (`src/gh_forge.rs`), the real `stage::Forge` over `gh api` (`$GH`, else `gh` on the PATH): finds a release by LISTING (a draft is not returned by `releases/tags/<tag>`), remembers the id of a draft it created because the listing can miss it for a moment, refuses a stored asset name that differs from the requested one (GitHub turns spaces into dots), reads back by downloading and hashing the bytes, and undrafts after an annotated tag exists. `tests/forge_runner.rs` (feature `runner-tests`) runs the whole cycle against `ciresnave-bot/releaseant-artifact-rehearsal`. Measurements, dated, in `docs/ARTIFACT-MEASUREMENTS.md` (A3); size caps, 429 wording and the state a dropped upload leaves stay `UNVERIFIED`. Not reachable from `publish` yet.
