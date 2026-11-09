@@ -1,11 +1,11 @@
-//! `publish --artifacts-only` and the refusal of an unwired mixed release, through the binary and the
+//! `publish --artifacts-only` and the refusals of a mixed release, through the binary and the
 //! library. No network and no upload: dry runs, and refusals that happen before anything is asked.
 
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
 
-use releaseant::artifacts_cmd::refuse_unwired_mixed;
+use releaseant::artifacts_cmd::check_mixed_flags;
 
 const HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -188,28 +188,44 @@ fn the_flags_exclude_each_other_and_need_their_directory() {
 }
 
 #[test]
-fn a_real_mixed_publish_of_declared_artifacts_is_refused_before_anything_runs() {
+fn a_real_mixed_publish_needs_its_directory_and_the_tag_and_a_whole_plan() {
     let (dir, sha) = fixture(
         "mixed_refused",
         Some("https://github.com/o/n"),
         Some(&artifact_toml()),
     );
     let repo = dir.path().join("repo");
-    let o = publish(&repo, &sha, &["--execute", "--allow-not-tip"]);
-    let t = text(&o);
-    assert_eq!(o.status.code(), Some(2), "{t}");
-    assert!(t.contains("--crates-only"), "{t}");
-    assert!(!repo.join(".releaseant").exists(), "nothing ran: {t}");
+    let ok_flags = ["--execute", "--allow-not-tip"];
+    for (extra, needle) in [
+        (vec![], "--artifacts-dir"),
+        (vec!["--artifacts-dir", "dist"], "--tag"),
+        (
+            vec!["--artifacts-dir", "dist", "--tag", "--only", "zzart-one"],
+            "partial",
+        ),
+    ] {
+        let mut args = ok_flags.to_vec();
+        args.extend(extra.iter().copied());
+        let o = publish(&repo, &sha, &args);
+        let t = text(&o);
+        assert_eq!(o.status.code(), Some(2), "{extra:?}: {t}");
+        assert!(t.contains(needle), "{extra:?}: {t}");
+        assert!(!repo.join(".releaseant").exists(), "nothing ran: {t}");
+    }
 }
 
 #[test]
-fn the_mixed_refusal_fires_only_for_a_commit_that_declares_artifacts() {
-    let (dir, sha) = fixture("refusal_control", None, Some(&artifact_toml()));
-    let repo = dir.path().join("repo");
-    assert!(refuse_unwired_mixed(&repo, &sha).is_err());
-    // Controls: no releaseant.toml at the commit, and one without artifacts.
-    let (d2, s2) = fixture("refusal_no_toml", None, None);
-    assert!(refuse_unwired_mixed(&d2.path().join("repo"), &s2).is_ok());
-    let (d3, s3) = fixture("refusal_no_artifacts", None, Some("[names]\nowners = []\n"));
-    assert!(refuse_unwired_mixed(&d3.path().join("repo"), &s3).is_ok());
+fn the_mixed_flag_rule_names_what_is_missing_and_passes_a_whole_tagged_release() {
+    assert!(
+        check_mixed_flags(false, false)
+            .unwrap_err()
+            .contains("--tag")
+    );
+    assert!(
+        check_mixed_flags(true, true)
+            .unwrap_err()
+            .contains("partial")
+    );
+    // The control: a tagged, whole release passes.
+    assert!(check_mixed_flags(true, false).is_ok());
 }

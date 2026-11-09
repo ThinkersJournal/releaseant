@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.70
+
+- CLI slice 2b: a real `publish` of a commit that declares `[[artifact]]` is now the mixed release (no flag = crates and artifacts). `pipeline::publish` takes `CrateStepHooks` (`artifacts_cmd::Mixed`): the declarations are recorded and files and images staged before the first crate upload (a failure uploads nothing), images are promoted after every crate is read back (a failure is `Summary::after_crates` and the run is not a success), and with `--tag` the draft release is published only after the project tag is created and read back. It needs `--artifacts-dir`, `--tag` and a whole plan (no `--only`/`--exclude`), and refuses before anything runs otherwise; `--crates-only` leaves the artifacts alone. `release()` is split into reusable phase functions (behaviour unchanged). `refuse_unwired_mixed` is gone. Not run for real.
+
 ## 0.0.69
 
 - CLI slice 2a: `publish --artifacts-only --artifacts-dir <dir>` stages and reads back the declared artifacts (files to a draft GitHub release through `GhForge`, images through crane, images tagged) with no crate step and no project tag; without `--execute` it prints the plan. The GitHub repository is derived from the crates' `repository` (`src/release_repo.rs`); `--artifacts-repo owner/name` fills a missing one and must equal a declared one; a missing, non-GitHub or conflicting `repository` is a named refusal, never a guess. New `--crates-only`; a real `publish` of a commit that declares `[[artifact]]` refuses unless `--crates-only` or `--artifacts-only` is given (the mixed release is slice 2b).

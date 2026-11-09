@@ -153,6 +153,7 @@ mod tests {
                 }],
             },
             warnings: Vec::new(),
+            after_crates: None,
         }
     }
 

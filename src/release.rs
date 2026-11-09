@@ -147,6 +147,135 @@ pub struct Services<'a> {
     pub clock: &'a mut dyn Clock,
 }
 
+/// Fix the artifact declarations for this commit: the first run records them, a later run of the
+/// same commit must declare the same ones.
+///
+/// # Errors
+/// [`ReleaseError::ArtifactsChanged`], or the ledger failing.
+pub fn record_declarations(
+    artifacts: &[Artifact],
+    ledger: &Ledger,
+    clock: &mut dyn Clock,
+    ctx: &RunContext,
+) -> Result<(), ReleaseError> {
+    let now = artifact::fingerprint(artifacts);
+    let earlier = ledger.read()?;
+    let recorded = earlier.iter().rev().find(|e| {
+        e.event == EventKind::Planned
+            && e.crate_name.as_deref() == Some(ARTIFACTS_SUBJECT)
+            && e.sha == ctx.sha
+    });
+    match recorded {
+        Some(e) if e.detail != now => Err(ReleaseError::ArtifactsChanged {
+            recorded: e.detail.clone(),
+            now,
+        }),
+        Some(_) => Ok(()),
+        None => Ok(ledger.append(&Event {
+            ts: clock.now_utc(),
+            run: ctx.run_id.clone(),
+            sha: ctx.sha.clone(),
+            crate_name: Some(ARTIFACTS_SUBJECT.to_owned()),
+            version: None,
+            event: EventKind::Planned,
+            detail: now,
+        })?),
+    }
+}
+
+/// Step 1: stage artifacts (reversible, so everything that can fail cheaply fails here). Returns
+/// whether every artifact is confirmed on its target; when not, `rep.stopped` says so.
+///
+/// # Errors
+/// The ledger failing.
+pub fn stage_artifacts(
+    inp: &Inputs<'_>,
+    forge: &mut dyn Forge,
+    images: &mut dyn ImageRegistry,
+    ledger: &Ledger,
+    clock: &mut dyn Clock,
+    sctx: &Ctx,
+    rep: &mut ReleaseReport,
+) -> Result<bool, LedgerError> {
+    rep.files = stage_files(
+        forge,
+        ledger,
+        clock,
+        sctx,
+        inp.tag,
+        inp.artifacts_dir,
+        inp.artifacts,
+    )?;
+    // A file that failed stops the staging here: nothing of the other kind is pushed either.
+    if rep.files.all_ok() {
+        rep.images = stage_images(
+            images,
+            ledger,
+            clock,
+            sctx,
+            inp.artifacts_dir,
+            inp.artifacts,
+        )?;
+    }
+    if !rep.files.all_ok() || !rep.images.all_ok() {
+        rep.stopped = Some(
+            "an artifact is not confirmed on its target; no crate was published and nothing was tagged"
+                .into(),
+        );
+        return Ok(false);
+    }
+    Ok(true)
+}
+
+/// Step 3: promote images, the user-visible commit point of an image. Returns whether every image
+/// is tagged; when not, `rep.stopped` says so.
+///
+/// # Errors
+/// The ledger failing.
+pub fn promote_artifacts(
+    inp: &Inputs<'_>,
+    images: &mut dyn ImageRegistry,
+    ledger: &Ledger,
+    clock: &mut dyn Clock,
+    sctx: &Ctx,
+    rep: &mut ReleaseReport,
+) -> Result<bool, LedgerError> {
+    rep.promoted = promote_images(
+        images,
+        ledger,
+        clock,
+        sctx,
+        inp.artifacts_dir,
+        inp.artifacts,
+    )?;
+    if !rep.promoted.all_ok() {
+        rep.stopped = Some("an image could not be tagged; no project tag was created".into());
+        return Ok(false);
+    }
+    Ok(true)
+}
+
+/// Step 5: publish the draft release onto the project tag. A declaration without a `file` artifact
+/// has no draft, and this does nothing. Returns whether the release is published (or none was due).
+pub fn publish_release(
+    artifacts: &[Artifact],
+    forge: &mut dyn Forge,
+    tag: &str,
+    rep: &mut ReleaseReport,
+) -> bool {
+    if !artifacts.iter().any(|a| a.kind == artifact::Kind::File) {
+        return true;
+    }
+    if let Err(why) = forge.publish_draft(tag) {
+        rep.stopped = Some(format!(
+            "the tag exists but the draft release was not published: {why}"
+        ));
+        return false;
+    }
+    rep.published = true;
+    true
+}
+
 /// Carry out a release in the order above.
 ///
 /// `tag_step` creates the project tag (annotated, on the commit, pushed and read back, as
@@ -172,31 +301,7 @@ pub fn release(
 
     // The declarations are part of the plan: an earlier run of this commit fixed them.
     if use_artifacts && execute {
-        let now = artifact::fingerprint(inp.artifacts);
-        let earlier = ledger.read()?;
-        let recorded = earlier.iter().rev().find(|e| {
-            e.event == EventKind::Planned
-                && e.crate_name.as_deref() == Some(ARTIFACTS_SUBJECT)
-                && e.sha == ctx.sha
-        });
-        match recorded {
-            Some(e) if e.detail != now => {
-                return Err(ReleaseError::ArtifactsChanged {
-                    recorded: e.detail.clone(),
-                    now,
-                });
-            }
-            Some(_) => {}
-            None => ledger.append(&Event {
-                ts: svc.clock.now_utc(),
-                run: ctx.run_id.clone(),
-                sha: ctx.sha.clone(),
-                crate_name: Some(ARTIFACTS_SUBJECT.to_owned()),
-                version: None,
-                event: EventKind::Planned,
-                detail: now,
-            })?,
-        }
+        record_declarations(inp.artifacts, ledger, svc.clock, ctx)?;
     }
 
     // A dry run uploads nothing, stages nothing, tags nothing.
@@ -220,34 +325,12 @@ pub fn release(
     };
 
     // 1. Stage artifacts: reversible, so everything that can fail cheaply fails here.
-    if use_artifacts {
-        rep.files = stage_files(
-            svc.forge,
-            ledger,
-            svc.clock,
-            &sctx,
-            inp.tag,
-            inp.artifacts_dir,
-            inp.artifacts,
-        )?;
-        // A file that failed stops the staging here: nothing of the other kind is pushed either.
-        if rep.files.all_ok() {
-            rep.images = stage_images(
-                svc.images,
-                ledger,
-                svc.clock,
-                &sctx,
-                inp.artifacts_dir,
-                inp.artifacts,
-            )?;
-        }
-        if !rep.files.all_ok() || !rep.images.all_ok() {
-            rep.stopped = Some(
-                "an artifact is not confirmed on its target; no crate was published and nothing was tagged"
-                    .into(),
-            );
-            return Ok(rep);
-        }
+    if use_artifacts
+        && !stage_artifacts(
+            inp, svc.forge, svc.images, ledger, svc.clock, &sctx, &mut rep,
+        )?
+    {
+        return Ok(rep);
     }
 
     // 2. The crates: the irreversible step.
@@ -267,19 +350,8 @@ pub fn release(
     }
 
     // 3. Promote images: the user-visible commit point of an image.
-    if use_artifacts {
-        rep.promoted = promote_images(
-            svc.images,
-            ledger,
-            svc.clock,
-            &sctx,
-            inp.artifacts_dir,
-            inp.artifacts,
-        )?;
-        if !rep.promoted.all_ok() {
-            rep.stopped = Some("an image could not be tagged; no project tag was created".into());
-            return Ok(rep);
-        }
+    if use_artifacts && !promote_artifacts(inp, svc.images, ledger, svc.clock, &sctx, &mut rep)? {
+        return Ok(rep);
     }
 
     // 4. The project tag, only for the whole release; 5. then the release onto it.
@@ -289,15 +361,8 @@ pub fn release(
             return Ok(rep);
         }
         rep.tagged = true;
-        let has_files = inp.artifacts.iter().any(|a| a.kind == artifact::Kind::File);
-        if use_artifacts && has_files {
-            if let Err(why) = svc.forge.publish_draft(inp.tag) {
-                rep.stopped = Some(format!(
-                    "the tag exists but the draft release was not published: {why}"
-                ));
-                return Ok(rep);
-            }
-            rep.published = true;
+        if use_artifacts && !publish_release(inp.artifacts, svc.forge, inp.tag, &mut rep) {
+            return Ok(rep);
         }
     }
     Ok(rep)
