@@ -219,6 +219,26 @@ enum Command {
         /// the ledger records it as carried over. 0 verifies everything every time. Default 12.
         #[arg(long, default_value_t = 12)]
         reuse_verified_hours: u64,
+        /// The directory CI put the declared artifacts in (paths in `[[artifact]]` are relative to it).
+        #[arg(long)]
+        artifacts_dir: Option<PathBuf>,
+        /// Publish only the declared artifacts (stage and read back; images are tagged; no crate is
+        /// published and there is no project tag). Needs `--artifacts-dir`.
+        #[arg(
+            long,
+            requires = "artifacts_dir",
+            conflicts_with_all = ["crates_only", "only", "exclude", "tag", "retries"]
+        )]
+        artifacts_only: bool,
+        /// Publish only the crates; declared artifacts are left alone (the behaviour before artifacts
+        /// existed). Without this or `--artifacts-only`, a real run refuses when artifacts are declared:
+        /// the mixed release is not wired to this command yet.
+        #[arg(long)]
+        crates_only: bool,
+        /// The GitHub `owner/name` the file artifacts go to, when the crates' `repository` does not
+        /// say (default: taken from `repository` in Cargo.toml; refused when missing or in conflict).
+        #[arg(long)]
+        artifacts_repo: Option<String>,
     },
     /// Tag a published release: an annotated `v<version>` on the commit, pushed to origin and read
     /// back (dry-run unless `--execute`).
@@ -407,7 +427,7 @@ fn require_green(
     }
 }
 
-fn work_dir(run_id: &str) -> PathBuf {
+pub(crate) fn work_dir(run_id: &str) -> PathBuf {
     std::env::temp_dir().join(format!("releaseant-{run_id}"))
 }
 
@@ -415,7 +435,7 @@ fn work_dir(run_id: &str) -> PathBuf {
 /// the same second (a CI matrix, parallel tests) would otherwise share one scratch directory, and the
 /// first to finish would delete the other's archive. A counter is part of it too, for runs in one
 /// process (tests, a binary that wraps [`run`]): the process id cannot tell those apart.
-fn run_id(sha: &str) -> String {
+pub(crate) fn run_id(sha: &str) -> String {
     static RUNS: AtomicU64 = AtomicU64::new(0);
     format!(
         "{}-{}-{}-{}",
@@ -624,6 +644,10 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             retries,
             retry_pause,
             reuse_verified_hours,
+            artifacts_dir,
+            artifacts_only,
+            crates_only,
+            artifacts_repo,
         } => {
             let require_metadata = policy.set()?;
             if guard_ci {
@@ -638,6 +662,27 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             }
             if execute && !allow_not_tip {
                 crate::source::check_tip(&source.repo, &source.sha)?;
+            }
+            if artifacts_only {
+                let dir = artifacts_dir.ok_or("--artifacts-only needs --artifacts-dir")?;
+                let ledger_path =
+                    ledger.unwrap_or_else(|| source.repo.join(".releaseant/ledger.jsonl"));
+                return crate::artifacts_cmd::artifacts_only(
+                    &cargo,
+                    &crate::artifacts_cmd::Request {
+                        repo: &source.repo,
+                        sha: &source.sha,
+                        ledger: &ledger_path,
+                        artifacts_dir: &dir,
+                        repo_override: artifacts_repo.as_deref(),
+                        tag_version: tag_version.as_ref(),
+                        execute,
+                        max_wait,
+                    },
+                );
+            }
+            if execute && !crates_only {
+                crate::artifacts_cmd::refuse_unwired_mixed(&source.repo, &source.sha)?;
             }
             if no_verify_crate.len() != reason.len() {
                 return Err("every --no-verify-crate needs its own --reason".into());
