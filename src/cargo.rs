@@ -254,12 +254,22 @@ impl Cargo {
             .collect()
     }
 
-    /// `cargo check -p name` in `dir`.
+    /// `cargo check -p name` in `dir`, building into `dir/target`.
+    ///
+    /// The target directory is always passed explicitly. Left to the environment (`CARGO_TARGET_DIR`,
+    /// or a `build.target-dir` in the user's cargo config) every verification would share one build
+    /// cache, and a crate with the same name and version as an earlier, different one (a probe crate
+    /// in the tests, a rebuilt package in real use) could be answered from that cache instead of
+    /// being built from its own tarball: measured 2026-11-08, with `CARGO_TARGET_DIR` set a
+    /// tree-only crate verified OK in 3 of 4 full test runs, and in 0 of 4 with it unset.
     ///
     /// # Errors
     /// [`CargoError::Failed`] with cargo's text.
     pub fn check(&self, dir: &Path, name: &str) -> Result<(), CargoError> {
-        self.run_ok(dir, &["check", "-p", name]).map(|_| ())
+        let target = dir.join("target");
+        let target = target.to_string_lossy();
+        self.run_ok(dir, &["check", "-p", name, "--target-dir", &target])
+            .map(|_| ())
     }
 }
 

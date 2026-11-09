@@ -169,5 +169,10 @@ mod tests {
             "the tree-only crate must fail from its tarball"
         );
         assert!(get(&good).is_ok(), "{:?}", get(&good));
+        // Verification builds into its own directory, never one chosen by the environment.
+        assert!(
+            scratch.path().join("target").is_dir(),
+            "verification must build into <scratch>/target"
+        );
     }
 }
