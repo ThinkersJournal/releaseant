@@ -1,7 +1,7 @@
 name: Runner tests (self-hosted)
 
-# Runs the tests that need Docker and crane (tests/crane_runner.rs, feature `runner-tests`) on the
-# self-hosted runner. See docs/RUNNER-TESTS.md.
+# Runs the tests that need Docker and crane (tests/crane_runner.rs) and the real-GitHub check of
+# GhForge (tests/forge_runner.rs), both behind feature `runner-tests`, on the self-hosted runner. See docs/RUNNER-TESTS.md.
 #
 # SECURITY (public repo, CIRESNAVE-EXPECTATIONS 5.1h): this job runs on a self-hosted machine, so it must
 # never run code from a fork. Triggers are limited to push to main, a schedule and manual dispatch, all
@@ -52,4 +52,33 @@ jobs:
         with:
           name: runner-test-log
           path: runner-test.log
+          if-no-files-found: error
+
+  forge:
+    name: real GhForge against the private rehearsal repository
+    if: vars.RUNNER_TESTS_ENABLED == 'true'
+    # Uses the `gh` already signed in on the runner machine (write access to
+    # ciresnave-bot/releaseant-artifact-rehearsal, or $RELEASEANT_FORGE_REPO set on the runner);
+    # this file names no secret. Same labels as the crane job (the PM's to set).
+    runs-on: [self-hosted, windows, releaseant]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          toolchain: stable
+      # Same rule as the crane job: exactly one test must have run and passed (the test fails, it
+      # does not skip, when gh is missing or refused). It leaves 0 releases and 0 tags behind.
+      - name: cargo test (runner-tests)
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --locked --features runner-tests --test forge_runner -- --nocapture 2>&1 | tee forge-test.log
+          grep -q "test result: ok. 1 passed; 0 failed" forge-test.log             || { echo "::error::the forge test did not run and pass exactly once"; exit 1; }
+      - name: Upload run record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge-test-log
+          path: forge-test.log
           if-no-files-found: error
