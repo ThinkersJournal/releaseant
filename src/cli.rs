@@ -664,7 +664,6 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                 crate::source::check_tip(&source.repo, &source.sha)?;
             }
             if artifacts_only {
-                let dir = artifacts_dir.ok_or("--artifacts-only needs --artifacts-dir")?;
                 let ledger_path =
                     ledger.unwrap_or_else(|| source.repo.join(".releaseant/ledger.jsonl"));
                 return crate::artifacts_cmd::artifacts_only(
@@ -673,16 +672,13 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                         repo: &source.repo,
                         sha: &source.sha,
                         ledger: &ledger_path,
-                        artifacts_dir: &dir,
+                        artifacts_dir: artifacts_dir.as_deref(),
                         repo_override: artifacts_repo.as_deref(),
                         tag_version: tag_version.as_ref(),
                         execute,
                         max_wait,
                     },
                 );
-            }
-            if execute && !crates_only {
-                crate::artifacts_cmd::refuse_unwired_mixed(&source.repo, &source.sha)?;
             }
             if no_verify_crate.len() != reason.len() {
                 return Err("every --no-verify-crate needs its own --reason".into());
@@ -711,6 +707,31 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             if let Some(s) = max_wait {
                 opts.max_wait = Duration::from_secs(s);
             }
+            // A commit that declares artifacts publishes them with the crates (unless --crates-only).
+            let mixed = if crates_only {
+                None
+            } else {
+                let m = crate::artifacts_cmd::Mixed::prepare(
+                    &cargo,
+                    &crate::artifacts_cmd::Request {
+                        repo: &source.repo,
+                        sha: &source.sha,
+                        ledger: &ledger_path,
+                        artifacts_dir: artifacts_dir.as_deref(),
+                        repo_override: artifacts_repo.as_deref(),
+                        tag_version: tag_version.as_ref(),
+                        execute,
+                        max_wait,
+                    },
+                )?;
+                if m.is_some() && execute {
+                    crate::artifacts_cmd::check_mixed_flags(
+                        tag,
+                        any_excluded || !only_names.is_empty(),
+                    )?;
+                }
+                m
+            };
             // The run id of the latest run: the tag record names it.
             let last_id = std::cell::RefCell::new(String::new());
             let owners_source = std::cell::RefCell::new(CratesIoOwners::new(crate::names::BASE));
@@ -741,6 +762,9 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                             ours: owner.iter().cloned().collect(),
                             owners: &owners_source,
                         }),
+                        hooks: mixed
+                            .as_ref()
+                            .map(|m| m as &dyn crate::pipeline::CrateStepHooks),
                     },
                     |dir, target| {
                         Box::new(CratesIo::new(
@@ -805,6 +829,9 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
             if let Some(why) = &summary.report.stopped {
                 println!("run stopped (resumable): {why}");
             }
+            if let Some(why) = &summary.after_crates {
+                println!("artifacts not promoted (resumable): {why}");
+            }
             if !execute {
                 println!("dry run: nothing was uploaded (use --execute)");
             }
@@ -830,7 +857,18 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                     },
                     &summary,
                 );
-            Ok(published && tagged)
+            // The draft release goes public only on a tag that exists (created and read back above).
+            let released = match mixed.as_ref().filter(|_| execute && published && tagged) {
+                Some(m) => match m.finish() {
+                    Ok(()) => true,
+                    Err(why) => {
+                        println!("PUBLISHED and tagged, but {why}; run the same command again");
+                        false
+                    }
+                },
+                None => true,
+            };
+            Ok(published && tagged && released)
         }
         Command::Tag {
             source,

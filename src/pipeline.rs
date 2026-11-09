@@ -80,6 +80,8 @@ pub enum PipelineError {
     NamesNoOwners,
     /// Crate names that another owner holds, or that could not be checked; nothing was uploaded.
     NamesRefused(Vec<(String, NameState)>),
+    /// An artifact is not confirmed on its target; no crate was uploaded.
+    ArtifactsNotStaged(String),
 }
 
 impl fmt::Display for PipelineError {
@@ -148,6 +150,9 @@ impl fmt::Display for PipelineError {
                     )?;
                 }
                 Ok(())
+            }
+            Self::ArtifactsNotStaged(why) => {
+                write!(f, "artifacts are not staged; no crate was uploaded: {why}")
             }
             Self::Metadata(v) => {
                 write!(
@@ -373,6 +378,22 @@ pub struct NameCheck<'a> {
     pub owners: &'a std::cell::RefCell<dyn OwnerSource + 'a>,
 }
 
+/// Steps a mixed release runs around the crates' run (`docs/ARTIFACTS-DESIGN.md` section 7).
+pub trait CrateStepHooks {
+    /// Before the first crate is uploaded (execute only): stage the artifacts. An error stops the
+    /// publish with nothing uploaded.
+    ///
+    /// # Errors
+    /// Why the artifacts are not staged.
+    fn before_crates(&self, ctx: &RunContext) -> Result<(), String>;
+    /// After every crate is published and read back (execute only): promote the images. An error
+    /// is reported in [`Summary::after_crates`] and the release is not a success.
+    ///
+    /// # Errors
+    /// Why the artifacts could not be promoted.
+    fn after_crates(&self, ctx: &RunContext) -> Result<(), String>;
+}
+
 /// Inputs to [`publish`].
 pub struct PublishArgs<'a> {
     /// The repository to publish from.
@@ -413,6 +434,8 @@ pub struct PublishArgs<'a> {
     /// Refuse before any upload a crate name that another owner holds (see [`crate::names`]).
     /// `None` does not ask.
     pub name_check: Option<NameCheck<'a>>,
+    /// Artifact steps before and after the crates (a mixed release); `None` is crates only.
+    pub hooks: Option<&'a dyn CrateStepHooks>,
 }
 
 /// What a publish did.
@@ -428,13 +451,17 @@ pub struct Summary {
     pub plan: Plan,
     /// Metadata problems that did not stop the run (quality fields the registry accepts without).
     pub warnings: Vec<Problem>,
+    /// Why the steps after the crates (promoting images) did not finish, if they did not.
+    pub after_crates: Option<String>,
 }
 
 impl Summary {
-    /// The run succeeded and every consumer check passed.
+    /// The run succeeded, every consumer check passed and the steps after the crates finished.
     #[must_use]
     pub fn is_success(&self) -> bool {
-        self.report.is_success() && self.consumer.iter().all(|(_, r)| r.is_ok())
+        self.report.is_success()
+            && self.consumer.iter().all(|(_, r)| r.is_ok())
+            && self.after_crates.is_none()
     }
 }
 
@@ -720,6 +747,11 @@ pub fn publish(
         run_id: args.run_id.to_owned(),
         sha: args.sha.to_owned(),
     };
+    let execute = args.opts.mode == Mode::Execute;
+    if let Some(h) = args.hooks.filter(|_| execute) {
+        h.before_crates(&ctx)
+            .map_err(PipelineError::ArtifactsNotStaged)?;
+    }
     let report = run(
         &prepared.plan,
         registry.as_mut(),
@@ -728,6 +760,10 @@ pub fn publish(
         &ctx,
         &args.opts,
     )?;
+    let after_crates = match args.hooks.filter(|_| execute && report.is_success()) {
+        Some(h) => h.after_crates(&ctx).err(),
+        None => None,
+    };
 
     let mut consumer_results = Vec::new();
     if args.opts.mode == Mode::Execute {
@@ -761,6 +797,7 @@ pub fn publish(
         consumer: consumer_results,
         plan: prepared.plan,
         warnings,
+        after_crates,
     })
 }
 
@@ -913,6 +950,7 @@ mod tests {
             reuse_verified: None,
             check_rust_version: false,
             name_check: None,
+            hooks: None,
         }
     }
 
@@ -926,6 +964,112 @@ mod tests {
 
     fn pid() -> String {
         format!("zzrlpipe{}", std::process::id())
+    }
+
+    /// Records what the ledger held when each hook ran.
+    struct Spy<'a> {
+        ledger: &'a Path,
+        seen: std::cell::RefCell<Vec<(&'static str, usize, usize)>>,
+        fail_before: bool,
+        fail_after: bool,
+    }
+
+    impl Spy<'_> {
+        fn note(&self, step: &'static str) {
+            let events = Ledger::open(self.ledger)
+                .and_then(|l| l.read())
+                .unwrap_or_default();
+            let n = |k: EventKind| events.iter().filter(|e| e.event == k).count();
+            self.seen
+                .borrow_mut()
+                .push((step, n(EventKind::UploadStarted), n(EventKind::Visible)));
+        }
+    }
+
+    impl CrateStepHooks for Spy<'_> {
+        fn before_crates(&self, _: &RunContext) -> Result<(), String> {
+            self.note("before");
+            if self.fail_before {
+                Err("not staged".into())
+            } else {
+                Ok(())
+            }
+        }
+        fn after_crates(&self, _: &RunContext) -> Result<(), String> {
+            self.note("after");
+            if self.fail_after {
+                Err("not promoted".into())
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    /// What a spied publish did: its result, the calls the hooks saw, whether any upload started.
+    type Spied = (
+        Result<Summary, PipelineError>,
+        Vec<(&'static str, usize, usize)>,
+        bool,
+    );
+
+    fn spied(mode: Mode, fail_before: bool, fail_after: bool) -> Spied {
+        let p = pid();
+        let (repo, sha) = repo(&p, false);
+        let tmp = tempfile::tempdir().unwrap();
+        let (ledger, work) = (tmp.path().join("l.jsonl"), tmp.path().join("w"));
+        let spy = Spy {
+            ledger: &ledger,
+            seen: std::cell::RefCell::default(),
+            fail_before,
+            fail_after,
+        };
+        let mut a = args(repo.path(), &sha, &ledger, &work, mode, vec![]);
+        a.hooks = Some(&spy);
+        let r = publish(
+            &Cargo::from_env(),
+            &a,
+            |_, _| Box::new(FakeRegistry::new()),
+            &mut FakeClock::default(),
+            &mut NoConsumer,
+        );
+        let wrote_uploads = Ledger::open(&ledger)
+            .and_then(|l| l.read())
+            .unwrap_or_default()
+            .iter()
+            .any(|e| e.event == EventKind::UploadStarted);
+        (r, spy.seen.into_inner(), wrote_uploads)
+    }
+
+    // Staging runs before the first upload and promotion after every crate is read back; a dry run
+    // calls neither.
+    #[test]
+    fn hooks_run_before_the_first_upload_and_after_the_last_read_back() {
+        let (r, seen, _) = spied(Mode::Execute, false, false);
+        assert!(r.unwrap().is_success());
+        assert_eq!(seen, [("before", 0, 0), ("after", 2, 2)], "{seen:?}");
+        let (r, seen, uploaded) = spied(Mode::DryRun, false, false);
+        assert!(r.unwrap().report.stopped.is_none());
+        assert!(seen.is_empty() && !uploaded, "{seen:?}");
+    }
+
+    #[test]
+    fn artifacts_that_are_not_staged_stop_the_publish_before_any_upload() {
+        let (r, seen, uploaded) = spied(Mode::Execute, true, false);
+        match r {
+            Err(PipelineError::ArtifactsNotStaged(w)) => assert_eq!(w, "not staged"),
+            other => panic!("expected ArtifactsNotStaged, got {other:?}"),
+        }
+        assert_eq!(seen, [("before", 0, 0)]);
+        assert!(!uploaded, "no crate was uploaded");
+    }
+
+    #[test]
+    fn images_that_are_not_promoted_make_the_publish_unsuccessful() {
+        let (r, _, _) = spied(Mode::Execute, false, true);
+        let s = r.unwrap();
+        assert!(s.report.is_success(), "the crates themselves landed");
+        assert_eq!(s.after_crates.as_deref(), Some("not promoted"));
+        assert!(!s.is_success());
     }
 
     // Every ledger event of the run produced one progress line (compared by kind, not a bare
