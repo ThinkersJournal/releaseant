@@ -29,6 +29,12 @@ tag-held check in `src/images.rs` switched off it fails at the Held assertion. N
 
 ## What the runner must provide
 
+For `tests/forge_runner.rs` (the `forge` job): a `gh` signed in on the runner machine with write access to
+the private rehearsal repository `ciresnave-bot/releaseant-artifact-rehearsal` (or `RELEASEANT_FORGE_REPO`
+set there). The workflow names no secret: the credential is the machine's own `gh` login, which is the PM's
+to provide. The job, like the crane one, fails unless exactly one test ran and passed. Run it by hand with
+`cargo test --features runner-tests --test forge_runner -- --nocapture`.
+
 Docker with a daemon that can pull `registry:2` and publish a localhost port; `crane` (0.22.1 is the
 version the measurements used) via `CRANE` or the PATH; a Rust toolchain. The `runs-on` labels in the
 workflow (`self-hosted, windows, releaseant`) are a draft: the PM sets them when the runner group exists.
