@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.71
+
+- CI/docs: `.github/workflows/runner-tests.yml` gains an inert `forge` job that runs `tests/forge_runner.rs` (feature `runner-tests`) against the private rehearsal repository on the self-hosted runner, with the same exactly-one-passed check and log upload as the crane job. Still gated on `RUNNER_TESTS_ENABLED`, no `pull_request` trigger, no secret named (the runner machine's own `gh` login is used). `docs/RUNNER-TESTS.md` says what the runner must provide. No Rust change.
+
 ## 0.0.70
 
 - CLI slice 2b: a real `publish` of a commit that declares `[[artifact]]` is now the mixed release (no flag = crates and artifacts). `pipeline::publish` takes `CrateStepHooks` (`artifacts_cmd::Mixed`): the declarations are recorded and files and images staged before the first crate upload (a failure uploads nothing), images are promoted after every crate is read back (a failure is `Summary::after_crates` and the run is not a success), and with `--tag` the draft release is published only after the project tag is created and read back. It needs `--artifacts-dir`, `--tag` and a whole plan (no `--only`/`--exclude`), and refuses before anything runs otherwise; `--crates-only` leaves the artifacts alone. `release()` is split into reusable phase functions (behaviour unchanged). `refuse_unwired_mixed` is gone. Not run for real.
