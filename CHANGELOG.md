@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.73
+
+- Docs: `docs/ADOPTION.md` status 2026-11-10: ReleaseAnt adopted for Fuel and Baracuda, the real runs so far, the Fuel 0.46.2 ledger reading with its control, and the verified-events gap. No Rust change.
+
 ## 0.0.72
 
 - Docs: `docs/ARTIFACT-MEASUREMENTS.md` records the PM-run Docker Hub rehearsal (slice A5, runbook steps 1 to 9): digest-only and tag pushes and a silent tag move all succeed with `crane`, an unknown repository answers `MANIFEST_UNKNOWN` (not `NAME_UNKNOWN` or `UNAUTHORIZED`), and tags are mutable. 429 wording, a push that dies midway and our own code path against Hub are still unmeasured. No Rust change.
