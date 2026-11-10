@@ -1,7 +1,46 @@
 # R5: adopting ReleaseAnt (design note and dry-run evidence)
 
-Status: proposal for the PM. **No file in any other repository is edited by this note or by the lane.** Every
-claim names the file and ref it was read at. Nothing was published, yanked or tagged to produce this note.
+Status: **adopted for fuel and baracuda (PM ruling 2026-11-10, see "Status 2026-11-10" below).** The sections
+after it are the original proposal and its dry-run evidence, written at 0.0.14 to 0.0.51 and kept as written; where
+they say something has not been done, read the status section first. **No file in any other repository is edited by
+this note or by the lane.** Every claim names the file and ref it was read at. Nothing was published, yanked or
+tagged to produce this note.
+
+## Status 2026-11-10: adopted
+
+**The PM's rulings (2026-11-10, relayed over Synapse; not CireSnave's words):**
+
+1. R5 is adopted for fuel and baracuda, with one command per this note.
+2. The baracuda lane adds `scripts/preflight.ps1` (the licence and emit/parse `MAJOR.MINOR` rules, proposal 3 below)
+   and then deletes `scripts/publish.ps1`. At baracuda `origin/main` `316bb007`, read 2026-11-10, `publish.ps1` is still
+   present and `preflight.ps1` is not.
+3. The PM keeps `tools/publish-loop.sh` as a thin wrapper for registry read-back and tagging until `releaseant` does
+   both, and then retires it.
+4. The tag names its stream through `--tag-version`, never a guess.
+
+**What has run for real** (sources: `docs/R5-LIVE.md` sections 3 to 5 at `9a4be32`, and the Fuel ledger below):
+
+| run | what | length | 429 |
+|---|---|---|---|
+| baracuda, 2026-11-02 | 73 crates, one run | 69 min 46 s | 20 `waiting` rows (the only 429s measured) |
+| Fuel 0.36.4, 2026-11-02 | 43 crates, `--reuse-verified-hours 12` | 46 min 24 s | none |
+| Fuel 0.36.7, 2026-11-02 | 43 crates, loaded box | 61 min 34 s | none |
+| Fuel 0.46.2, 2026-11-09 | dry run, then `--execute` ~35 minutes later | verify 11844.5 s (3 h 17 min), then 8345.0 s (2 h 19 min) | not checked here |
+
+**Fuel 0.46.2, from its ledger (`C:/Projects/fuel/.releaseant/ledger.jsonl`, 828 rows when read 2026-11-10; the lane's
+read, nothing edited):** the dry run (run `de12d8ef-1794240144-74200-0`) built all 43 crates and carried none over; the
+`--execute` run (`de12d8ef-1794254131-173272-0`, commit `de12d8ef`, finished `complete`) built all 43 again and carried none
+over, although the same commit had been verified 35 minutes earlier. **The likely cause is a stale binary, not a missing
+feature:** carrying a verification over has been in `releaseant` since 0.0.51 (PR #50, 12-hour window), and
+`tools/publish-loop.sh` runs `C:/Projects/releaseant/target/release/releaseant.exe` unless `RELEASEANT_EXE` is set;
+that file reported `0.0.50` (built 2026-11-01) when read 2026-11-10. Which executable the PM ran is not recorded in the
+ledger, so this is not proven. **Control:** the current build (0.0.72), a dry run at `de12d8ef` against a copy of that
+ledger with `--reuse-verified-hours 48` (the 12-hour default had lapsed by then), printed "verification carried over
+from the ledger for 43 of 43 crates", built none and took 1 min 20 s; the real ledger was not touched. **Run the
+current release build**: rebuild that executable or point `RELEASEANT_EXE` at one.
+
+**One real gap:** the `verified` events of a run are written only after every crate passed, so a verification that
+fails at crate 40 of 43 leaves nothing to carry over for the 39 that passed. Not built; the PM has been asked.
 
 ## What exists today
 
@@ -74,6 +113,8 @@ would order today (needs packaging); a real publish. A dry-run `publish` on the 
 cheap form of the missing step.
 
 ## Adoption plan
+
+(Written before the real runs above. Items 3 and 4 have run; the status section has the rulings.)
 
 **1. First real use (PM): a single-crate Ant, `releaseant publish --execute --tag`**, which closes the one
 untested path (the tag after a real upload). Suggested sequence, all but the last step dry:
