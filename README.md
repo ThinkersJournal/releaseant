@@ -22,8 +22,8 @@ releaseant-demo-app 0.1.0
 $ releaseant publish --sha $SHA        # a dry run: nothing is uploaded
 [00:00] packaging 2 crates
 [00:01] verifying releaseant-demo-core (1 of 2)
+[00:01] verified releaseant-demo-core 0.1.0
 [00:02] verifying releaseant-demo-app (2 of 2)
-[00:03] verified releaseant-demo-core 0.1.0
 [00:03] verified releaseant-demo-app 0.1.0
 [00:03] run planned
 [00:03] run finished: complete

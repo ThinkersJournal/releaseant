@@ -24,7 +24,7 @@ use crate::progress::{ProgressSink, observer};
 use crate::registry::{Clock, Lookup, Registry};
 use crate::run::{Mode, Options, Outcome, Report, RunContext, RunError, run};
 use crate::source::{self, SourceError};
-use crate::verify::{PackagedCrate, verify_set_with};
+use crate::verify::{PackagedCrate, verify_set_observed};
 
 /// A recorded exception to a rule: this crate skips pre-upload verification, for this reason.
 #[derive(Debug, Clone)]
@@ -672,7 +672,11 @@ pub fn publish(
     skip.extend(carried.iter().map(|(n, _)| n.clone()));
     let starts: RefCell<Vec<(String, Instant)>> = RefCell::new(Vec::new());
     let verify_began = Instant::now();
-    let verified = verify_set_with(
+    // A crate that passes is recorded as `verified` at once, not when the whole set is done: a set
+    // that fails at its 40th crate keeps the 39 passes, so a retry at the same commit carries them
+    // over instead of building them again.
+    let ledger_failure: RefCell<Option<LedgerError>> = RefCell::new(None);
+    let verified = verify_set_observed(
         cargo,
         &packaged,
         &args.work.join("verify"),
@@ -681,7 +685,29 @@ pub fn publish(
             starts.borrow_mut().push((name.to_owned(), Instant::now()));
             say(format!("verifying {name} ({i} of {total})"));
         },
-    )?;
+        &mut |name, result| {
+            if result.is_ok()
+                && let Err(e) = record(
+                    &ledger,
+                    clock,
+                    args,
+                    EventKind::Verified,
+                    Some((name, &version_of(name))),
+                    "",
+                )
+            {
+                *ledger_failure.borrow_mut() = Some(e);
+                return Err(io::Error::other(
+                    "the ledger could not record a verification",
+                ));
+            }
+            Ok(())
+        },
+    );
+    if let Some(e) = ledger_failure.into_inner() {
+        return Err(e.into());
+    }
+    let verified = verified?;
     let verify_ended = Instant::now();
     // Timing notes first, so a run whose verification failed still says where its time went.
     record(
@@ -726,10 +752,6 @@ pub fn publish(
         .collect();
     if !failed.is_empty() {
         return Err(PipelineError::VerifyFailed(failed));
-    }
-    for (n, _) in &verified {
-        let v = version_of(n);
-        record(&ledger, clock, args, EventKind::Verified, Some((n, &v)), "")?;
     }
     for (n, from) in &carried {
         let v = version_of(n);
@@ -1098,16 +1120,20 @@ mod tests {
         let got = lines.borrow().clone();
         let (an, bn) = (format!("{p}-a"), format!("{p}-b"));
         assert_eq!(got[0], "packaging 2 crates", "{got:?}");
+        // A crate's pass is recorded as soon as it is built, so its "verified" line follows its
+        // "verifying" line instead of all of them coming after the last build.
         assert_eq!(got[1], format!("verifying {an} (1 of 2)"));
-        assert_eq!(got[2], format!("verifying {bn} (2 of 2)"));
+        assert_eq!(got[2], format!("verified {an} 0.0.1"));
+        assert_eq!(got[3], format!("verifying {bn} (2 of 2)"));
         let events = Ledger::open(&ledger).unwrap().read().unwrap();
         let from_ledger: Vec<String> = events
             .iter()
             .filter(|e| e.event != EventKind::Phase)
             .map(|e| crate::progress::describe(e, None))
             .collect();
-        let tail: Vec<String> = got[3..]
+        let tail: Vec<String> = got[1..]
             .iter()
+            .filter(|l| !l.starts_with("verifying "))
             .map(|l| {
                 // upload durations are the only part the ledger cannot reproduce
                 l.split(" (").next().unwrap().to_owned()
@@ -2069,6 +2095,64 @@ zzrl-not-yet-published = \"0.23.0\"",
             checks4, 0,
             "an event at exactly now is inside a zero window"
         );
+    }
+
+    // A set that fails part-way keeps the passes it had: the crate that built is recorded as verified at
+    // once and the one that did not is not, so a retry at the same commit carries the pass over and builds
+    // only the failure again (a failure at crate 40 of 43 used to lose the 39). The control is the same
+    // retry with carrying over off: it builds both again.
+    #[test]
+    fn a_crate_that_passed_is_kept_when_another_in_the_set_fails() {
+        let p = pid();
+        let (a_name, b_name) = (format!("{p}-a"), format!("{p}-b"));
+        let (repo, sha) = repo(&p, true);
+        let tmp = tempfile::tempdir().unwrap();
+        let ledger = tmp.path().join("l.jsonl");
+        let go = |run_id: &'static str, reuse: Option<Duration>| {
+            let work = tmp.path().join(run_id);
+            let mut a = args(repo.path(), &sha, &ledger, &work, Mode::DryRun, vec![]);
+            a.run_id = run_id;
+            a.reuse_verified = reuse;
+            let err = publish(
+                &Cargo::from_env(),
+                &a,
+                |_, _| Box::new(FakeRegistry::new()),
+                &mut FakeClock::default(),
+                &mut NoConsumer,
+            )
+            .unwrap_err();
+            match err {
+                PipelineError::VerifyFailed(v) => {
+                    assert_eq!(v.len(), 1, "{v:?}");
+                    assert_eq!(v[0].0, b_name);
+                }
+                other => panic!("{other}"),
+            }
+        };
+        let twelve_hours = Some(Duration::from_secs(12 * 3600));
+
+        go("first", twelve_hours);
+        let (v1, checks1) = verification_of(&ledger, "first");
+        assert_eq!(checks1, 2, "both were built");
+        let names: Vec<_> = v1.iter().map(|e| e.crate_name.clone().unwrap()).collect();
+        assert_eq!(
+            names,
+            std::slice::from_ref(&a_name),
+            "only the crate that passed is verified"
+        );
+        assert!(v1[0].detail.is_empty());
+
+        go("second", twelve_hours);
+        let (v2, checks2) = verification_of(&ledger, "second");
+        assert_eq!(checks2, 1, "only the crate that failed is built again");
+        assert!(v2.is_empty(), "nothing new passed: {v2:?}");
+
+        // Control: with carrying over off the same retry builds both again and records the pass again.
+        go("third", None);
+        let (v3, checks3) = verification_of(&ledger, "third");
+        assert_eq!(checks3, 2);
+        assert_eq!(v3.len(), 1);
+        assert_eq!(v3[0].crate_name.as_deref(), Some(a_name.as_str()));
     }
 
     // Only a verification of the same commit that is recent enough is carried over: another commit's, or

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.74
+
+- Fix: a crate's `verified` event is now recorded as soon as its build passes, not after the whole set has been built, so when a later crate fails the earlier crates that passed are kept and a retry within `--reuse-verified-hours` carries them over instead of building them again. The progress lines follow the same order (verifying, verified, verifying, verified). Failed builds record nothing.
+
 ## 0.0.73
 
 - Docs: `docs/ADOPTION.md` status 2026-11-10: ReleaseAnt adopted for Fuel and Baracuda, the real runs so far, the Fuel 0.46.2 ledger reading with its control, and the verified-events gap. No Rust change.
