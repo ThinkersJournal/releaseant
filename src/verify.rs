@@ -76,6 +76,27 @@ pub fn verify_set_with(
     skip: &[String],
     before: &dyn Fn(&str, usize, usize),
 ) -> io::Result<Vec<(String, Result<(), String>)>> {
+    verify_set_observed(cargo, crates, scratch, skip, before, &mut |_, _| Ok(()))
+}
+
+/// What [`verify_set_observed`] calls after each crate's build: the crate's name and its result.
+pub type AfterBuild<'a> = dyn FnMut(&str, &Result<(), String>) -> io::Result<()> + 'a;
+
+/// [`verify_set_with`], also calling `after(name, result)` as soon as each crate's build has finished,
+/// so a caller can record a pass at once instead of only when the whole set has been built (a set
+/// that fails at its 40th crate would otherwise lose the 39 that passed). An error from `after`
+/// stops the run and is returned; the crates after it are not built.
+///
+/// # Errors
+/// I/O errors preparing the throwaway workspace, or an error returned by `after`.
+pub fn verify_set_observed(
+    cargo: &Cargo,
+    crates: &[PackagedCrate],
+    scratch: &Path,
+    skip: &[String],
+    before: &dyn Fn(&str, usize, usize),
+    after: &mut AfterBuild<'_>,
+) -> io::Result<Vec<(String, Result<(), String>)>> {
     fs::create_dir_all(scratch)?;
     let mut dirs = Vec::new();
     for c in crates {
@@ -96,15 +117,14 @@ pub fn verify_set_with(
     fs::write(scratch.join("Cargo.toml"), manifest)?;
 
     let built: Vec<&(String, String)> = dirs.iter().filter(|(n, _)| !skip.contains(n)).collect();
-    Ok(built
-        .iter()
-        .enumerate()
-        .map(|(i, (n, _))| {
-            before(n, i + 1, built.len());
-            let r = cargo.check(scratch, n).map_err(|e| e.to_string());
-            (n.clone(), r)
-        })
-        .collect())
+    let mut results = Vec::with_capacity(built.len());
+    for (i, (n, _)) in built.iter().enumerate() {
+        before(n, i + 1, built.len());
+        let r = cargo.check(scratch, n).map_err(|e| e.to_string());
+        after(n, &r)?;
+        results.push((n.clone(), r));
+    }
+    Ok(results)
 }
 
 #[cfg(test)]
