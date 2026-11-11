@@ -166,7 +166,7 @@ exported with `crane pull --format oci` to a layout directory.
 | 5 | `crane push <layout> R@D` | exit 0. Pushed four blobs, then the two child manifests by digest, then the index `D` by digest (size 639). Docker Hub accepted a digest-only push with no tag. |
 | 5b | `crane ls R` | exit 0, prints only `a5-1`: the index pushed by digest has no tag. |
 | 5c | `crane digest R@D` | exit 0, `D`: readable by digest while untagged. |
-| 6 | SHA-256 of the manifest bytes (the command was not recorded in the raw file) | the PM reports `34b902ef...f7b5`, equal to `D`. |
+| 6 | SHA-256 of the manifest bytes (the command was not recorded in the raw file; the PM later said it was `crane manifest R@sha256:34b902ef... | sha256sum`, first 64 hex chars equal to the declared digest; reported, not re-run here) | the PM reports `34b902ef...f7b5`, equal to `D`. |
 | 7 | `crane push <layout> R:a5-2`, then `crane digest R:a5-2` | exit 0 both; the push reported `existing manifest` for both children, then `a5-2: digest: D size: 639`; the tag read back `D`. |
 | 8 | `crane tag R@sha256:d1a8d0a4...9e a5-2`, then `crane digest R:a5-2`, then `crane ls R` | exit 0, no warning, `a5-2: digest: sha256:d1a8d0a4...9e size: 1023`; the tag then read back `d1a8d0a4...`; `crane ls` printed `a5-1` and `a5-2`. **Docker Hub let an existing tag be moved to a different image silently**, as `registry:2` did in A4 row 7. |
 | 9 | the repository settings page | CireSnave's reading, relayed by the PM: the page says all tags are mutable. No screenshot; the setting's name and whether it can be changed on this plan were not copied. Consistent with step 8. |
