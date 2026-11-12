@@ -17,11 +17,6 @@ on:
   schedule:
     - cron: "23 4 * * *"
   workflow_dispatch:
-    inputs:
-      probe:
-        description: "probe the WSL runner for the forge job (prints gh auth status, reads the rehearsal repo)"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -100,21 +95,3 @@ jobs:
           name: forge-test-log
           path: forge-test.log
           if-no-files-found: error
-
-  # TEMPORARY (PM 2026-11-12): does the WSL runner's gh login reach the rehearsal repository? Dispatch only; reads, never writes.
-  forge-probe:
-    name: probe the WSL runner
-    if: github.event_name == 'workflow_dispatch' && inputs.probe
-    runs-on: [self-hosted, Linux, X64, wsl]
-    timeout-minutes: 5
-    steps:
-      - name: whoami and gh auth status
-        shell: bash
-        run: |
-          id -un
-          gh --version | head -1
-          gh auth status 2>&1 || true
-      - name: read-only look at the rehearsal repository
-        shell: bash
-        run: |
-          gh api repos/ciresnave-bot/releaseant-artifact-rehearsal --jq '{full_name, private, permissions}' 2>&1 || true
