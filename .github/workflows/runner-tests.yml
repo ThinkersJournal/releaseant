@@ -1,21 +1,27 @@
 name: Runner tests (self-hosted)
 
-# Runs the tests that need Docker and crane (tests/crane_runner.rs) and the real-GitHub check of
-# GhForge (tests/forge_runner.rs), both behind feature `runner-tests`, on the self-hosted runner. See docs/RUNNER-TESTS.md.
+# Runs the real-crane check (tests/crane_runner.rs) on a GitHub-hosted ubuntu runner (Docker is preinstalled
+# there; crane is installed pinned below) and the real-GitHub check of GhForge (tests/forge_runner.rs) on a
+# self-hosted runner, both behind feature `runner-tests`. See docs/RUNNER-TESTS.md.
 #
 # SECURITY (public repo, CIRESNAVE-EXPECTATIONS 5.1h): this job runs on a self-hosted machine, so it must
 # never run code from a fork. Triggers are limited to push to main, a schedule and manual dispatch, all
 # of which run only code already on `main` or that a maintainer chose to dispatch. There is
 # deliberately NO `pull_request` trigger, and the job names no secret.
 #
-# INERT until the repository variable RUNNER_TESTS_ENABLED is 'true' (set only after the runner is
-# registered for this repository).
+# The crane job runs on a hosted runner and needs no switch. The forge job (self-hosted) stays INERT until the
+# repository variable RUNNER_TESTS_ENABLED is 'true' (set only after a runner is registered for it).
 on:
   push:
     branches: [main]
   schedule:
     - cron: "23 4 * * *"
   workflow_dispatch:
+    inputs:
+      probe:
+        description: "probe the WSL runner for the forge job (prints gh auth status, reads the rehearsal repo)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -27,16 +33,28 @@ env:
 jobs:
   crane:
     name: real crane against registry:2
-    if: vars.RUNNER_TESTS_ENABLED == 'true'
-    # The labels are the PM's to set when the runner group exists (docs/RUNNER-TESTS.md); these are
-    # the ones this file was drafted with.
-    runs-on: [self-hosted, windows, releaseant]
+    # GitHub-hosted: no self-hosted machine, no secret, no Docker-group access to anyone's computer.
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
         with:
           toolchain: stable
+      # crane 0.22.1 is the version the measurements used. The sha256 is the release's checksums.txt line for
+      # go-containerregistry_Linux_x86_64.tar.gz and equals the hash of the file downloaded when this was written.
+      - name: Install crane 0.22.1 (pinned)
+        shell: bash
+        run: |
+          set -euo pipefail
+          f=go-containerregistry_Linux_x86_64.tar.gz
+          curl -fsSL -o "$f" "https://github.com/google/go-containerregistry/releases/download/v0.22.1/$f"
+          echo "0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0  $f" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/crane"
+          tar -xzf "$f" -C "$RUNNER_TEMP/crane" crane
+          echo "$RUNNER_TEMP/crane" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/crane/crane" version
+          docker --version
       # Fails if the test fails, if Docker or crane is missing (the test panics, it does not skip), or
       # if it did not run exactly one test: a run that passes zero tests is a failure.
       - name: cargo test (runner-tests)
@@ -82,3 +100,21 @@ jobs:
           name: forge-test-log
           path: forge-test.log
           if-no-files-found: error
+
+  # TEMPORARY (PM 2026-11-12): does the WSL runner's gh login reach the rehearsal repository? Dispatch only; reads, never writes.
+  forge-probe:
+    name: probe the WSL runner
+    if: github.event_name == 'workflow_dispatch' && inputs.probe
+    runs-on: [self-hosted, Linux, X64, wsl]
+    timeout-minutes: 5
+    steps:
+      - name: whoami and gh auth status
+        shell: bash
+        run: |
+          id -un
+          gh --version | head -1
+          gh auth status 2>&1 || true
+      - name: read-only look at the rehearsal repository
+        shell: bash
+        run: |
+          gh api repos/ciresnave-bot/releaseant-artifact-rehearsal --jq '{full_name, private, permissions}' 2>&1 || true

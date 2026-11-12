@@ -1,8 +1,9 @@
 //! The real-`crane` check against a real `registry:2` (docs/ARTIFACTS-DESIGN.md section 9, slice A6;
-//! docs/RUNNER-TESTS.md). It needs Docker and `crane`, which GitHub's hosted runners do not offer in
-//! the form this uses, so it sits behind the `runner-tests` feature: type-checked by CI on every PR
-//! (clippy and doc build with all features), RUN by `.github/workflows/runner-tests.yml` on the
-//! self-hosted runner. It is never `#[ignore]`d, and a missing Docker or `crane` is a FAILURE with a
+//! docs/RUNNER-TESTS.md). It needs Docker and `crane`, which the hosted `cargo test` job does not provide
+//! (an ubuntu-latest hosted runner has Docker and the workflow installs crane; the windows and macos
+//! hosted runners have no Linux containers), so it sits behind the `runner-tests` feature: type-checked by
+//! CI on every PR (clippy and doc build with all features), RUN by `.github/workflows/runner-tests.yml` on
+//! an ubuntu-latest hosted runner. It is never `#[ignore]`d, and a missing Docker or `crane` is a FAILURE with a
 //! message, not a skip: a test that quietly does nothing is indistinguishable from one that passed.
 //!
 //! What it does is what `docs/ARTIFACT-MEASUREMENTS.md` records being done by hand on 2026-11-08:
