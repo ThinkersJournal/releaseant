@@ -449,7 +449,6 @@ pub(crate) fn run_id(sha: &str) -> String {
 /// Run the command line `args` (the program name first, as `std::env::args_os()` gives them) and
 /// return the process exit status: 0 success, 1 the command ran and reported a failure, 2 an error
 /// (and clap's own usage errors).
-#[must_use]
 pub fn run(args: Vec<OsString>) -> ExitCode {
     ExitCode::from(run_code(args))
 }
