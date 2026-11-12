@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.76 — CHANGELOG fragments and the stamp script
+
+- CI/tooling: adopted the portfolio fragment kit (CireSnave 2026-11-12, via the PM): a PR now adds one `changelog.d/<topic>.md` and never edits a version line; `tools/stamp-version.py` stamps the PM-allocated number at merge, and the `Changelog fragment` workflow runs `tools/check-fragment.py`. Verified: a throwaway fragment and `stamp-version.py 99.99.99 --dry-run` listed `Cargo.toml`, `Cargo.lock` and `CHANGELOG.md`; this entry was itself stamped by the script. No Rust change.
+
 ## 0.0.75
 
 - Docs: `docs/ARTIFACT-MEASUREMENTS.md` A5 step 6 now records the manifest-hash command the PM reported (reported, not re-run). No Rust change.
