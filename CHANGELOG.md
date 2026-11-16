@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.80 — CI: move the CodeRipper portfolio workflow pin to 0.47.5
+
+The advisory `portfolio` job in `ci.yml` now calls the shared workflow at coderipper `c72a6e03479d914de8ea8a73609ba73e93a0de92` (installs CodeRipper 0.47.5) instead of `b45eb41`. The repository has no `.coderipper.toml` and no old rule names in any file, so `tools/migrate-rule-ids.py --dry-run` finds nothing to rename (it exits 2: no config to read). No code change.
+
 ## 0.0.78 — clippy on Rust 1.100
 
 - Fix: `cli::run` no longer carries `#[must_use]`; `ExitCode` is `#[must_use]` itself since Rust 1.100, so clippy `double_must_use` failed `-D warnings`. `cargo clippy --all-targets --all-features -- -D warnings` is clean on rustc 1.100.0 (it failed with exactly this one error before). No behaviour change.
