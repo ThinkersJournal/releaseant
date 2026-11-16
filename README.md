@@ -3,8 +3,8 @@
 Ordered, verified, resumable publishing of Rust crates and workspaces to crates.io, with read-back.
 
 **Status: early, pre-1.0.** Published on crates.io since 0.0.44; a breaking change bumps the second number. The hello-world
-below is run in CI on Linux, Windows and macOS, and strangers' trials of it (4 of 4) passed, all on Windows; expect rough edges
-elsewhere and report them.
+below is run in CI on Linux, Windows and macOS, and four fresh-eyes trials of it by AI agents (not people; 4 of 4 passed, all on Windows) are recorded in
+`docs/PUBLISH-PLAN.md`; no human outside the project has tried it yet, so expect rough edges and report them.
 
 ## Hello
 
