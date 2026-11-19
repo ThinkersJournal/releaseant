@@ -90,8 +90,8 @@ not tested); whether `gh` retries on its own.
 
 ## A5, 2026-11-09: Docker Hub (`thinkersjournal/releaseant-a5-test`), runbook and observations
 
-**Status: runbook steps 1 to 9 recorded below (PM run, 2026-11-09, `crane` 0.22.1, login `ciresnave`);
-step 10 not observed; step 11 not run.** The runbook is kept as run. Nothing here is a claim about Docker
+**Status: CLOSED at 10 of 11 (2026-11-19). Steps 1 to 9 PM run 2026-11-09 (`crane` 0.22.1, login
+`ciresnave`); step 10 measured read-only 2026-11-19, no 429 seen; step 11 declined by the PM.** The runbook is kept as run. Nothing here is a claim about Docker
 Hub beyond what the "Observed" table says, and every row there comes from the PM's raw file, not from a
 run by the ReleaseAnt lane. The PM said CireSnave would delete the repository afterwards (not checked by the lane).
 
@@ -170,8 +170,22 @@ exported with `crane pull --format oci` to a layout directory.
 | 7 | `crane push <layout> R:a5-2`, then `crane digest R:a5-2` | exit 0 both; the push reported `existing manifest` for both children, then `a5-2: digest: D size: 639`; the tag read back `D`. |
 | 8 | `crane tag R@sha256:d1a8d0a4...9e a5-2`, then `crane digest R:a5-2`, then `crane ls R` | exit 0, no warning, `a5-2: digest: sha256:d1a8d0a4...9e size: 1023`; the tag then read back `d1a8d0a4...`; `crane ls` printed `a5-1` and `a5-2`. **Docker Hub let an existing tag be moved to a different image silently**, as `registry:2` did in A4 row 7. |
 | 9 | the repository settings page | CireSnave's reading, relayed by the PM: the page says all tags are mutable. No screenshot; the setting's name and whether it can be changed on this plan were not copied. Consistent with step 8. |
-| 10 | rate limits and 429 wording | **Not observed.** No 429 appeared; none was provoked. Limits and wording stay `UNVERIFIED`. |
-| 11 | the lane's `images::Crane` path against Docker Hub | **Not run.** The lane's session cannot push to Hub and the throwaway repository was to be deleted. |
+| 10 | rate limits and 429 wording | **Not observed.** No 429 appeared; none was provoked. Limits and wording stay `UNVERIFIED`. Follow-up, PM run 2026-11-19 11:36 local, read-only, `crane` 0.22.1 with the Docker Desktop credential store: see "Step 10 follow-up" below. |
+| 11 | the lane's `images::Crane` path against Docker Hub | **Not run; declined by the PM 2026-11-19.** Local `registry:2` (`tests/crane_runner.rs`) covers the code path; Hub's 429 wording stays `UNVERIFIED`. `crane_runner.rs` gets no Hub option. |
+
+### Step 10 follow-up (PM run 2026-11-19 11:36 local; relayed by the PM, not run by the lane)
+
+| Command | Observed |
+|---|---|
+| `crane digest thinkersjournal/releaseant-a5-test:a5-1`, three runs | every run exit 1, stdout empty; stderr: `HEAD https://index.docker.io/v2/thinkersjournal/releaseant-a5-test/manifests/a5-1: unexpected stat...` (truncated in the PM's relay), then `Error: GET .../manifests/a5-1: MANIFEST_UNKNOWN: manifest unknown; unknown tag=a5-1`. |
+| anonymous `HEAD` of `ratelimitpreview/test` manifest (documented not to count as a pull) | `ratelimit-limit: 100;w=3600`, `ratelimit-remaining: 100;w=3600`. |
+| authenticated pair of the same headers | **Not taken** (needs a token from the credential helper). |
+
+Readings, each limited to what was seen:
+
+- **No 429 was observed**, so the verbatim 429 / `TOOMANYREQUESTS` wording stays `UNVERIFIED`, and no limit was provoked.
+- **The anonymous pull limit read 100 per 3600 s window for that probe at that moment.** One reading by one client; it is not a statement about push limits or about the authenticated limit.
+- **Tag `a5-1` did not exist on 2026-11-19, although steps 1, 5 to 8 of 2026-11-09 recorded it** (row 1 pushed it, row 8's `crane ls` listed it). The repository answered with `MANIFEST_UNKNOWN`, not `NAME_UNKNOWN`, which on this registry also reads as an absent tag (see (b) below). Which of these happened is **not known**: the tag was deleted, the repository was deleted and recreated, or the 2026-11-09 record is wrong. No one has said which; the lane did not check Hub itself.
 
 What this changes for the design (section 4.2, `UNVERIFIED` rows): (a) tags on Docker Hub are mutable
 here, so the pre-check plus read-back remains the only guard and the named hole is real on Hub too;
