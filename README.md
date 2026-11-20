@@ -201,11 +201,13 @@ in the last 12 hours (`--reuse-verified-hours N`; 0 verifies everything every ti
 with `carried over, not built again: run <id> at <time>`, and the progress line says how many were carried over.
 The first run at a commit always builds every crate.
 
+One ledger holds one plan per commit: after a run of the whole plan, a run at the same commit that changes the plan (`--exclude`, `--only`) is refused with `the ledger has a run at this commit with a different plan`. After a dry run, use a different ledger (`--ledger FILE`) or remove `.releaseant/` (dry runs only) to start that run.
+
 Tag the release in git in the same action: add `--tag` (`releaseant publish --sha $SHA --execute --tag`). Once every
 crate is on the registry it creates an annotated `v<version>` on exactly that commit, pushes only that tag to
 `origin` and reads it back. It refuses a commit that is on no origin branch and never moves an existing tag; a
 second run finds it already tagged. When the crates are at several versions, say which one with
-`--tag-version 0.32.0`; a run with `--exclude` is not tagged. A run with `--only` has no project tag (it would claim more than was published): each selected crate that is on the registry gets its own annotated `<crate>-v<version>` (`releaseant tag --crate NAME --version V` does the same on its own), and the project's `v<version>` comes from the full run that finishes the set. Without `--execute` it only checks that the tag
+`--tag-version 0.32.0`; a run with `--exclude` is not tagged. A run with `--only` has no project tag (it would claim more than was published): each selected crate that is on the registry gets its own annotated `<crate>-v<version>` (`releaseant tag --sha $SHA --crate NAME --version V` does the same on its own), and the project's `v<version>` comes from the full run that finishes the set. Without `--execute` it only checks that the tag
 could be made. `releaseant tag --sha $SHA --version 0.1.0 [--execute]` does the same on its own.
 
 Leave a crate out on purpose, with the reason recorded in the ledger (crates that need it still need it on the
