@@ -88,3 +88,14 @@ timestamps differ) with exit codes 0, 0, 2; nothing blocked. It noted the README
 Install text, which 0.0.45 fixes. A git identity was already set on the box ("if git asks" not exercised); the CRLF warnings on
 Windows are git's. Windows only. Not run: a Linux or macOS stranger and a machine with no git identity. The agent's report is not
 stored here.
+
+## Fifth fresh-eyes trial, 2026-11-20 (no git identity)
+
+A Sonnet subagent ran `cargo install releaseant --version 0.0.50 --locked` (exit 0, 59 s on 2 jobs) and followed the shipped
+README with HOME, GIT_CONFIG_GLOBAL and GIT_CONFIG_SYSTEM pointed at nothing and no GIT_AUTHOR_* set. `git commit` failed
+exit 128 "Author identity unknown" (the README only said "if git asks who you are"); after a local `git config` the `plan`,
+`plan --sha main` (exit 2) and dry-run `publish` outputs matched the README, exits 0, 2, 0. Windows only, one agent, not a
+human; the agent's report is not stored here. Friction found and what was done: the identity step had no commands (README now
+names them); the build-time estimate was pessimistic (59 s; README now says one to a few minutes); the demo workspace is
+assembled by hand, because `examples/hello.sh` is not in the published package (open, ROADMAP R7); git's "master" hint on
+`git init` is git's own noise (left). Still not tried: a Linux or macOS stranger.
