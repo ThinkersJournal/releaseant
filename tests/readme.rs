@@ -157,6 +157,30 @@ fn split_progress(text: &str) -> (Vec<String>, Vec<String>) {
     (progress, rest)
 }
 
+/// The EasyAnts card shows `examples/hello.sh`; it must stay the README's hello-world commands.
+#[test]
+fn the_card_example_is_the_readme_hello_world() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let readme = fs::read_to_string(root.join("README.md")).unwrap();
+    let example = fs::read_to_string(root.join("examples/hello.sh")).unwrap();
+    let want: Vec<String> = readme_steps(&readme).into_iter().map(|(c, _)| c).collect();
+    let got: Vec<String> = example
+        .lines()
+        .filter(|l| !l.trim().is_empty() && !l.starts_with('#'))
+        .map(|l| l.split(" #").next().unwrap().trim().to_owned())
+        .collect();
+    // The README goes on to show the branch-name refusal; the card shows the first steps only.
+    assert!(
+        want.len() >= got.len(),
+        "README hello-world is shorter than the example"
+    );
+    assert_eq!(
+        got,
+        want[..got.len()],
+        "examples/hello.sh drifted from the README hello-world"
+    );
+}
+
 #[test]
 fn the_readme_hello_world_does_what_the_readme_says() {
     let readme =

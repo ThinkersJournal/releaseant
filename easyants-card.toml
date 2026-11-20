@@ -1,0 +1,7 @@
+name = "ReleaseAnt"
+sentence = "Ordered, verified, resumable publishing of Rust crates and workspaces to crates.io, with read-back."
+status = "ready"
+install_url = "https://crates.io/crates/releaseant"
+install_snippet = "cargo install releaseant"
+docs = "https://github.com/ThinkersJournal/releaseant"
+example_path = "examples/hello.sh"
