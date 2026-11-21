@@ -47,7 +47,8 @@ error: not a full 40-hex commit SHA: "main" (get one with `git rev-parse main`)
 
 Two crates, in directories of those names (`mkdir -p releaseant-demo-core/src releaseant-demo-app/src`), each with an empty
 `src/lib.rs` and a `README.md` (any text), committed in git (`git init`, `git add -A`,
-`git commit`; if git asks who you are, set `user.name` and `user.email` first):
+`git commit -m init`). On a machine with no git identity that last command stops with "Author identity unknown"; run
+`git config user.name "Your Name"` and `git config user.email you@example.com` (inside this repository), then commit again:
 
 ```toml
 # Cargo.toml
@@ -146,7 +147,7 @@ From crates.io (Rust 1.88 or newer):
 cargo install releaseant
 ```
 
-Or from a clone or an unpacked package (the build takes a few minutes; `cargo install` puts the binary in
+Or from a clone or an unpacked package (the build takes one to a few minutes, 59 s on 2 jobs in a trial; `cargo install` puts the binary in
 `~/.cargo/bin`, which rustup already put on your `PATH`):
 
 ```console
