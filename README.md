@@ -48,7 +48,7 @@ error: not a full 40-hex commit SHA: "main" (get one with `git rev-parse main`)
 Two crates, in directories of those names (`mkdir -p releaseant-demo-core/src releaseant-demo-app/src`), each with an empty
 `src/lib.rs` and a `README.md` (any text), committed in git (`git init`, `git add -A`,
 `git commit -m init`). On a machine with no git identity that last command stops with "Author identity unknown"; run
-`git config user.name "Your Name"` and `git config user.email you@example.com` (inside this repository), then commit again:
+`git config user.name "Your Name"` and `git config user.email you@example.com` (inside this repository), then commit again. Or skip this: `sh examples/make-demo.sh` (shipped in the package and the repository) builds exactly this workspace in `./releaseant-demo`, setting a repo-local identity only if you have none. What follows is what it writes:
 
 ```toml
 # Cargo.toml

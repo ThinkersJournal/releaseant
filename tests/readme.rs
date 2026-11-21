@@ -511,3 +511,60 @@ releaseant-demo-app 0.1.0
     assert_ne!(code, Some(0));
     assert!(err.contains("cannot be used with"), "{err}");
 }
+
+/// `examples/make-demo.sh` builds the README's demo workspace on a machine with no git identity at
+/// all, and what it writes is what the README shows; `plan` then lists both crates.
+#[test]
+fn make_demo_script_builds_the_readme_workspace_with_no_git_identity() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let readme = fs::read_to_string(root.join("README.md")).unwrap();
+    let tmp = tempfile::tempdir().unwrap();
+    let out = Command::new("sh")
+        .arg(root.join("examples/make-demo.sh"))
+        .current_dir(tmp.path())
+        .env("HOME", tmp.path())
+        .env(
+            "GIT_CONFIG_GLOBAL",
+            if cfg!(windows) { "NUL" } else { "/dev/null" },
+        )
+        .env(
+            "GIT_CONFIG_SYSTEM",
+            if cfg!(windows) { "NUL" } else { "/dev/null" },
+        )
+        .env_remove("GIT_AUTHOR_NAME")
+        .env_remove("GIT_AUTHOR_EMAIL")
+        .env_remove("GIT_COMMITTER_NAME")
+        .env_remove("GIT_COMMITTER_EMAIL")
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let demo = tmp.path().join("releaseant-demo");
+    for (path, text) in readme_manifests(&readme) {
+        let got = fs::read_to_string(demo.join(&path))
+            .unwrap()
+            .replace("\r\n", "\n");
+        assert_eq!(got, text, "{path} differs from the README");
+    }
+    let sha = git(&demo, &["rev-parse", "HEAD"]);
+    let plan = Command::new(env!("CARGO_BIN_EXE_releaseant"))
+        .args(["plan", "--sha", &sha, "--repo"])
+        .arg(&demo)
+        .output()
+        .unwrap();
+    assert!(
+        plan.status.success(),
+        "{}",
+        String::from_utf8_lossy(&plan.stderr)
+    );
+    let text = String::from_utf8_lossy(&plan.stdout).replace("\r\n", "\n");
+    assert_eq!(
+        text,
+        "releaseant-demo-core 0.1.0
+releaseant-demo-app 0.1.0
+"
+    );
+}
