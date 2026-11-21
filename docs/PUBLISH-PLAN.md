@@ -97,5 +97,5 @@ exit 128 "Author identity unknown" (the README only said "if git asks who you ar
 `plan --sha main` (exit 2) and dry-run `publish` outputs matched the README, exits 0, 2, 0. Windows only, one agent, not a
 human; the agent's report is not stored here. Friction found and what was done: the identity step had no commands (README now
 names them); the build-time estimate was pessimistic (59 s; README now says one to a few minutes); the demo workspace is
-assembled by hand, because `examples/hello.sh` is not in the published package (open, ROADMAP R7); git's "master" hint on
+assembled by hand (fixed 2026-11-21: `examples/make-demo.sh` builds it and ships in the package, ROADMAP R7); git's "master" hint on
 `git init` is git's own noise (left). Still not tried: a Linux or macOS stranger.
