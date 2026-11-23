@@ -413,3 +413,41 @@ did not slow down at all (238.1 s to 239.9 s) but its publish build did (135.2 s
 As in 4f: a real 429's wording (none met in 43 + 43 uploads), a kill between upload and read-back, a lagging index (the
 longest availability wait was 4.0 s), a real transient failure. New: nothing in the ledger says how loaded the machine
 was, so a future run that wants this comparison needs the load recorded beside it.
+
+## 6. The httpant 0.9.0 publish (2026-11-23), reconstructed from the registry: there is no run ledger
+
+**Read this first.** This section is not read from a ledger. The PM ran `workspace-publish.py` without redirecting its
+output, saw only its last lines, and kept no ledger and no out file (PM, 2026-11-23, `[FINDING]` httpant-0.9.0-ledger).
+Nothing here is a measurement of the tool: no per-crate timing, no `phase` events, no check of whether a 429 was met.
+What is below is the registry's own record, which this lane re-read on 2026-11-23, plus the PM's own account of the
+tail of the run. The next multi-crate publish keeps its out file and ledger (the PM's word), and gets a section like 3
+to 5.
+
+**What the PM reported** (the last lines of the run, not re-verified by this lane): 4 crates to reach 0.9.0; round 1:
+0 published, 4 to go; round 2: 4 published, 0 to go; `READ BACK 4/4`. Published from a clean archive of commit
+`0b0fcca6f3000a3e91573089afaf414df5afd3f1`. `httpant-conformance` and `httpant-bench` are `publish = false` and were not
+part of it.
+
+**What the registry says**, read with `GET https://crates.io/api/v1/crates/<crate>/0.9.0` on 2026-11-23 (field
+`version.created_at`, `crate_size`, `checksum`; all four `yanked: false`, `rust_version` `1.89`):
+
+| crate (dependency order) | `created_at` (UTC) | `crate_size` | checksum (sha256) |
+|---|---|---|---|
+| `httpant-core` | 2026-11-23T01:56:00.04Z | 24804 B | `c53182aecc984518d6cb148e2d58ff1be276b2b5521ef8bedfc0e70c6e53f726` |
+| `httpant-client` | 2026-11-23T01:56:02.14Z | 33664 B | `80bdea1927ca6d129f79f10572db0d0fd6aae0a5c216e8d3570a8b1921e49424` |
+| `httpant-server` | 2026-11-23T01:56:04.12Z | 101614 B | `744f68a0aac89a3b6404c57a701b406d35746341c6926a878733bd6855309bfd` |
+| `httpant` | 2026-11-23T01:56:06.31Z | 59575 B | `e05a521c4b68e1a47b27f04915c3bfabee58d1c5f20ac30588a97fb784a3e919` |
+
+The tag `v0.9.0` on `ThinkersJournal/httpant` is annotated and peels to `0b0fcca6f3000a3e91573089afaf414df5afd3f1`
+(`git ls-remote --tags`), the commit the PM named.
+
+**What this does and does not establish.**
+- All four crates are on the registry at 0.9.0, not yanked, in dependency order, about 2 s apart (2.10, 1.98, 2.19 s).
+  That is consistent with the PM's `READ BACK 4/4` and says the order was right.
+- The 2 s spacing is the gap between registry creation times. It is not the time `cargo publish` took, and it is not
+  a rate-limit pause (after the limit, section 3b saw about one upload a minute).
+- "Two rounds, round 1 published nothing" is the PM's reading of the script's output; the registry cannot confirm or
+  explain it. Why round 1 published none of the four is not known from anything this lane holds.
+- The checksums are the registry's. Comparing them to a build of `0b0fcca6` would show whether the uploaded archives match
+  the commit; this lane did not build it, so that comparison is not made here.
+- Unmeasured, as in 5e, and still so: a real 429's wording, a kill between upload and read-back, a lagging index.
