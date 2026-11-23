@@ -78,6 +78,29 @@ jobs:
           toolchain: stable
       - run: cargo package --locked
 
+  # ROADMAP R7: the shipped examples (examples/make-demo.sh, then the hello commands) run with the real binary on
+  # Linux and macOS, the way a user would after `cargo install`.
+  examples:
+    name: examples (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
+        with:
+          toolchain: stable
+      - run: cargo install --path . --locked --root "$RUNNER_TEMP/ra"
+      - name: make-demo.sh and hello commands
+        run: |
+          export PATH="$RUNNER_TEMP/ra/bin:$PATH"
+          cd "$RUNNER_TEMP"
+          sh "$GITHUB_WORKSPACE/examples/make-demo.sh"
+          cd releaseant-demo
+          sh "$GITHUB_WORKSPACE/examples/hello.sh"
+
   doc:
     name: doc
     runs-on: ubuntu-latest
