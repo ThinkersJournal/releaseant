@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.90 — Docs: R5-LIVE section 6, the httpant 0.9.0 publish
+
+`docs/R5-LIVE.md` section 6 records the 2026-11-23 httpant 0.9.0 publish (4 crates). No ledger was kept, so it is labelled as reconstructed from the registry: creation times, sizes and checksums re-read from the crates.io API, the `v0.9.0` tag peeled with `git ls-remote`, and the PM's account of the run's tail kept separate and unverified.
+
 ## 0.0.89 — Changed
 
 `src/categories.rs` re-fetched from `https://crates.io/api/v1/category_slugs` on 2026-11-22: 104 slugs, identical to the 2026-10-29 list. New test `the_list_matches_what_crates_io_serves_today` fetches the live list and fails, naming the added and removed slugs, when it drifts (negative control: deleting `accessibility` from the list made it fail with "added upstream [\"accessibility\"]"). ROADMAP R6 "Later" item 1.
