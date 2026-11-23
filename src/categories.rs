@@ -167,7 +167,11 @@ mod tests {
             .map(|e| e["slug"].as_str().expect("slug").to_owned())
             .collect();
         live.sort();
-        assert!(live.len() > 50, "implausibly short live list: {}", live.len());
+        assert!(
+            live.len() > 50,
+            "implausibly short live list: {}",
+            live.len()
+        );
         let ours: Vec<String> = SLUGS.iter().map(|s| (*s).to_owned()).collect();
         let added: Vec<_> = live.iter().filter(|s| !ours.contains(s)).collect();
         let removed: Vec<_> = ours.iter().filter(|s| !live.contains(s)).collect();
