@@ -135,4 +135,49 @@ mod tests {
         assert!(!is_valid("Development-Tools"));
         assert!(!is_valid(""));
     }
+
+    // The drift check (ROADMAP R6 "Later"): fetches the live list, so it needs the network like the other
+    // crates.io tests; a fetch failure fails the test, because a check that silently skips is not a check.
+    // When it fails on a real difference, replace SLUGS with the fetched list and update the date and count above.
+    #[test]
+    fn the_list_matches_what_crates_io_serves_today() {
+        let agent: ureq::Agent = ureq::Agent::config_builder()
+            .timeout_global(Some(std::time::Duration::from_secs(30)))
+            .tls_config(
+                ureq::tls::TlsConfig::builder()
+                    .provider(ureq::tls::TlsProvider::NativeTls)
+                    .root_certs(ureq::tls::RootCerts::PlatformVerifier)
+                    .build(),
+            )
+            .user_agent(concat!("releaseant/", env!("CARGO_PKG_VERSION")))
+            .build()
+            .into();
+        let body = agent
+            .get("https://crates.io/api/v1/category_slugs")
+            .call()
+            .expect("fetch category_slugs")
+            .body_mut()
+            .read_to_string()
+            .expect("read body");
+        let v: serde_json::Value = serde_json::from_str(&body).expect("json");
+        let mut live: Vec<String> = v["category_slugs"]
+            .as_array()
+            .expect("category_slugs array")
+            .iter()
+            .map(|e| e["slug"].as_str().expect("slug").to_owned())
+            .collect();
+        live.sort();
+        assert!(
+            live.len() > 50,
+            "implausibly short live list: {}",
+            live.len()
+        );
+        let ours: Vec<String> = SLUGS.iter().map(|s| (*s).to_owned()).collect();
+        let added: Vec<_> = live.iter().filter(|s| !ours.contains(s)).collect();
+        let removed: Vec<_> = ours.iter().filter(|s| !live.contains(s)).collect();
+        assert!(
+            added.is_empty() && removed.is_empty(),
+            "categories drifted: added upstream {added:?}, removed upstream {removed:?}"
+        );
+    }
 }
