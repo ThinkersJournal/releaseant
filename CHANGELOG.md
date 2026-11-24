@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.91 — CI: portfolio gate pin moved to dc45e36
+
+Moved the `portfolio.yml` reusable-workflow pin in `.github/workflows/ci.yml` from c72a6e0 to dc45e3632ab9f471292458e5ccba5f375084a70a, as the PM asked. `url` is not in `Cargo.lock` (a positive control, `serde`, is), so RUSTSEC-2026-0592 needs no lock change. Verified by the diff only; the advisory result is read from CI by check name once the PR opens.
+
 ## 0.0.90 — Docs: R5-LIVE section 6, the httpant 0.9.0 publish
 
 `docs/R5-LIVE.md` section 6 records the 2026-11-23 httpant 0.9.0 publish (4 crates). No ledger was kept, so it is labelled as reconstructed from the registry: creation times, sizes and checksums re-read from the crates.io API, the `v0.9.0` tag peeled with `git ls-remote`, and the PM's account of the run's tail kept separate and unverified.
