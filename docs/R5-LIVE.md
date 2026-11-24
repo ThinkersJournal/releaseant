@@ -543,3 +543,90 @@ matters here only because a `--require-green` or a clean-build check that denies
   commit.
 - Still unmeasured, as in 5e: a real 429's wording, a kill between upload and read-back, a lagging index (the longest
   gap here, about 2 s, was cargo's own wait, and it ended on its own), a real transient failure.
+
+## 8. The baracuda 0.1.0-alpha.183 publish (2026-11-24), from cargo's own output and the registry
+
+**Read this first.** `C:/Projects/.lane-state/publish-baracuda-alpha183.out` is the raw output of one multi-crate
+`cargo publish -p <x14>` run (the PM's account, relayed by pm-ants: 14 crates, `DOCS_RS=1`, tag `v0.1.0-alpha.183` on
+`bef4be0a3`). It is **the PM's file, not pm-assist's**; sections 3 to 5 read a releaseant ledger and section 7 read a file
+with a start header and an `exit=` footer, and this file differs from both: it is 148 lines of cargo output only, with
+**no `publish start` header, no `exit=` footer, no sha line and no crate-list line**. So the invocation, the exit code and
+the commit are the PM's statement, not something the file shows. What the file shows is cargo's own status lines. This lane
+read all 148 lines, then re-read the registry and the tag itself (method below). The file is not copied into the repo.
+
+**Lines relied on.** Lines 2 to 43: 14 `Packaging` (14 `Packaged`). Lines 44 to 95: 14 `Verifying` and 14 `Finished`. Lines 96
+to 147: 14 `Uploaded`, 8 `waiting for` notes (106, 111, 116, 123, 128, 135, 140, 145) and 8 `Published` lines (108, 113, 118, 125,
+130, 137, 142, 147). Grep over the whole file for `429`, `retry`, `failed`, `error`, `warning`: **0 hits each**; control: the
+same file gives 14 `Uploaded` and 8 `Published`, which are present, and the aocl file of section 7 gave 14 `warning:` lines
+under the same grep, so the pattern does find warnings when a run has them. Line 79 is `Blocking waiting for file lock on
+package cache` (cargo's own, during the `baracuda-cuda-emit` verify; harmless, not a retry). Line 146 is cargo's `press ctrl-c to
+skip waiting` hint, not a wait event.
+
+**What the run did.** 11 crates at `0.1.0-alpha.183` and 3 at `0.56.5` (`baracuda-cuda-parse`, `-cuda-emit`, `-cuda-seam`); 11 + 3 =
+14, matching the PM's count. Cargo packaged all 14, verified all 14, and only then uploaded, in 8 dependency layers:
+
+| round | crates | `waiting for` note | `Published` line |
+|---|---|---|---|
+| 1 | `baracuda-build`, `-cuda-parse`, `-cuda-vocab`, `-seam`, `-types-derive` (5) | line 106, "9 remaining" | 108 |
+| 2 | `baracuda-types` | line 111, "8 remaining" | 113 |
+| 3 | `baracuda-core` | line 116, "7 remaining" | 118 |
+| 4 | `baracuda-cuda-sys`, `-nvrtc-sys` (2) | line 123, "5 remaining" | 125 |
+| 5 | `baracuda-driver` | line 128, "4 remaining" | 130 |
+| 6 | `baracuda-kernels-types`, `-nvrtc` (2) | line 135, "2 remaining" | 137 |
+| 7 | `baracuda-cuda-emit` | line 140, "1 remaining" | 142 |
+| 8 | `baracuda-cuda-seam` | line 145 (no remaining count) | 147 |
+
+5 + 1 + 1 + 2 + 1 + 2 + 1 + 1 = 14. Each wait ended in a `Published` line and the next layer started after it. The `Finished ... in
+N s` figures rise from 10.4 to 30.9 s down the file, one running clock again, not 14 build times (not established, as in
+section 7). The file has no per-line timestamps, so the time split between building and registry waits inside the run is not
+measured. The file's modification time is 10:51:34 UTC and the last registry `created_at` below is 10:51:32.9, consistent with a
+run that ended about when its last crate appeared.
+
+**A 429? None in this output.** All 14 uploads went through with no wait and no retry text. The registry's `created_at` times
+(below) span 10:51:15.2 to 10:51:32.9, **14 versions in 17.6 s**. That is fewer than the 46 uploads baracuda had accepted before
+its first 429 in section 3b, so it is no evidence about where the limit lies; it is a statement about this output.
+
+**What the registry says**, read by this lane on 2026-11-24 with `GET https://crates.io/api/v1/crates/<crate>/<version>` (fields
+`version.created_at`, `crate_size`, `yanked`). All 14 answered, all `yanked: false`. This is a method different from the out
+file (the registry's record, not cargo's), so agreement between the two is evidence:
+
+| round | crate | version | `created_at` (UTC, 2026-11-24) | `crate_size` |
+|---|---|---|---|---|
+| 1 | `baracuda-build` | 0.1.0-alpha.183 | 10:51:15.24 | 12048 B |
+| 1 | `baracuda-cuda-parse` | 0.56.5 | 10:51:16.00 | 15694 B |
+| 1 | `baracuda-cuda-vocab` | 0.1.0-alpha.183 | 10:51:16.61 | 19138 B |
+| 1 | `baracuda-seam` | 0.1.0-alpha.183 | 10:51:17.30 | 8442 B |
+| 1 | `baracuda-types-derive` | 0.1.0-alpha.183 | 10:51:17.79 | 11233 B |
+| 2 | `baracuda-types` | 0.1.0-alpha.183 | 10:51:19.33 | 22883 B |
+| 3 | `baracuda-core` | 0.1.0-alpha.183 | 10:51:21.41 | 17405 B |
+| 4 | `baracuda-cuda-sys` | 0.1.0-alpha.183 | 10:51:23.91 | 106850 B |
+| 4 | `baracuda-nvrtc-sys` | 0.1.0-alpha.183 | 10:51:24.92 | 12212 B |
+| 5 | `baracuda-driver` | 0.1.0-alpha.183 | 10:51:26.34 | 115749 B |
+| 6 | `baracuda-kernels-types` | 0.1.0-alpha.183 | 10:51:28.57 | 23844 B |
+| 6 | `baracuda-nvrtc` | 0.1.0-alpha.183 | 10:51:29.19 | 12718 B |
+| 7 | `baracuda-cuda-emit` | 0.56.5 | 10:51:30.57 | 316728 B |
+| 8 | `baracuda-cuda-seam` | 0.56.5 | 10:51:32.86 | 25062 B |
+
+The upload order matches the table in every round; each round's last crate precedes the next round's first. Packaged sizes agree:
+`baracuda-build` is 11.8 KiB compressed on line 4 and 12048 B (11.77 KiB) in the registry; `baracuda-cuda-emit` 309.3 KiB on line
+31 and 316728 B (309.3 KiB).
+
+**Tag.** `git ls-remote --tags https://github.com/ThinkersJournal/baracuda 'v0.1.0-alpha.183*'` gives `refs/tags/v0.1.0-alpha.183`
+`3fe5304e...` (a tag object, so annotated) and `refs/tags/v0.1.0-alpha.183^{}` `bef4be0a3fd099f9bfa66f3ebd7bc7f053cc7e7f`, the
+commit the PM named.
+
+**Controls.** This lane's own read: 14 crates, 14 hits, each with a `created_at` inside the 17.6 s window above. The same query for
+a version outside the run, `baracuda-cuda-sys` `0.1.0-alpha.182`, returns `does not have a version`, so the read does tell a
+published version from an absent one. **Not run here:** a read of a crate the run was meant to hold back; "nothing else was
+published" rests on the PM's controls, which this lane has not seen. The archives were not compared to a build of `bef4be0a3`
+(checksums not compared).
+
+**What this adds, and what it does not.**
+- Added: one more real multi-crate `cargo publish`, with no 429, the first with layers of width 5, 1, 1, 2, 1, 2, 1, 1 (a
+  chain, not three layers as in section 7), and a read of an out file that has no header or footer.
+- Not added: anything about releaseant's guards, ledger or retries; no phase timing; no exit code from the file; no check that
+  the archives match the commit.
+- Still unmeasured, as in 5e: a real 429's wording, a kill between upload and read-back, a lagging index (the longest gap here,
+  about 2.5 s between rounds 3 and 4, was cargo's own wait, ending on its own), a real transient failure.
+- The onemkl 0.3.8 out file (`.lane-state/publish-onemkl-0.3.8.out`) was still being written when this section was drafted and is
+  not covered; it gets its own section when complete.
