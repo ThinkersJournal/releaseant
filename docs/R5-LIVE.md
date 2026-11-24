@@ -451,3 +451,95 @@ The tag `v0.9.0` on `ThinkersJournal/httpant` is annotated and peels to `0b0fcca
 - The checksums are the registry's. Comparing them to a build of `0b0fcca6` would show whether the uploaded archives match
   the commit; this lane did not build it, so that comparison is not made here.
 - Unmeasured, as in 5e, and still so: a real 429's wording, a kill between upload and read-back, a lagging index.
+
+## 7. The aocl 0.2.2 publish (2026-11-24), from cargo's own output and the registry
+
+**Read this first.** The file is **not a releaseant ledger**. `C:/Projects/.lane-state/publish-aocl-0.2.2.out` is the
+raw stdout and stderr of one multi-crate `cargo publish` (the PM, via pm-kernels, 2026-11-24: "one cargo invocation for 17
+crates", from a clean archive of `main` `69fee1bd`, `DOCS_RS=1`). It has no `phase`, `waiting` or `classified` events and no
+`--require-green`, so none of the section 3 to 5 measurements (where the time went per phase, builds against registry
+time) can be made from it. What it does have is cargo's status lines and one wall-clock header and footer. This lane read
+all 224 lines, then re-read the registry itself (method below). The out file is not copied into the repo.
+
+**Lines relied on.** Line 1: `publish start 01:24:24Z sha 69fee1bd28c52f4cb303b53300a528e204042b20 version 0.2.2` and the
+17 crate names. Line 224: `exit=0 end 01:25:16Z`. Lines 3 to 52: 17 `Packaging` (17 `Packaged`). Lines 53 to 180: 17
+`Verifying` and 17 `Finished`. Lines 181 to 220: 17 `Uploaded`. Lines 187, 204, 221: the three `waiting for` notes. Lines
+189, 206, 223: the three `Published` lines. No line contains `429`, `retry` or `failed` (grep over the whole file: 0 hits; control: the same file gives 17 `Uploaded`
+and 14 `warning:` lines, which are present). Line 222 is cargo's `press ctrl-c to skip waiting` hint, not a wait event.
+
+**What the run did.**
+
+| round | crates | `waiting for` note | `Published` line |
+|---|---|---|---|
+| 1 | `aocl-build`, `aocl-error`, `aocl-types` (3) | line 187, "14 remaining" | 189 |
+| 2 | the seven `-sys` crates (7) | line 204, "7 remaining" | 206 |
+| 3 | `aocl-compression`, `-crypto`, `-data-analytics`, `-scalapack`, `-securerng`, `-sparse`, `-utils` (7) | line 221 | 223 |
+
+3 + 7 + 7 = 17, uploaded in dependency layers; cargo waited for each layer to be visible before starting the next, and
+each wait ended in a `Published` line. Exit 0. Whole run **52 s** by the file's own clock (01:24:24Z to 01:25:16Z). In the
+file's order the packaging and the 17 verification builds come first and the uploads after all of them. Their registry
+timestamps start at 01:25:01, 37 s after the start header, so the builds took about that much of the 52 s; the file has no
+timestamp per line, so the split inside it is not measured. (The `Finished ... in N s` figures rise from 10.7 to 37.3 s
+down the file, which reads as one running clock, not 17 separate build times; not established.)
+
+**A 429? None in this output.** All 17 uploads went through with no wait and no retry text, at the same short pace as
+section 4a and 5a: the registry's `created_at` times (below) span 01:25:01.4 to 01:25:13.3, **17 versions in 11.9 s**.
+That is fewer than the 46 uploads baracuda had accepted before its first 429 (section 3b), so it is no evidence about where the
+limit lies; it is a statement about this output, not about the registry's rule.
+
+**What the registry says**, read by this lane on 2026-11-24 with `GET https://crates.io/api/v1/crates/<crate>/0.2.2` (fields
+`version.created_at`, `crate_size`, `yanked`, `checksum`). All 17 answered, all `yanked: false`. This is a method
+different from the out file (the registry's record, not cargo's), so agreement between the two is evidence:
+
+| round | crate | `created_at` (UTC, 2026-11-24) | `crate_size` |
+|---|---|---|---|
+| 1 | `aocl-build` | 01:25:01.44 | 13057 B |
+| 1 | `aocl-error` | 01:25:01.96 | 6967 B |
+| 1 | `aocl-types` | 01:25:02.36 | 7803 B |
+| 2 | `aocl-compression-sys` | 01:25:04.00 | 16756 B |
+| 2 | `aocl-crypto-sys` | 01:25:04.65 | 13884 B |
+| 2 | `aocl-data-analytics-sys` | 01:25:05.28 | 16448 B |
+| 2 | `aocl-scalapack-sys` | 01:25:05.87 | 10768 B |
+| 2 | `aocl-securerng-sys` | 01:25:06.40 | 9026 B |
+| 2 | `aocl-sparse-sys` | 01:25:07.00 | 14625 B |
+| 2 | `aocl-utils-sys` | 01:25:07.61 | 13535 B |
+| 3 | `aocl-compression` | 01:25:09.65 | 11650 B |
+| 3 | `aocl-crypto` | 01:25:10.09 | 19988 B |
+| 3 | `aocl-data-analytics` | 01:25:11.01 | 30149 B |
+| 3 | `aocl-scalapack` | 01:25:11.65 | 21122 B |
+| 3 | `aocl-securerng` | 01:25:12.21 | 9710 B |
+| 3 | `aocl-sparse` | 01:25:12.74 | 34664 B |
+| 3 | `aocl-utils` | 01:25:13.31 | 11900 B |
+
+Checksums (sha256) are in the API response; they are not tabulated here and were not compared to a build of `69fee1bd`
+(this lane did not build it). Cargo reports the packaged sizes compressed (for example `aocl-build` 12.8 KiB, line 5) and the
+registry `crate_size` is the same archive (13057 B = 12.75 KiB), consistent with the upload being what was packaged.
+
+The three rounds line up with the creation times: round 1's last crate (01:25:02.4) precedes round 2's first
+(01:25:04.0), and round 2's last (01:25:07.6) precedes round 3's first (01:25:09.6). Each gap is about 1.6 to 2.0 s, which
+is the visibility wait cargo reported. The order inside a round is not the order on the packaging lines (line 3 onward);
+it is the upload order.
+
+**Tag.** `git ls-remote --tags https://github.com/ThinkersJournal/aocl 'v0.2.2*'` gives `refs/tags/v0.2.2` `ad10a448...`
+(a tag object, so annotated) and `refs/tags/v0.2.2^{}` `69fee1bd28c52f4cb303b53300a528e204042b20`, the commit the
+header names.
+
+**Controls.** The PM re-read 17 of 17 and reports held `aocl-math-sys` 0.0.0 and `aocl` 0.1.0 as controls (the PM's
+account, not re-run here). This lane's own read: 17 crates, 17 hits, each with a `created_at` on 2026-11-24 inside the run's
+window (01:24:24Z to 01:25:16Z); a crate not in the run would have been absent or earlier, and one 404 would have
+printed an error (none did). **Not run here:** a read of a held crate as a control. The 17-of-17 is therefore this lane's
+read of the named 17 only; "nothing else was published" rests on the PM's controls.
+
+**A finding that is not releaseant's.** Seven `-sys` crates print `warning: unused dependency libc` at verification
+(lines 59, 79, 96, 116, 133, 150, 167): `aocl-compression-sys`, `-crypto-sys`, `-data-analytics-sys`, `-scalapack-sys`,
+`-securerng-sys`, `-sparse-sys`, `-utils-sys`. It is cargo's `unused_dependencies` lint (set to `warn`) on a `[dependencies.libc]`
+table, harmless to the publish (exit 0) and aocl's to fix (a dependency that is unused ships to every consumer). It
+matters here only because a `--require-green` or a clean-build check that denies warnings would have stopped this run.
+
+**What this adds, and what it does not.**
+- Added: one more real multi-crate publish with no 429, the first with the layers (3, 7, 7) visible in the output, and the
+  first where cargo's own multi-crate publish did the upload and the wait (sections 3 to 5 are releaseant's own).
+- Not added: anything about releaseant's guards, ledger or retries; no phase timing; no check that the archives match the
+  commit.
+- Still unmeasured, as in 5e: a real 429's wording, a kill between upload and read-back, a lagging index (the longest
+  gap here, about 2 s, was cargo's own wait, and it ended on its own), a real transient failure.
