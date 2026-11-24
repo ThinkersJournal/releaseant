@@ -628,5 +628,56 @@ published" rests on the PM's controls, which this lane has not seen. The archive
   the archives match the commit.
 - Still unmeasured, as in 5e: a real 429's wording, a kill between upload and read-back, a lagging index (the longest gap here,
   about 2.5 s between rounds 3 and 4, was cargo's own wait, ending on its own), a real transient failure.
-- The onemkl 0.3.8 out file (`.lane-state/publish-onemkl-0.3.8.out`) was still being written when this section was drafted and is
-  not covered; it gets its own section when complete.
+- The onemkl 0.3.8 publish is section 9.
+
+## 9. The onemkl 0.3.8 publish (2026-11-24), from cargo's own output and the registry
+
+**Read this first.** `C:/Projects/.lane-state/publish-onemkl-0.3.8.out` is the PM's raw output of one `cargo publish` of 2 crates
+(the PM's account, relayed by pm-ants: exit 0, readback and tag `v0.3.8` read back). Like section 8's file it is cargo output
+only: 51 lines, **no start header, no `exit=` footer, no sha line**, so the invocation and the exit code are the PM's statement.
+This lane read all 51 lines (the file was read after it was complete; its modification time, 11:01:42 UTC, is 2 s after the last
+registry `created_at` below), then re-read the registry and the tag.
+
+**Lines relied on.** Lines 2 to 7: 2 `Packaging` (2 `Packaged`: `onemkl-sys` 10.8 MiB, 309.2 KiB compressed; `onemkl` 1.1 MiB,
+208.7 KiB compressed). Lines 8 to 40: 2 `Verifying` and 2 `Finished`. Lines 41 to 51: 2 `Uploaded`, 1 `waiting for` note (line 43)
+and 2 `Published` lines (46, 51). Grep over the whole file for `429`, `retry`, `failed`, `error`: **0 hits each**; control: the same
+file gives 2 `Uploaded` and 2 `Published`, which are present. Four lines begin `warning`: cargo's `redundant_homepage` manifest lint,
+once per crate (lines 9, 20, 24, 35), harmless to the publish and onemkl's to fix (`package.homepage` equals `package.repository`).
+Line 45 is `Blocking waiting for file lock on package cache`, as in section 8: cargo's own, not a retry. Line 50 is
+cargo's `press ctrl-c to skip waiting` hint.
+
+**What the run did.** Two crates, two layers: `onemkl-sys` first (line 41 to 46, "1 remaining crate" on line 43), then `onemkl`
+(lines 47 to 51). Both verified before either uploaded, and this is the first file here where the verify is **long**:
+`onemkl-sys` `Finished ... in 4m 55s` (line 22) and `onemkl` `Finished ... in 9m 38s` (line 40). Unlike the baracuda and aocl
+files these are not a rising running clock: they are two separate builds, and the second one is longer because it is the
+dependent. Line 37 shows how cargo verified `onemkl` before `onemkl-sys` 0.3.8 existed on the registry: `Unpacking onemkl-sys v0.3.8
+(registry ... tmp-registry)`, a throwaway local registry holding the just-packaged `onemkl-sys`, and line 39 then compiles
+`onemkl-sys v0.3.8` again from it, which is part of the 9m 38s. That is cargo's own mechanism for a multi-crate publish and
+needs nothing from releaseant; the registry was never consulted for `onemkl-sys` 0.3.8 at verify time. The two builds
+(about 14.5 minutes together) dwarf the uploads (3.7 s apart, below), the opposite of baracuda's 14 crates, where all verifies fit in
+about 31 s on the file's own clock.
+
+**A 429? None in this output.** Two uploads, no wait, no retry text. This says nothing about where the limit lies.
+
+**What the registry says**, read by this lane on 2026-11-24 with `GET https://crates.io/api/v1/crates/<crate>/0.3.8`:
+
+| round | crate | `created_at` (UTC, 2026-11-24) | `crate_size` | `yanked` |
+|---|---|---|---|---|
+| 1 | `onemkl-sys` | 11:01:36.83 | 316574 B | false |
+| 2 | `onemkl` | 11:01:40.57 | 213714 B | false |
+
+`onemkl-sys` precedes `onemkl` by 3.7 s, which covers cargo's visibility wait. The packaged sizes agree: 309.2 KiB on line 4 is 316574 B
+(309.2 KiB), 208.7 KiB on line 7 is 213714 B (208.7 KiB). The registry also answers for what the run could not have published: **`onemkl`
+`0.3.9` returns HTTP 404**, so the read tells a published version from an absent one. (A read of `onemkl` `0.3.7` as a second control returned an empty body
+on the first attempt and was not repeated, so it is not used.)
+
+**Tag.** `git ls-remote --tags https://github.com/ThinkersJournal/onemkl 'v0.3.8*'` gives `refs/tags/v0.3.8` `f3c85b5c...` (a tag
+object, so annotated) and `refs/tags/v0.3.8^{}` `353ee2e9143b4a6452b5b15471adfa4b4623d33d`. This lane was not given the commit the PM
+meant, so it does not say the tag is on the right one; the file has no sha line to check it against.
+
+**What this adds, and what it does not.**
+- Added: a two-crate dependent publish whose verify step takes minutes, not seconds, and a window in which cargo's tmp-registry
+  overlay is visible in the output (line 37). No 429, again.
+- Not added: anything about releaseant's guards, ledger or retries; no exit code from the file; no check that the archives match
+  the commit; no read of a held-back crate. The earlier "still unmeasured" list (a real 429's wording, a kill between upload and
+  read-back, a lagging index, a real transient failure) is unchanged.
