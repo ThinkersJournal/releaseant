@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.92 — R5-LIVE sections 8 and 9 (baracuda alpha.183 and onemkl 0.3.8 publishes)
+
+Docs only. `docs/R5-LIVE.md` section 8 reads the PM's out file for the 14-crate baracuda 0.1.0-alpha.183 / 0.56.5 `cargo publish` (no header or footer in the file) against the crates.io registry (14 of 14 present, 17.6 s window, no 429) and the `v0.1.0-alpha.183` tag; section 9 does the same for the 2-crate onemkl 0.3.8 publish (long verify, no 429).
+
 ## 0.0.91 — CI: portfolio gate pin moved to dc45e36
 
 Moved the `portfolio.yml` reusable-workflow pin in `.github/workflows/ci.yml` from c72a6e0 to dc45e3632ab9f471292458e5ccba5f375084a70a, as the PM asked. `url` is not in `Cargo.lock` (a positive control, `serde`, is), so RUSTSEC-2026-0592 needs no lock change. Verified by the diff only; the advisory result is read from CI by check name once the PR opens.
