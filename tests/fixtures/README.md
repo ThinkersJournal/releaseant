@@ -17,3 +17,7 @@ that equivalence is an assumption until R4 captures a real `cargo publish` of it
 The 429 pattern matches the outer shape of that line, not the middle sentence, because crates.io has more
 than one limit ("new crates" and "updates to existing crates" are known to exist; only the second has a
 sample). A variant with different middle text is a **guess** until a sample exists; the test for it says so.
+
+`rate_limited_live_20261125.txt` is lines 498 to 499 of `C:/Projects/.lane-state/publish-baracuda-rest-alpha186.out`, a
+baracuda alpha.186 publish read by this lane on 2026-11-25 (cargo's `Caused by:` block, retry-after `Wed, 25 Nov 2026
+08:29:14 GMT`). It is the "updates to existing crates" limit again, so it does not settle the "new crates" variant.

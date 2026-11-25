@@ -1,0 +1,2 @@
+Caused by:
+  the remote server responded with an error (status 429 Too Many Requests): You have published too many updates to existing crates in a short period of time. Please try again after Wed, 25 Nov 2026 08:29:14 GMT and see https://crates.io/docs/rate-limits for more details.
