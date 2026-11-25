@@ -190,6 +190,32 @@ mod tests {
         );
     }
 
+    const RATE_LIMITED_LIVE: &str =
+        include_str!("../tests/fixtures/rate_limited_live_20261125.txt");
+
+    // T9: the first 429 this lane saw itself (a baracuda alpha.186 publish, 2026-11-25), cargo's own `Caused by:`
+    // block, not a relayed sample. Same shape as the PM's, so the parser needs no change.
+    #[test]
+    fn live_429_of_2026_11_25_yields_its_retry_after_time() {
+        // 2026-11-25 08:29:14 UTC; 1_795_595_354 was computed independently with Python's datetime.
+        let expected = days_from_civil(2026, 11, 25) * 86_400 + 8 * 3600 + 29 * 60 + 14;
+        assert_eq!(expected, 1_795_595_354);
+        assert_eq!(
+            classify(false, RATE_LIMITED_LIVE),
+            Class::RateLimited {
+                retry_at_unix: Some(1_795_595_354)
+            }
+        );
+        // Negative control: a different date changes the answer, so the time really is read from the text.
+        let later = RATE_LIMITED_LIVE.replace("08:29:14", "09:29:14");
+        assert_eq!(
+            classify(false, &later),
+            Class::RateLimited {
+                retry_at_unix: Some(1_795_598_954)
+            }
+        );
+    }
+
     #[test]
     fn date_parser_known_values() {
         assert_eq!(parse_http_date("Thu, 01 Jan 1970 00:00:00"), Some(0));

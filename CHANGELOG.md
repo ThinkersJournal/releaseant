@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.93 — R5-LIVE section 10 (baracuda 70-crate publishes, first real 429)
+
+Docs and one test. `docs/R5-LIVE.md` section 10 reads the five 2026-11-25 baracuda alpha.186/.188/.191/.193/.195 out files against the crates.io registry (70 of 70 present each, 227 crates after the opening bursts at about one per minute) and records the first verbatim 429 (alpha.186 first-run file, line 499), the opening bursts of 10 to 31 that fit a shared bucket of about 30 refilling at one a minute (a fit, not crates.io's published rule), and an out file overwritten by a restarted loop. Also a test and fixture (`tests/fixtures/rate_limited_live_20261125.txt`, `classify::tests::live_429_of_2026_11_25_yields_its_retry_after_time`): the live 429 line parses to its retry-after time (1795595354) with the existing parser, no source change; a shifted-date negative control moves the answer by 3600 s.
+
 ## 0.0.92 — R5-LIVE sections 8 and 9 (baracuda alpha.183 and onemkl 0.3.8 publishes)
 
 Docs only. `docs/R5-LIVE.md` section 8 reads the PM's out file for the 14-crate baracuda 0.1.0-alpha.183 / 0.56.5 `cargo publish` (no header or footer in the file) against the crates.io registry (14 of 14 present, 17.6 s window, no 429) and the `v0.1.0-alpha.183` tag; section 9 does the same for the 2-crate onemkl 0.3.8 publish (long verify, no 429).
