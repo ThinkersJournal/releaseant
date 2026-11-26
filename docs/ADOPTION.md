@@ -201,8 +201,10 @@ For a lane or the PM running `releaseant` instead of a hand-written loop. Each l
 4. **Rate limits (HTTP 429) are waited out inside a run**, not by `--retries`: the time cargo prints ("try again after
    <date>") plus 5 seconds, taken from the run's `--max-wait` budget, which is **per run and 3600 s by default**. A
    run that runs out of budget stops resumable, naming the crate. 21600 (6 h) is generous; the real rate of
-   crates.io's new-version limit is **not measured** (R4's six uploads never met one), so no number here is a
-   promise.
+   crates.io's new-version limit was first met on 2026-11-25 (`docs/R5-LIVE.md` section 10: an opening burst of about
+   30 crates, then about one crate a minute, **a fit to five runs and not crates.io's published rule**), so a
+   70-crate workspace needs about 40 to 60 minutes of waiting after the burst, inside the 3600 s default only with
+   little to spare: pass `--max-wait` for a workspace that size. No number here is a promise.
 5. **A stop or failure is resumed, not restarted.** `--retries N` runs `publish` again up to N more times, and the
    loop ends only when the index, asked afresh, lists every crate of the run's plan at its version and not yanked
    (exit 0), or at a held version or checksum mismatch (stops at once, exit 1, needs a person), or when the attempts
