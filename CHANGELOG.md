@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.94 — docs: retry pacing checked against the measured crates.io rate
+
+`docs/R5-LIVE.md` section 10 gains a pacing check of `src/run.rs` against the rate measured on 2026-11-25 (server `Retry-After` plus 5 s is the right shape; the per-run `--max-wait` default of 3600 s is the number that is tight for a 70-crate workspace). `docs/ADOPTION.md` no longer says the rate is not measured. No code change.
+
+Also: the `portfolio.yml` reusable-workflow pin in `.github/workflows/ci.yml` moves from dc45e36 to 467fd259d6d062cba4c5683d310f1a6f2b66e763 (coderipper#375, CODERIPPER_VERSION 0.48.1), as pm-ants asked.
+
 ## 0.0.93 — R5-LIVE section 10 (baracuda 70-crate publishes, first real 429)
 
 Docs and one test. `docs/R5-LIVE.md` section 10 reads the five 2026-11-25 baracuda alpha.186/.188/.191/.193/.195 out files against the crates.io registry (70 of 70 present each, 227 crates after the opening bursts at about one per minute) and records the first verbatim 429 (alpha.186 first-run file, line 499), the opening bursts of 10 to 31 that fit a shared bucket of about 30 refilling at one a minute (a fit, not crates.io's published rule), and an out file overwritten by a restarted loop. Also a test and fixture (`tests/fixtures/rate_limited_live_20261125.txt`, `classify::tests::live_429_of_2026_11_25_yields_its_retry_after_time`): the live 429 line parses to its retry-after time (1795595354) with the existing parser, no source change; a shifted-date negative control moves the answer by 3600 s.
