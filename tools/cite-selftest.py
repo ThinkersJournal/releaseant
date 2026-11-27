@@ -11,6 +11,25 @@ citation of its own X.Y is reported as such (that is a result, not a pass).
 import io, os, re, shutil, subprocess, sys, tarfile, tempfile
 
 
+def safe_extract(data, dest):
+    """Write the regular files and directories of a tar (our own `git archive`) under `dest`, each path
+    checked to stay inside it; links, devices and anything else are skipped. Nothing is handed to
+    `tarfile.extract*`, so a member name can never choose where a file lands."""
+    root = os.path.realpath(dest)
+    with tarfile.open(fileobj=io.BytesIO(data)) as t:
+        for m in t.getmembers():
+            target = os.path.realpath(os.path.join(root, m.name))
+            if target != root and not target.startswith(root + os.sep):
+                raise SystemExit("refusing a tar member outside the target: " + m.name)
+            if m.isdir():
+                os.makedirs(target, exist_ok=True)
+            elif m.isfile():
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                src = t.extractfile(m)
+                with open(target, "wb") as out:
+                    shutil.copyfileobj(src, out)
+
+
 def main():
     exe, repos = sys.argv[1], sys.argv[2:]
     for repo in repos:
@@ -19,7 +38,7 @@ def main():
         tar = subprocess.run(["git", "-C", repo, "archive", sha], check=True, capture_output=True).stdout
         d = tempfile.mkdtemp(prefix="cite-selftest-")
         try:
-            tarfile.open(fileobj=io.BytesIO(tar)).extractall(d)
+            safe_extract(tar, d)
             cur = None
             for dp, dn, fn in os.walk(d):
                 if "Cargo.toml" in fn:
