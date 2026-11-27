@@ -258,6 +258,31 @@ enum Command {
         #[arg(long)]
         execute: bool,
     },
+    /// After a minor (or pre-1.0 breaking) bump is published and read back, find what still cites the
+    /// old `X.Y` of the project's own crates (dependency requirements, `name@X.Y`, docs.rs links, in
+    /// manifests, Markdown and Rust doc comments). Prints a patch; writes only with `--apply`. History
+    /// (CHANGELOG, `changelog.d/`, `docs/design/`), quotes and narration are refused, not edited.
+    /// Exit 3: the served version is not on `--old`, or no crate of the tree is at `--new`.
+    CiteUpdate {
+        /// The tree to read: a `git archive` copy or a worktree.
+        #[arg(long, default_value = ".")]
+        root: PathBuf,
+        /// The `X.Y` being left, e.g. 0.27.
+        #[arg(long)]
+        old: String,
+        /// The `X.Y` being moved to, e.g. 0.28.
+        #[arg(long)]
+        new: String,
+        /// The version the registry served before the bump; its `X.Y` must be `--old`.
+        #[arg(long)]
+        served: String,
+        /// Also write the patch to this file.
+        #[arg(long)]
+        patch_out: Option<PathBuf>,
+        /// Rewrite the files in `--root` (use a worktree, never a published copy).
+        #[arg(long)]
+        apply: bool,
+    },
     /// Ask the index about every crate in the plan.
     Readback(Source),
     /// Yank a version this tool published (dry-run unless `--execute`).
@@ -890,6 +915,47 @@ fn real_main(cli: Cli) -> Result<bool, Box<dyn std::error::Error>> {
                 identity: None,
             })?;
             println!("{}", describe_tag(&outcome, &tag, &source.sha));
+            Ok(true)
+        }
+        Command::CiteUpdate {
+            root,
+            old,
+            new,
+            served,
+            patch_out,
+            apply,
+        } => {
+            let report = crate::cite::run(&crate::cite::Request {
+                root: &root,
+                old: &old,
+                new: &new,
+                served: &served,
+                apply,
+            })
+            .map_err(|e| ExitWith(3, e.to_string()))?;
+            println!(
+                "served {served} -> old {old}; new {new}; {} own crates ({} at {new}); files listed by {}",
+                report.names.len(),
+                report.at_new,
+                report.listing
+            );
+            print!("{}", report.patch);
+            for r in &report.refused {
+                println!("refused: {}:{}: {}", r.file, r.line, r.why);
+            }
+            println!(
+                "{} file(s) {}, {} refused",
+                report.changed.len(),
+                if apply {
+                    "rewritten"
+                } else {
+                    "would change (dry run)"
+                },
+                report.refused.len()
+            );
+            if let Some(p) = patch_out {
+                std::fs::write(&p, &report.patch)?;
+            }
             Ok(true)
         }
         Command::Readback(s) => {

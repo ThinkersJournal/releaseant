@@ -12,6 +12,7 @@ pub mod artifacts_cmd;
 pub mod cargo;
 pub mod categories;
 pub mod ci;
+pub mod cite;
 pub mod classify;
 pub mod cli;
 pub mod clock;
