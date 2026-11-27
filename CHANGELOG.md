@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.97 — untrack a stray compiled Python file
+
+Stop tracking `tools/__pycache__/cite-selftest.cpython-315.pyc`, which slipped into the cite-update merge, and ignore `__pycache__/` and `*.pyc`. Verified: `git ls-files | grep pycache` is empty on the branch.
+
 ## 0.0.96 — Added: `releaseant cite-update`, the X.Y citation update for a minor bump (red-first test, self-test on vulkane, fireline, KISS)
 
 After a minor (or pre-1.0 breaking) bump is published and read back, `releaseant cite-update --root <tree> --old X.Y --new X.Y --served <version the registry served before the bump>` lists every place that still cites the old `X.Y` of the project's own crates and prints the edit as a unified diff (`--patch-out FILE` also writes it; `--apply` rewrites a worktree; the default changes nothing). It exists because the vulkane 0.26 -> 0.27 and 0.27 -> 0.28 bumps each needed the same hand edit (README x4, three `//!` examples, `vulkane_derive/README.md`, own-crate requirements), recorded as three hand updates in `.lane-state/stamp-hand-updates.md`, and a stamp-time edit was reverted once because the harness self-test compares with the SERVED version: the tool is for publish time, after the read-back, and does not run at the stamp.
