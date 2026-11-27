@@ -3,3 +3,5 @@ Cargo.lock.bak
 *.log
 
 .releaseant/
+__pycache__/
+*.pyc
