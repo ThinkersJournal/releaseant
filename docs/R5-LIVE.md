@@ -853,7 +853,7 @@ Fourteen rounds, with remaining 17, 12, 11, 11, 11, 11, 9, 8, 6, 5, 4, 3, 2, 1: 
 - **Not read:** the logs of fuel 0.56.1, onemkl 0.4.2 and 0.4.3, whose files were overwritten; the full text of any 429; which of the two reads failed at 20:05:22.
 - **For the owner of `publish_repo.py`** (findings, not changes): (4) a failed `crates_io()` read is compared as a version, so it counts as "not published" (fuel round 8); (5) the tool does not know about other runs sharing the limit: fuel's first run (19:22 to 20:05) overlapped baracuda alpha.211 and spent three rounds and 13 minutes before its first crate, and AOCL started 2 min after fuel's burst; a lock or a queue across `publish_repo.py` runs would make that visible; (6) `required=0` is refused, which is right, but the log does not say whether the read failed or the branch has no protection (12d: it was most likely a failed read at 20:05:22).
 
-## 13. The publishes of 2026-11-26 from 22:54Z to 2026-11-27 06:19Z (fuel 0.58.0 and 0.58.3, Unpopped 0.60.x, vulkane 0.30.x, fishstringer 0.10.x, fireline 0.11.0, onemkl 0.4.x, AOCL 0.2.5, baracuda alpha.217, and eleven small ones): what the PM's tool did, read from its logs and the registry, and what the tool changed that night
+## 13. The publishes of 2026-11-26 from 22:54Z to 2026-11-28 00:27Z (13a to 13f read to 06:19Z on 11-27, 13g after) (fuel 0.58.0 and 0.58.3, Unpopped 0.60.x, vulkane 0.30.x, fishstringer 0.10.x, fireline 0.11.0, onemkl 0.4.x, AOCL 0.2.5, baracuda alpha.217, and eleven small ones): what the PM's tool did, read from its logs and the registry, and what the tool changed that night
 
 **Read this first.** As in sections 11 and 12, nothing here is a releaseant run: every publish was `C:/Projects/tools/publish_repo.py`, mostly through `publish_when_green.sh` and `publish-driver12.sh` and `publish-driver19.sh`. The logs in `C:/Projects/.lane-state` are **overwritten per repo**, so a log read at 05:56Z to 06:19Z (this lane's copies are in its scratch folder, not in the repo) holds only the *last* run of its repo: baracuda alpha.217, fuel 0.58.3, vulkane 0.30.4 (still running at 06:19Z), onemkl 0.4.15, Unpopped 0.60.26 and releaseant 0.0.97, and for fireline, fishstringer, aocl, agentlife, synapse, mcpant, webservant, AlarmAnt, json-mcp-server, unisql, commy-sdk-rust and vulkane 0.30.3 the log of the last publish of that repo. **A run that a later run overwrote survives only as registry rows** (fuel 0.58.0, Unpopped 0.60.8, 0.60.10, 0.60.17, 0.60.20, onemkl 0.4.6, 0.4.8, 0.4.11, vulkane 0.30.1, fishstringer 0.10.0).
 
@@ -917,7 +917,7 @@ Twenty-one rounds, remaining at the start of each: 73, 56, 51, 47, 43, 40, 36, 3
 ### 13e. The small ones, and vulkane 0.30.3 and 0.30.4
 
 - **vulkane 0.30.3** (`publish-vulkane.log`, read at 05:56Z and again whole later): main `fd40d955`, `required=7 not-success=[]`, all 15 from 0.30.1, dry run 05:18:06 to 05:18:50, round 1 at 05:18:54, **registry 05:19:35 to 05:19:45 for 11 crates (13 with the two the search missed, 05:19:40 and 05:19:41), then one at 05:20:43 and the last at 05:21:40**: round 2 started with 2 remaining after a 46 s sleep, round 3 with 1 after a 48 s sleep, **three rounds, two 429s (94 s)**; `readback differ: []` 05:21:55, tag 05:21:59. The first crate came 41 s after round 1 started.
-- **vulkane 0.30.4** is **still running at 06:19Z**: main `8092c689`, `required=7`, **`SKIPPED-NEW (never published; a first publish needs an explicit --allow-new): vulkane-msl-emit 0.30.4`** (a never-published crate, skipped by the tool's `--allow-new` rule, read from `publish_repo.py` line 114), `publishable=16`, **15 to publish** from 0.30.3 (the skipped crate is counted in `already-current`, which is why 16 minus 15 is not zero there), dry run 06:11:47 to 06:12:39, round 1 at 06:12:45 with 15 remaining, 429 then rounds with 10, 8 and 7 remaining at 06:14:38, 06:16:38 and 06:17:49, three more sleeps (56, 50, 30 s) read, a fourth at 06:18:29 (64 s). Registry at 06:17Z: 6 crates (4 at 06:13:33 to 06:13:35, 2 at 06:15:40 and 06:15:41). **No tag yet**; the number of 0.30.4 crates still to go is not final in this section.
+- **vulkane 0.30.4** was **still running at 06:19Z** (finished, 15 crates, 06:24:11, tag on origin: 13g): main `8092c689`, `required=7`, **`SKIPPED-NEW (never published; a first publish needs an explicit --allow-new): vulkane-msl-emit 0.30.4`** (a never-published crate, skipped by the tool's `--allow-new` rule, read from `publish_repo.py` line 114), `publishable=16`, **15 to publish** from 0.30.3 (the skipped crate is counted in `already-current`, which is why 16 minus 15 is not zero there), dry run 06:11:47 to 06:12:39, round 1 at 06:12:45 with 15 remaining, 429 then rounds with 10, 8 and 7 remaining at 06:14:38, 06:16:38 and 06:17:49, three more sleeps (56, 50, 30 s) read, a fourth at 06:18:29 (64 s). Registry at 06:17Z: 6 crates (4 at 06:13:33 to 06:13:35, 2 at 06:15:40 and 06:15:41). The 0.30.4 line is superseded by 13g.
 - **onemkl 0.4.15** (`publish-onemkl.log`): two crates, `onemkl-sys` at 06:02:58 and `onemkl` at 06:03:46, **a 429 and a 32 s sleep between** (dry run 19 s, round 1 at 06:02:43, round 2 at 06:03:34 with 1 remaining), the smallest case of the same limit; tag 06:03:55. Same shape as 12e's onemkl 0.4.2, 90 s between its two crates, now with its log: **a 429 on the second crate of a two-crate publish**.
 - **fireline 0.11.0, fishstringer 0.10.1, unisql 0.27.19, commy-sdk-rust 0.22.1, mcpant 0.0.6, releaseant 0.0.96 and 0.0.97, AlarmAnt 0.4.5, webservant 0.4.16, agentlife 0.30.88, synapse rc.271 and Unpopped 0.60.23 and 0.60.26** each published in one round with no 429 and `readback differ: []` on the first read-back (dry run 9 s to 3 min 45 s). **json-mcp-server 0.3.9** had one `server error: retry in 60s` on round 1 and published in round 2 (the one `server error` line in the logs read for this section). **AlarmAnt 0.4.5 and mcpant 0.0.6 went out from `0.0.0`**: the tool read `0.0.0` as the registry's current version of the name (`to-publish=[["alarmant","0.4.5","0.0.0"]]`), which is not the `None` that it skips as `SKIPPED-NEW`; so the names already existed on the registry at `0.0.0` (a placeholder, not checked by this lane against the registry page) and the tool treated them as ordinary upgrades.
 - **epistemologicant**: `publish-epistemologicant.log` (00:52Z) shows six `SKIPPED-NEW` lines, `publishable=7`, one crate to publish from `0.0.0` (`epistemologicant`), a dry run **exit 101** `error: failed to prepare local package for uploading`, and no publish: **nothing went out** (six never-published crates need `--allow-new`; the seventh failed its dry run). Not in the registry rows for the window; the reason for the dry-run failure is not in the log.
@@ -934,3 +934,59 @@ Twenty-one rounds, remaining at the start of each: 73, 56, 51, 47, 43, 40, 36, 3
 5. **`PUBLISH_NO_LOCK=1` skips the lock** (between `14719f7`, 02:56Z, and `e6de11b`, 03:35Z): "a small publish (a few crates) may skip the queue behind a long one". **The small publishes after 03:35Z (Unpopped 0.60.20 at 03:35:50, onemkl 0.4.15, Unpopped 0.60.23 and 0.60.26, releaseant 0.0.97) cannot be told apart in the logs from ones that took the lock**: this lane did not find a log line that says which it was. The cost the change accepts is the one 12c measured: a small publish drawing on the bucket while a large one is mid-run.
 
 **Not changed, from the same diff:** the tool still does not read the 429's wording into the ledger (it prints `429: sleeping Ns`), still has no ledger or resume of its own (the log is the only record, opened with mode `w` per run of the same repo: **the cause of every "none kept" in 13a**), and still counts "remaining" by the registry web API alone, though it now distinguishes a failed read from an absent crate. **For the owner of `publish_repo.py`** (findings, not changes): (7) **keep a log per run** (open with `a`, or a timestamped name) (a timestamped name), not per repo: 13a has eleven registry-only rows, and 13e's vulkane 0.30.3 and 0.30.4 would be two files; (8) **write `lock acquired` and `lock released` lines after the truncation**, so the log says what the lock did; (9) the `already-current` count includes the `SKIPPED-NEW` crates (vulkane 0.30.4: 16 publishable, 15 to publish, `already-current=1` for a crate that is not current but skipped), which a reader takes for "already published".
+
+### 13g. The same series, 2026-11-27 06:16Z to 2026-11-28 00:27Z (the push was held until 2026-11-28 00:02Z): 41 more registry versions, and what the logs of the last run of each repo say
+
+**What was read, and when.** The registry pass of 13 was repeated at 00:05Z to 00:27Z on 11-28 over the same 421 names, one request per 2 s, **0 names failed**, rows with `created_at` on 11-27 or 11-28; the two names the search misses (`vulkane_derive`, `vulkane-spirv-parse`) were read by name with the rest of vulkane's 15 (`vulkane-msl-emit` returns 404: never published, as the tool's `SKIPPED-NEW` says). The logs in `C:/Projects/.lane-state` were copied at 00:05Z: each holds **the last run of its repo only**, so everything between 13a's last row and these logs is registry rows. The rows from 06:16Z, **none yanked except one**: `aocl-sparse-sys` 0.2.11 (read `yanked` true at 00:27Z; who yanked it and when is not in the API row this lane read, and nothing in a log says).
+
+| version | crates | registry first to last (11-27 UTC) |
+|---|---|---|
+| vulkane 0.30.4 (13e's row, now whole) | 15 | 06:13:32 to 06:24:11, tag `v0.30.4` on origin (`8092c689`) |
+| aocl 0.2.6 | 2 | 06:34:09 and 06:34:10 |
+| fuel 0.58.4 | 40 | 06:44:55 to 07:05:48 |
+| onemkl 0.4.16 | 2 | 07:07:25 and 07:07:27 |
+| baracuda alpha.220 | 70 | 07:19:55 to 08:19:14 |
+| Unpopped 0.60.32 | 4 | 08:23:14 to 08:23:21 |
+| fuel 0.59.0 | 40 | 10:14:40 to 10:24:51 |
+| onemkl 0.5.0 | 2 | 10:26:37 to 10:26:40 |
+| baracuda alpha.224 | 70 | 10:45:46 to 11:39:25 |
+| vulkane 0.30.8 | 15 | 11:44:53 to 11:53:16 |
+| Unpopped 0.61.0 | 4 | 11:57:07 to 11:58:18 |
+| onemkl 0.5.1 | 2 | 12:25:27 and 12:25:30 |
+| fireline 0.12.0, fishstringer 0.11.0 | 6, 3 | 12:50:33 to 12:50:39; 12:52:21 to 12:52:23 |
+| vulkane 0.30.9 | 15 | 12:56:05 to 12:56:18 (the search saw 13 by 12:56:18) |
+| onemkl 0.5.2 | 2 | 13:25:15 and 13:25:18 |
+| baracuda alpha.225, and 3 at 0.61.0 | 70, 3 | 15:02:56 to 15:45:34; 15:02:57 to 15:33:59 |
+| aocl 0.2.7 | 2 | 15:47:59 and 15:48:01 |
+| Unpopped 0.61.2 | 4 | 16:01:21 to 16:01:28 |
+| vulkane 0.31.1 | 15 | 16:06:03 to 16:07:40 (13 in the search) |
+| onemkl 0.6.0 | 2 | 17:05:08 to 17:05:12 |
+| Unpopped 0.61.5 | 4 | 17:16:38 to 17:16:45 |
+| aocl 0.2.8, 0.2.9 | 2, 1 | 17:23:56 and 17:23:58; 17:42:57 |
+| vulkane 0.31.3 | 15 | 17:45:31 to 17:45:43 (13 in the search) |
+| aocl 0.2.11 | 4 (one yanked) | 18:08:00 to 18:08:01 |
+| kiss 0.0.45 (`kiss-bench`, `kiss-agent-ai`, `kiss-agent`, `kiss-workflow`, `kiss-coding`, `kiss-mcp`, `kiss-agent-sdk`) | 7 | 18:17:07 to 18:20:51; no log read |
+| baracuda alpha.231 | 70 | 18:19:33 to 19:03:10 |
+| aocl 0.2.13 | 3 | 18:45:52 to 18:46:37 |
+| onemkl 0.6.1 | 2 | 19:05:51 and 19:05:53 |
+| vulkane 0.31.7 | 15 | 19:10:31 to 19:20:00 |
+| Unpopped 0.61.10 | 4 | 19:26:35 to 19:26:43 |
+| aocl 0.2.17 | 5 | 19:34:48 to 19:34:52 |
+| aocl 0.2.26 | 2 | 21:56:09 and 21:56:10 |
+| Unpopped 0.62.0 | 4 | 22:12:13 to 22:12:19 |
+| fireline 0.13.0 | 6 | 22:34:26 to 22:34:31 |
+| `synapseone` 0.10.2 | 1 | 22:36:14 (a crate name this lane did not know; no log read) |
+| aocl 0.2.28 | 2 | 22:42:28 |
+| fishstringer 0.12.0, 0.12.2 | 3, 3 | 22:47:59 to 22:48:01; 23:50:21 to 23:50:24 |
+| onemkl 0.6.5 | 2 | 23:49:43 and 23:49:46 |
+| baracuda alpha.235 | **31 at 00:06:31 (11-28), still running at 00:27Z** | 00:06:01 onward |
+
+The AOCL, onemkl and Unpopped versions are **several a day**: aocl went 0.2.5 to 0.2.28 in the window with **1 to 5 crates each time** (the 11-27 22:42Z log: `--only aocl-crypto,aocl-data-analytics`, from 0.2.5, two crates). Versions that skip numbers (onemkl 0.4.16 to 0.5.0, aocl 0.2.17 to 0.2.26, vulkane 0.30.4 to 0.30.8) are the PM's number allocation and not publishes this lane missed: nothing on the registry between them was found, and **this lane did not read what each version contained**.
+
+**The last runs, from their logs (read whole):**
+- **fuel 0.59.0** (`publish-fuel.log`, 10:04:18Z): main `a47fae9f`, `required=7`, 40 to publish from 0.58.4, dry run 10:04:38 to 10:09:02 (4 min 24 s), round 1 at 10:09:13, remaining at each round **40, 10, 5, 2, 1: a burst of 30** (registry first crate 10:14:40, 5 min 27 s after round 1 began), four 429s, **sleeps 30, 74, 61 and 33 s = 198 s**; `readback differ: []` 10:25:19, tag 10:25:25. The previous upload was Unpopped 0.60.32 (08:23), after baracuda alpha.220 ended at 08:19:14: **a 30 burst after an idle gap of about 2 h**, against 27 for fuel 0.58.3 (46 min after alpha.217) and 28 for 0.58.0.
+- **vulkane 0.31.7** (`publish-vulkane.log`, 19:08:26Z): main `b7c0ffc1`, 16 publishable, `vulkane-msl-emit` `SKIPPED-NEW`, 15 to publish from 0.31.3, dry run 19:08:34 to 19:09:34, round 1 at 19:09:40, remaining **15, 9, 7, 6, 4, 3, 2, 1: a burst of 6**, seven 429s, **sleeps 55, 71, 30, 75, 30, 30 and 30 s = 321 s**, last crate 19:20:00 (the registry), tag 19:20:20. Its log began **5 min 16 s after baracuda alpha.231's last crate (19:03:10) and 2 min 33 s after onemkl 0.6.1's (19:05:53)**: the cross-repo shared limit of 12c and 12d, seen again on a small repo.
+- **baracuda alpha.235** (`publish-baracuda.log`, 23:56:36Z, still running): main `9800a0dc`, `required=8`, 73 publishable, round 1 at 00:02:25 with **70 remaining** (from alpha.231), dry run 23:57:19 to 00:01:52 (**4 min 33 s**). **Registry: 31 crates in 30 s (00:06:01 to 00:06:31)**: a burst of 31, the size of alpha.211's, where alpha.217's was 17 (13d); the last large upload before it was vulkane 0.31.7 (ended 19:20:00), 4 h 46 min earlier, with small ones since (fishstringer 0.12.2 at 23:50, 3 crates). The log at 00:27Z reads round 7 with 20 remaining. **Not read to the end**; section 13 stops at 00:27Z.
+- **Small, one round each, `readback differ: []`, no 429:** Unpopped 0.62.0 (from 0.61.10, dry run 44 s, tag 22:12:32), fireline 0.13.0 (from 0.12.0, tag 22:34:44), aocl 0.2.28 (tag 22:42:37), fishstringer 0.12.2 (from 0.12.0, tag 23:50:34), onemkl 0.6.5 (from 0.6.1, two crates 3 s apart, tag 23:49:56). **coderipper 0.48.14** (`publish-coderipper.log`, 17:49Z, from 0.48.12; not a name the registry search covers): one crate, dry run 75 s, round 1 to the read-back **2 min 1 s** with no 429 line, tag 17:53:06.
+
+**What 13g adds to the question the series asks** (is the rate limit shared across repos, and what does a burst depend on?): the bursts in 12 and 13 are **31 (alpha.211), 28 (fuel 0.57.0 second run), 28 (fuel 0.58.0), 27 (fuel 0.58.3), 21 (AOCL 0.2.5), 17 (alpha.217), 30 (fuel 0.59.0), 6 (vulkane 0.31.7) and 31 (alpha.235)**. The two low ones (17 and 6) each followed a large upload by about 17 min and about 5 min; the high ones followed gaps of about 2 h or more or a lighter hour. **That fits a shared bucket of about 30 that large uploads drain and that takes more than 17 minutes to refill; it does not prove it**: 27 (fuel 0.58.3 after a 46 min gap) and 21 (AOCL 0.2.5 after 8 small crates) sit between, and nothing here measures the bucket directly.
